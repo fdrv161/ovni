@@ -30,6 +30,7 @@ jobs:
           notes=".github/release-notes/${GITHUB_REF_NAME}.md"
           [ -f "$notes" ] || { echo "Missing $notes"; exit 1; }
           echo "NOTES=$notes" >> "$GITHUB_ENV"
+          echo "VERSION=${GITHUB_REF_NAME#telescope-accessible-}" >> "$GITHUB_ENV"
 
       - name: Cache FetchContent deps
         uses: actions/cache@v4
@@ -87,7 +88,7 @@ jobs:
       - name: Publish release
         uses: softprops/action-gh-release@v2
         with:
-          name: TELESCOPE Accessible ${{ github.ref_name }}
+          name: TELESCOPE Accessible ${{ env.VERSION }}
           body_path: ${{ env.NOTES }}
           files: |
             dist/TELESCOPE-accessible-windows-vst3.zip
