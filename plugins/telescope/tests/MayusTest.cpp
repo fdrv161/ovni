@@ -160,7 +160,7 @@ TEST_CASE ("telescope: despues de look::upper no queda ninguna minuscula, en los
     }
     std::printf ("MAYUS titulos: %d (6 idiomas x 4 secciones) · %d con una letra fuera del ASCII\n",
                  (int) titles.size(), withAccent);
-    CHECK (titles.size() == 6 * (size_t) telescope::rules::Section::kNumSections);
+    CHECK (titles.size() == (size_t) telescope::rules::kNumLanguages * (size_t) telescope::rules::Section::kNumSections);
     CHECK (withAccent > 0);   // control: si ningún título tuviera tilde, esto no probaría la tilde
 
     // Y todas las frases y todos los rótulos: lo que cualquier lente pase por upper o por lower.
@@ -185,7 +185,7 @@ TEST_CASE ("telescope: despues de look::upper no queda ninguna minuscula, en los
         }
     std::printf ("MAYUS tablas: %d frases de Rules.h y %d rótulos de Strings.h, subidos y bajados\n", phrases, labels);
     CHECK (phrases > 0);
-    CHECK (labels == 6 * telescope::strings::kNumKeys);
+    CHECK (labels == (int) telescope::strings::availableLanguages().size() * telescope::strings::kNumKeys);
 }
 
 TEST_CASE ("telescope: VERDICT dibuja los titulos con su tilde en los seis idiomas", "[telescope][mayus]")
@@ -247,7 +247,7 @@ TEST_CASE ("telescope: VERDICT dibuja los titulos con su tilde en los seis idiom
     }
     telescope::Lens::setDirectPaintForTest (false);
     std::printf ("MAYUS lente: %d títulos dibujados en mayúscula (6 idiomas x 4)\n", drawnTitles);
-    CHECK (drawnTitles == 6 * (int) telescope::rules::Section::kNumSections);
+    CHECK (drawnTitles == telescope::rules::kNumLanguages * (int) telescope::rules::Section::kNumSections);
 
     proc.setVerdictLanguage ("en");
     proc.releaseResources();

@@ -34,7 +34,7 @@ namespace
 {
 // Los seis códigos, en el orden en que viven en las dos tablas. Se comprueba que sean LOS MISMOS: si
 // `Strings.h` tuviera japonés y `Rules.h` no, la matriz saldría con una columna vacía y nadie lo notaría.
-const char* const kCodes[] = { "en", "es", "pt", "fr", "de", "it" };
+const char* const kCodes[] = { "en", "es", "pt", "fr", "de", "it", "ru" };
 constexpr int kNumCodes = (int) (sizeof (kCodes) / sizeof (kCodes[0]));
 
 // Los que no pasaron por un hablante nativo. Va en el encabezado del documento y en la fila de la

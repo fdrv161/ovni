@@ -505,7 +505,7 @@ inline void drawTagOverData (juce::Graphics& g, const juce::String& text, juce::
 // cambiaría el del host), así que la caja se decide acá, con una tabla fija: sale igual en cualquier host y en
 // cualquier sistema.
 //
-// Cubre las letras de los seis idiomas (en, es, pt, fr, de, it): medidas sobre Rules.h y Strings.h, todas son de
+// Cubre las letras de los seis idiomas (en, es, pt, fr, de, it) y, en el fork accesible, la cirílica del ruso (U+0400..U+045F): medidas sobre Rules.h y Strings.h, todas son de
 // Latin-1. ASCII; de U+00E0 a U+00FE ↔ de U+00C0 a U+00DE, a 0x20 (salvo ÷ y ×, que no son letras); ÿ ↔ Ÿ (U+0178);
 // œ ↔ Œ; y ß → «SS» (que al bajar vuelve «ss», como en cualquier otro lado). Todo lo demás queda igual: el japonés
 // no tiene caja. [mayus] lo prueba con el locale «C» puesto a propósito.
@@ -515,6 +515,8 @@ inline juce::juce_wchar upperChar (juce::juce_wchar c) noexcept
     if (c >= 0xE0 && c <= 0xFE && c != 0xF7)    return c - 0x20;   // à..þ → À..Þ
     if (c == 0xFF)                              return 0x178;      // ÿ → Ÿ
     if (c == 0x153)                             return 0x152;      // œ → Œ
+    if (c >= 0x430 && c <= 0x44F)               return c - 0x20;   // а..я → А..Я (русский)
+    if (c >= 0x450 && c <= 0x45F)               return c - 0x50;   // ё и другие → Ё
     return c;
 }
 
@@ -524,6 +526,8 @@ inline juce::juce_wchar lowerChar (juce::juce_wchar c) noexcept
     if (c >= 0xC0 && c <= 0xDE && c != 0xD7)    return c + 0x20;   // À..Þ → à..þ
     if (c == 0x178)                             return 0xFF;       // Ÿ → ÿ
     if (c == 0x152)                             return 0x153;      // Œ → œ
+    if (c >= 0x410 && c <= 0x42F)               return c + 0x20;   // А..Я → а..я (русский)
+    if (c >= 0x400 && c <= 0x40F)               return c + 0x50;   // Ё и другие → ё
     return c;
 }
 
