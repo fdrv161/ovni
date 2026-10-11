@@ -2,6 +2,7 @@
 #include "lenses/NoteName.h"
 #include "lenses/Look.h"
 #include "PluginProcessor.h"
+#include "a11y/SpokenFormat.h"
 #include "ui-kit/Fonts.h"
 #include "ui-kit/Theme.h"
 #include <algorithm>
@@ -796,5 +797,146 @@ void VerdictLens::paintLive (juce::Graphics& g)
     look::drawTextLine (g, juce::String::fromUTF8 (rep.footer.c_str()),
                         zones.note.withX (zones.list.getX()).withWidth (zones.list.getWidth()),
                         juce::Justification::centredRight);
+}
+
+//======================================================================================== доступность
+// Выводы VERDICT — уже готовые фразы с числами. Для скринридера они читаются как есть, только знаки вроде «·»
+// заменяются на запятые, а значки ● ⚠ ○ ✓ ✗ — словами.
+namespace
+{
+enum A11yGroup { gSummary = 0, gFeel, gTranslate, gMissing, gWithin, gActions };
+
+juce::String severityWord (rules::Severity s)
+{
+    switch (s)
+    {
+        case rules::Severity::bad:  return "problem";
+        case rules::Severity::warn: return "warning";
+        default:                    return "note";
+    }
+}
+}
+
+std::vector<const VerdictFinding*> VerdictLens::a11yFindings (int group) const
+{
+    std::vector<const VerdictFinding*> out;
+    if (group == gWithin)
+    {
+        for (const auto& s : rep.strengths) out.push_back (&s);
+        return out;
+    }
+    const auto sec = group == gFeel ? rules::Section::feel
+                   : (group == gTranslate ? rules::Section::translate : rules::Section::missing);
+    for (const auto& f : rep.findings)
+        if (f.section == sec) out.push_back (&f);
+    return out;
+}
+
+juce::String VerdictLens::a11yGroupName (int group) const
+{
+    switch (group)
+    {
+        case gSummary:   return "Summary";
+        case gFeel:      return spoken::clean (ph ("section.feel"));
+        case gTranslate: return spoken::clean (ph ("section.translate"));
+        case gMissing:   return spoken::clean (ph ("section.missing"));
+        case gWithin:    return spoken::clean (ph ("section.within"));
+        default:         return "Actions";
+    }
+}
+
+int VerdictLens::a11yRowCount (int group) const
+{
+    if (group == gSummary) return 2;
+    if (group == gActions) return kNumControls;
+    // Пустой раздел — одна строка, которая это говорит.
+    return juce::jmax (1, (int) a11yFindings (group).size());
+}
+
+juce::String VerdictLens::a11yRowName (int group, int row) const
+{
+    if (group == gSummary) return row == 0 ? "State" : "Result";
+    if (group == gActions)
+    {
+        switch (row)
+        {
+            case ctrlReset: return "Reset analysis";
+            case ctrlMode:  return "Mode";
+            default:        return "Load a file to judge";
+        }
+    }
+
+    const auto list = a11yFindings (group);
+    if (list.empty())
+    {
+        if (! rep.summary.heard) return "No audio analysed yet";
+        return spoken::clean (juce::String::fromUTF8 (
+            Verdict::translate ("none", processor.verdictLanguage().toRawUTF8()).c_str()));
+    }
+    return spoken::clean (juce::String::fromUTF8 (list[(size_t) juce::jlimit (0, (int) list.size() - 1, row)]->text.c_str()));
+}
+
+juce::String VerdictLens::a11yRowValue (int group, int row) const
+{
+    if (group == gSummary)
+    {
+        if (row == 0) return spoken::clean (stateText());
+        const auto h = headlineText();
+        return h.isEmpty() ? juce::String ("nothing analysed yet") : spoken::clean (h);
+    }
+    if (group == gActions)
+    {
+        if (row == ctrlMode)
+            return processor.verdictMode() == TelescopeProcessor::verdictFile ? "File" : "Live";
+        if (row == ctrlLoad)
+        {
+            const auto name = processor.verdictFileName();
+            return name.isEmpty() ? juce::String ("no file") : name;
+        }
+        return {};
+    }
+
+    const auto list = a11yFindings (group);
+    if (list.empty()) return {};
+    const auto& f = *list[(size_t) juce::jlimit (0, (int) list.size() - 1, row)];
+
+    juce::String word = group == gWithin ? juce::String ("within range") : severityWord (f.severity);
+    if (group == gTranslate)
+        for (const auto& d : rep.devices)
+            if (d.id == f.ruleId)
+                word = d.verdict == devices::DeviceVerdict::ok   ? "OK"
+                     : (d.verdict == devices::DeviceVerdict::fail ? "fails" : "warning");
+
+    const auto evidence = spoken::clean (juce::String::fromUTF8 (f.evidence.c_str()));
+    return evidence.isEmpty() ? word : word + ", " + evidence;
+}
+
+bool VerdictLens::a11yIsAdjustable (int group, int row) const
+{
+    return group == gActions && row == ctrlMode;
+}
+
+bool VerdictLens::a11yAdjust (int group, int row, int step)
+{
+    if (! a11yIsAdjustable (group, row)) return false;
+    const bool wantFile = step > 0;
+    const bool isFile = processor.verdictMode() == TelescopeProcessor::verdictFile;
+    if (wantFile == isFile) return false;   // край: режимов всего два
+    pressControl (ctrlMode);
+    return true;
+}
+
+bool VerdictLens::a11yIsActivatable (int group, int) const
+{
+    return group == gActions;
+}
+
+juce::String VerdictLens::a11yActivate (int group, int row)
+{
+    if (group != gActions) return {};
+    pressControl (row);
+    if (row == ctrlReset) return "Analysis reset";
+    if (row == ctrlMode)  return a11yRowValue (gActions, ctrlMode);
+    return {};   // ctrlLoad: открылся диалог выбора файла, его озвучит сам скринридер
 }
 }

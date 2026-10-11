@@ -2,6 +2,8 @@
 #include "lenses/Look.h"
 #include "PluginProcessor.h"
 #include "lenses/LensReadout.h"
+#include "a11y/A11yWidgets.h"
+#include "a11y/SpokenFormat.h"
 #include "ui-kit/Fonts.h"
 #include "ui-kit/Theme.h"
 #include <algorithm>
@@ -285,6 +287,19 @@ bool SpectrumLens::advanceFrame()
         srSeen      = f.sr;
         for (int s = 0; s < SpectrumFrame::kMaxSpectra; ++s) holdBefore[s] = colHold[s];
         rebuildColumns (f);
+
+        // Доступность: копия сырых бинов для текстовых показаний (зонд и пики). Столбцы картинки зависят
+        // от ширины окна в пикселях, а скринридеру нужны цифры, не зависящие от масштаба.
+        a11ySpectra  = spectrumNumSpectra (f.channelMode);
+        a11yBins     = juce::jlimit (0, SpectrumFrame::kMaxBins, f.numBins);
+        a11yBinHz    = f.binHz();
+        a11yHasFrame = a11yBins > 1 && a11yBinHz > 0.0;
+        ++a11yFrameSerial;
+        for (int s = 0; s < a11ySpectra; ++s)
+        {
+            a11yMag[s].assign (f.magDb[s], f.magDb[s] + a11yBins);
+            a11yHold[s].assign (f.holdDb[s], f.holdDb[s] + a11yBins);
+        }
 
         // El HOLD se dibuja tal cual (no se suaviza): se mueve cuando el motor lo baja — si se ve.
         for (int s = 0; s < SpectrumFrame::kMaxSpectra && ! holdMoved; ++s)
@@ -888,5 +903,290 @@ void SpectrumLens::mouseMove (const juce::MouseEvent& e)
 void SpectrumLens::mouseExit (const juce::MouseEvent&)
 {
     if (hovered != -1 || cursorX != -1) { hovered = -1; cursorX = -1; repaint(); }
+}
+
+//======================================================================================== доступность
+// Текстовые показания для скринридера. Цифры те же, что видит зрячий: уровни FFT — с наклоном (slope),
+// как кривая на графике; третьоктавные полосы — без наклона, как столбики (у розового шума и то и другое
+// ровное, поэтому смысл одинаковый).
+namespace
+{
+constexpr int kProbeMinMidi = 16;    // 20.6 Гц — нижний край графика
+constexpr int kProbeMaxMidi = 135;   // 19.9 кГц — верхний край
+
+double midiHz (int midi) { return 440.0 * std::pow (2.0, (double) (midi - 69) / 12.0); }
+}
+
+juce::String SpectrumLens::a11yGroupName (int group) const
+{
+    switch (group)
+    {
+        case 0:  return "Readings";
+        case 1:  return "Third-octave bands";
+        default: return "Settings";
+    }
+}
+
+int SpectrumLens::a11yRowCount (int group) const
+{
+    switch (group)
+    {
+        case 0:  return 1 + kA11yPeaks;
+        case 1:  return SpectrumFrame::kNumThird;
+        case 2:  return kNumControls;
+        default: return 0;
+    }
+}
+
+juce::String SpectrumLens::a11yRowName (int group, int row) const
+{
+    if (group == 0) return row == 0 ? juce::String ("Probe") : "Peak " + juce::String (row);
+    if (group == 1) return spoken::hz (kThirdOctaveHz[juce::jlimit (0, SpectrumFrame::kNumThird - 1, row)]);
+
+    static const char* const names[kNumControls] = { "FFT size", "Window", "Overlap", "Channel", "Display",
+                                                     "Slope", "Average", "Peak hold", "Range", "Smoothing" };
+    return names[juce::jlimit (0, kNumControls - 1, row)];
+}
+
+juce::String SpectrumLens::a11yRowValue (int group, int row) const
+{
+    if (group == 2) return a11yControlValue (row);
+    if (! a11yHasFrame) return "no data yet";
+    if (group == 1) return a11yBandValue (juce::jlimit (0, SpectrumFrame::kNumThird - 1, row));
+
+    if (row == 0)
+    {
+        const double hz = midiHz (probeMidi);
+        return spoken::hz (hz) + ", " + spoken::note (noteFor (hz)) + ", " + a11yLevels (hz, true);
+    }
+
+    const auto& list = a11yPeaks();
+    if (row - 1 >= (int) list.size())
+        return "no peak above -" + juce::String (sets.rangeDb()) + " dB";
+    const auto& p = list[(size_t) (row - 1)];
+    return spoken::hz (p.hz) + ", " + spoken::noteWithCents (noteFor (p.hz)) + ", "
+         + spoken::db (p.db, sets.rangeDb());
+}
+
+bool SpectrumLens::a11yIsAdjustable (int group, int row) const
+{
+    return group == 2 || (group == 0 && row == 0);
+}
+
+bool SpectrumLens::a11yAdjust (int group, int row, int step)
+{
+    if (group == 2) return stepControl (row, step);
+    if (group != 0 || row != 0) return false;
+
+    // Зонд ходит по нотам: шаг — полтона, крупный шаг — октава.
+    const int size  = std::abs (step) >= a11yui::kExtreme ? 1000 : (std::abs (step) >= a11yui::kCoarse ? 12 : 1);
+    const int next  = juce::jlimit (kProbeMinMidi, kProbeMaxMidi, probeMidi + (step > 0 ? size : -size));
+    if (next == probeMidi) return false;
+    probeMidi = next;
+
+    // Перекрестие на графике следует за зондом: зрячему помощнику видно, куда «смотрит» зонд.
+    cursorX = juce::roundToInt (xForFreq (midiHz (probeMidi)));
+    repaint();
+    return true;
+}
+
+float SpectrumLens::a11yLevelAt (int slot, double hz, bool hold) const
+{
+    if (! a11yHasFrame || slot >= a11ySpectra) return SpectrumFrame::kFloorDb;
+    const auto& v = hold ? a11yHold[slot] : a11yMag[slot];
+    if ((int) v.size() < a11yBins) return SpectrumFrame::kFloorDb;
+
+    // Окно в полтона вокруг частоты (±1/24 октавы), берём максимум — так же столбец картинки берёт
+    // максимум своих бинов. Если бины шире окна (низ спектра, малый FFT) — интерполяция между соседями.
+    const double lo = hz * std::pow (2.0, -1.0 / 24.0), hi = hz * std::pow (2.0, 1.0 / 24.0);
+    const int k0 = juce::jmax (0, (int) std::ceil (lo / a11yBinHz));
+    const int k1 = juce::jmin (a11yBins - 1, (int) std::floor (hi / a11yBinHz));
+
+    float db = SpectrumFrame::kFloorDb;
+    if (k1 >= k0)
+    {
+        for (int k = k0; k <= k1; ++k) db = juce::jmax (db, v[(size_t) k]);
+    }
+    else
+    {
+        const double pos = hz / a11yBinHz;
+        const int    ka  = juce::jlimit (0, a11yBins - 1, (int) std::floor (pos));
+        const int    kb  = juce::jmin (a11yBins - 1, ka + 1);
+        const auto   t   = (float) juce::jlimit (0.0, 1.0, pos - (double) ka);
+        db = v[(size_t) ka] + t * (v[(size_t) kb] - v[(size_t) ka]);
+    }
+    return spectrumDisplayDb (db, hz, sets.slopeDbPerOct);
+}
+
+juce::String SpectrumLens::a11yLevels (double hz, bool withHold) const
+{
+    const int  floorDb = sets.rangeDb();
+    const bool hold = withHold && sets.peakHold;
+    const auto one = [&] (int slot)
+    {
+        auto t = spoken::db (a11yLevelAt (slot, hz, false), floorDb);
+        if (hold) t << ", hold " << spoken::db (a11yLevelAt (slot, hz, true), floorDb);
+        return t;
+    };
+    if (a11ySpectra >= 2) return "L " + one (0) + "; R " + one (1);
+    return one (0);
+}
+
+juce::String SpectrumLens::a11yBandValue (int band) const
+{
+    const int floorDb = sets.rangeDb();
+    if (a11ySpectra >= 2)
+        return "L " + spoken::db (bandDb[0][band], floorDb) + ", R " + spoken::db (bandDb[1][band], floorDb);
+    return spoken::db (bandDb[0][band], floorDb);
+}
+
+// Самые громкие пики: локальные максимумы бинов (громче из двух каналов, с наклоном, как на графике),
+// не ближе 1/6 октавы друг к другу, выше пола графика. Частота уточняется параболой по трём бинам —
+// иначе на малом FFT пик «прыгал» бы по сетке бинов.
+const std::vector<SpectrumLens::Peak>& SpectrumLens::a11yPeaks() const
+{
+    if (peaksFrame == a11yFrameSerial) return peaks;
+    peaksFrame = a11yFrameSerial;
+    peaks.clear();
+    if (! a11yHasFrame || (int) a11yMag[0].size() < a11yBins) return peaks;
+
+    const int   n = a11yBins;
+    const float floorDb = -(float) sets.rangeDb();
+    std::vector<float> lvl ((size_t) n, SpectrumFrame::kFloorDb);
+    for (int k = 1; k < n; ++k)
+    {
+        const double f = (double) k * a11yBinHz;
+        if (f < kMinHz * 0.9 || f > kMaxHz * 1.1) continue;
+        float v = a11yMag[0][(size_t) k];
+        if (a11ySpectra >= 2 && (int) a11yMag[1].size() >= n) v = juce::jmax (v, a11yMag[1][(size_t) k]);
+        lvl[(size_t) k] = spectrumDisplayDb (v, f, sets.slopeDbPerOct);
+    }
+
+    std::vector<Peak> candidates;
+    for (int k = 2; k < n - 1; ++k)
+    {
+        const float b = lvl[(size_t) k];
+        if (b <= floorDb || b <= lvl[(size_t) k - 1] || b < lvl[(size_t) k + 1]) continue;
+        const double a = lvl[(size_t) k - 1], c = lvl[(size_t) k + 1];
+        const double den = a - 2.0 * b + c;
+        const double p = den < 0.0 ? juce::jlimit (-0.5, 0.5, 0.5 * (a - c) / den) : 0.0;
+        candidates.push_back ({ ((double) k + p) * a11yBinHz, (float) (b - 0.25 * (a - c) * p) });
+    }
+    std::sort (candidates.begin(), candidates.end(), [] (const Peak& x, const Peak& y) { return x.db > y.db; });
+
+    for (const auto& c : candidates)
+    {
+        if ((int) peaks.size() >= kA11yPeaks) break;
+        if (c.hz < kMinHz || c.hz > kMaxHz) continue;
+        const bool tooClose = std::any_of (peaks.begin(), peaks.end(), [&c] (const Peak& p)
+                                           { return std::abs (std::log2 (c.hz / p.hz)) < 1.0 / 6.0; });
+        if (! tooClose) peaks.push_back (c);
+    }
+    return peaks;
+}
+
+juce::String SpectrumLens::a11yControlValue (int control) const
+{
+    const auto s = processor.spectrumSettings();
+    switch (control)
+    {
+        case fftSize: return juce::String (s.fftSize()) + " points";
+        case window:
+            return s.window == Spectrum::hann ? "Hann"
+                 : (s.window == Spectrum::blackmanHarris4 ? "Blackman-Harris" : "Kaiser");
+        case overlap: return juce::String (juce::roundToInt (s.overlap() * 100.0f)) + " percent";
+        case channel:
+            switch (s.channel)
+            {
+                case Spectrum::left:  return "Left";
+                case Spectrum::right: return "Right";
+                case Spectrum::mid:   return "Mid";
+                case Spectrum::side:  return "Side";
+                default:              return "Left and right";
+            }
+        case bandsMode:
+            return s.bandsMode == Spectrum::bandsThird ? "Third-octave bars"
+                 : (s.bandsMode == Spectrum::bandsBark ? "Bark bars" : "FFT curve");
+        case slope:   return spoken::trimmed (s.slopeDbPerOct, 1) + " dB per octave";
+        case average:
+            if (s.avgMode == Spectrum::avgNone)     return "Off";
+            if (s.avgMode == Spectrum::avgInfinite) return "Infinite";
+            return spoken::trimmed (s.avgSeconds, 1) + " seconds";
+        case hold:
+            if (! s.peakHold)                return "Off";
+            if (s.holdDecayDbPerSec <= 0.0f) return "Infinite";
+            return spoken::trimmed (s.holdDecayDbPerSec, 0) + " dB per second";
+        case range: return juce::String (s.rangeDb()) + " dB";
+        case smooth:
+        {
+            const int denom = TelescopeProcessor::kSpectrumSmoothDenom[
+                juce::jlimit (0, TelescopeProcessor::kNumSpectrumSmoothOptions - 1, processor.spectrumSmoothIndex())];
+            return denom <= 0 ? juce::String ("Off") : "1/" + juce::String (denom) + " octave";
+        }
+        default: return {};
+    }
+}
+
+// Шаг настройки вперёд или назад. В отличие от клика мышью (cycleControl), по кругу не ходит: на краю
+// значение не меняется и редактор молчит.
+bool SpectrumLens::stepControl (int control, int step)
+{
+    auto s = processor.spectrumSettings();
+
+    // Порядок вариантов пикового удержания тот же, что у мыши: выкл, 12 дБ/с, 30 дБ/с, бесконечно.
+    const auto holdIndex = [] (const Spectrum::Settings& x)
+    {
+        if (! x.peakHold) return 0;
+        if (x.holdDecayDbPerSec <= 0.0f) return 3;
+        return x.holdDecayDbPerSec >= 30.0f ? 2 : 1;
+    };
+    const int slopeSteps = juce::roundToInt ((Spectrum::kMaxSlopeDbPerOct - Spectrum::kMinSlopeDbPerOct) / Spectrum::kSlopeStep);
+
+    int idx = 0, n = 1;
+    switch (control)
+    {
+        case fftSize:   idx = s.fftOrder - Spectrum::kMinFftOrder; n = Spectrum::kMaxFftOrder - Spectrum::kMinFftOrder + 1; break;
+        case window:    idx = s.window;       n = Spectrum::kNumWindows;   break;
+        case overlap:   idx = s.overlapIndex; n = Spectrum::kNumOverlaps;  break;
+        case channel:   idx = s.channel;      n = Spectrum::kNumChannels;  break;
+        case bandsMode: idx = s.bandsMode;    n = Spectrum::kNumBandModes; break;
+        case slope:     idx = juce::roundToInt ((s.slopeDbPerOct - Spectrum::kMinSlopeDbPerOct) / Spectrum::kSlopeStep); n = slopeSteps + 1; break;
+        case average:   idx = s.avgMode;      n = Spectrum::kNumAverages;  break;
+        case hold:      idx = holdIndex (s);  n = 4; break;
+        case range:     idx = s.rangeDbIndex; n = Spectrum::kNumRanges;    break;
+        case smooth:    idx = processor.spectrumSmoothIndex(); n = TelescopeProcessor::kNumSpectrumSmoothOptions; break;
+        default: return false;
+    }
+
+    const int size = std::abs (step) >= a11yui::kExtreme ? n : (std::abs (step) >= a11yui::kCoarse ? 2 : 1);
+    const int next = juce::jlimit (0, n - 1, idx + (step > 0 ? size : -size));
+    if (next == idx) return false;
+
+    switch (control)
+    {
+        case fftSize:   s.fftOrder = Spectrum::kMinFftOrder + next; break;
+        case window:    s.window = next; break;
+        case overlap:   s.overlapIndex = next; break;
+        case channel:   s.channel = next; break;
+        case bandsMode: s.bandsMode = next; break;
+        case slope:     s.slopeDbPerOct = Spectrum::kMinSlopeDbPerOct + (float) next * Spectrum::kSlopeStep; break;
+        case average:   s.avgMode = next; break;
+        case hold:
+            s.peakHold = next != 0;
+            s.holdDecayDbPerSec = next == 2 ? 30.0f : (next == 3 ? 0.0f : 12.0f);
+            break;
+        case range:     s.rangeDbIndex = next; break;
+        case smooth:
+            // Сглаживание — только для рисования, в настройки движка не входит (как в cycleControl).
+            processor.setSpectrumSmoothIndex (next);
+            repaint();
+            return true;
+        default: return false;
+    }
+    processor.setSpectrumSettings (s);
+    sets = processor.spectrumSettings();
+    invalidateStatic();
+    repaint();
+    return true;
 }
 }

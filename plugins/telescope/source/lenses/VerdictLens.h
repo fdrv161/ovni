@@ -76,6 +76,19 @@ public:
     enum Control { ctrlReset = 0, ctrlMode, ctrlLoad, kNumControls };
     void pressControl (int control);
 
+    // ================== ДОСТУПНОСТЬ (см. Lens.h) ==================
+    // Группы: итог, три раздела выводов (как звучит, как переведётся на устройства, чего не хватает),
+    // что в норме, действия. Строки собираются прямо из отчёта, без зависимости от размера окна.
+    int          a11yGroupCount() const override { return 6; }
+    juce::String a11yGroupName (int group) const override;
+    int          a11yRowCount (int group) const override;
+    juce::String a11yRowName (int group, int row) const override;
+    juce::String a11yRowValue (int group, int row) const override;
+    bool         a11yIsAdjustable (int group, int row) const override;
+    bool         a11yAdjust (int group, int row, int step) override;
+    bool         a11yIsActivatable (int group, int row) const override;
+    juce::String a11yActivate (int group, int row) override;
+
     // El estado como DATO (la lente lo dibuja; el test lo lee).
     juce::String stateText() const;
 
@@ -179,6 +192,9 @@ private:
     // El ancho útil del texto de una fila: el panel menos la sangría de la insignia y el margen
     // derecho. UNA sola cuenta, usada por el que mide y por el que dibuja (era el origen del desborde).
     void buildLines();
+
+    // Доступность: выводы раздела группы 1..3 (или сильные стороны для группы 4) по порядку.
+    std::vector<const VerdictFinding*> a11yFindings (int group) const;
     // El texto envuelto al ancho dado, con la tipografía del panel. Lo comparten medir y dibujar.
 
 

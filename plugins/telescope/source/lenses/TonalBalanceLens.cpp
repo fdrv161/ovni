@@ -2,6 +2,7 @@
 #include "lenses/Look.h"
 #include "PluginProcessor.h"
 #include "lenses/LensReadout.h"
+#include "a11y/SpokenFormat.h"
 #include "ui-kit/Fonts.h"
 #include "ui-kit/Theme.h"
 #include <algorithm>
@@ -930,4 +931,148 @@ void TonalBalanceLens::filesDropped (const juce::StringArray& files, int, int)
 
 void TonalBalanceLens::fileDragEnter (const juce::StringArray&, int, int) { dragOver = true;  repaint(); }
 void TonalBalanceLens::fileDragExit  (const juce::StringArray&)          { dragOver = false; repaint(); }
+
+//======================================================================================== доступность
+// Те же числа, что во всплывающей подсказке под курсором: уровень программы и референса относительно их
+// интегральной громкости и разница между ними. Где сравнить нельзя, строка честно говорит почему.
+namespace
+{
+enum TbGroup { tbSummary = 0, tbBands, tbActions };
+enum TbSummaryRow { rowState = 0, rowReference, rowSection, kSummaryFixedRows };
+enum TbActionRow { actReset = 0, actLoad, actClear, actWholeFile, kNumActions };
+}
+
+juce::String TonalBalanceLens::a11yGroupName (int group) const
+{
+    switch (group)
+    {
+        case tbSummary: return "Summary";
+        case tbBands:   return "Third-octave bands";
+        default:        return "Actions";
+    }
+}
+
+int TonalBalanceLens::a11yRowCount (int group) const
+{
+    switch (group)
+    {
+        case tbSummary: return kSummaryFixedRows + kA11yDiffs;
+        case tbBands:   return ReferenceFrame::kNumBands;
+        default:        return kNumActions;
+    }
+}
+
+juce::String TonalBalanceLens::a11yRowName (int group, int row) const
+{
+    if (group == tbBands) return spoken::hz (kThirdOctaveHz[juce::jlimit (0, ReferenceFrame::kNumBands - 1, row)]);
+    if (group == tbActions)
+    {
+        switch (row)
+        {
+            case actReset: return "Reset averaging";
+            case actLoad:  return "Load reference file";
+            case actClear: return "Remove reference";
+            default:       return "Use the whole reference file";
+        }
+    }
+    switch (row)
+    {
+        case rowState:     return "State";
+        case rowReference: return "Reference";
+        case rowSection:   return "Reference section";
+        default:           return "Largest difference " + juce::String (row - kSummaryFixedRows + 1);
+    }
+}
+
+juce::String TonalBalanceLens::a11yRowValue (int group, int row) const
+{
+    if (group == tbActions) return {};
+    if (group == tbBands) return a11yBandValue (juce::jlimit (0, ReferenceFrame::kNumBands - 1, row));
+
+    switch (row)
+    {
+        case rowState: return spoken::clean (stateText());
+        case rowReference:
+        {
+            const auto name = processor.referenceName();
+            return name.isEmpty() ? juce::String ("none") : name;
+        }
+        case rowSection:
+        {
+            if (processor.referencePath().isEmpty()) return "none";
+            double from = 0.0, to = 0.0;
+            if (! processor.referenceRange (from, to)) return "whole file";
+            return mmss (from) + " to " + mmss (to);
+        }
+        default: break;
+    }
+
+    if (! data.refValid) return "no reference loaded";
+    const auto diffs = a11yLargestDiffs();
+    const int i = row - kSummaryFixedRows;
+    if (i >= (int) diffs.size()) return "none";
+    const int b = diffs[(size_t) i];
+    const float d = data.deltaDb[b];
+    return spoken::hz (kThirdOctaveHz[b]) + ", " + spoken::trimmed (std::abs (d), 1) + " dB "
+         + (d >= 0.0f ? "louder" : "quieter") + " than the reference";
+}
+
+juce::String TonalBalanceLens::a11yBandValue (int b) const
+{
+    const auto r = readoutForBand (b);
+    if (! r.valid) return {};
+    if (r.bins <= 0.0f) return "no FFT bins in this band";
+
+    juce::String t = r.liveDrawable ? "programme " + spoken::signedDb (r.liveNorm)
+                                    : juce::String ("programme below range");
+    if (! data.refValid) return t;
+
+    if (r.comparable)
+        t << ", reference " << spoken::signedDb (r.refNorm) << ", difference " << spoken::signedDb (r.deltaDb);
+    else if (! r.refDrawable && data.refNorm[b] > SpectrumFrame::kFloorDb)
+        t << ", reference below range";
+    else
+        t << ", no reference in this band";
+    return t;
+}
+
+std::vector<int> TonalBalanceLens::a11yLargestDiffs() const
+{
+    std::vector<int> bands;
+    for (int b = 0; b < ReferenceFrame::kNumBands; ++b)
+        if (comparable[b]) bands.push_back (b);
+    std::sort (bands.begin(), bands.end(), [this] (int x, int y)
+               { return std::abs (data.deltaDb[x]) > std::abs (data.deltaDb[y]); });
+    if ((int) bands.size() > kA11yDiffs) bands.resize ((size_t) kA11yDiffs);
+    return bands;
+}
+
+bool TonalBalanceLens::a11yIsActivatable (int group, int) const
+{
+    return group == tbActions;
+}
+
+juce::String TonalBalanceLens::a11yActivate (int group, int row)
+{
+    if (group != tbActions) return {};
+    switch (row)
+    {
+        case actReset:
+            pressControl (ctrlReset);
+            return "Averaging reset";
+        case actLoad:
+            pressControl (ctrlLoad);
+            return {};   // открылся диалог выбора файла, его озвучит сам скринридер
+        case actClear:
+            if (processor.referencePath().isEmpty()) return "No reference loaded";
+            pressControl (ctrlClear);
+            return "Reference removed";
+        default:
+            if (processor.referencePath().isEmpty()) return "No reference loaded";
+            dragging = false;
+            processor.clearReferenceRange();
+            repaint();
+            return "Whole reference file used";
+    }
+}
 }

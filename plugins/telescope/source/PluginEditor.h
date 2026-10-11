@@ -1,6 +1,8 @@
 #pragma once
+#include <array>
 #include <atomic>
 #include <memory>
+#include "a11y/A11yWidgets.h"
 #include "lenses/Lens.h"
 #include "template/PluginEditorBase.h"
 #include "ui/EyepieceIntro.h"
@@ -97,6 +99,24 @@ private:
 
     std::atomic<bool> appliedOnMessageThread { true };
     std::atomic<int>  applyCount { 0 };
+
+    // ================== ДОСТУПНОСТЬ (скринридер и клавиатура) ==================
+    // Невидимые элементы поверх нарисованного интерфейса. Порядок Tab: список линз, показания линзы,
+    // язык, тема. Объявлены последними: удаляются первыми, пока линза и источники ещё живы.
+    struct LensListSource;    // строки списка линз
+    struct LensPanelSource;   // строки показаний текущей линзы
+    std::unique_ptr<LensListSource>  lensListSource;
+    std::unique_ptr<LensPanelSource> lensPanelSource;
+    a11yui::A11yGrid   a11yLensList { juce::AccessibilityRole::list };
+    a11yui::A11yGrid   a11yPanel    { juce::AccessibilityRole::list };
+    a11yui::A11yButton a11yLanguage, a11yTheme;
+    std::array<std::pair<int, int>, kNumLenses> panelCursor {};   // где стоял курсор показаний в каждой линзе
+
+    void setupAccessibility();
+    void layoutAccessibility();
+    void focusA11y (juce::Component& target);
+    void cycleA11yFocus (juce::Component& from, bool forward);
+    void focusGained (FocusChangeType) override;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (TelescopeEditor)
 };

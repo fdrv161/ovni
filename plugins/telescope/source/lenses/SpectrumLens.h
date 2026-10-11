@@ -75,6 +75,19 @@ public:
                    smooth, kNumControls };
     void cycleControl (int control);
 
+    // ================== ДОСТУПНОСТЬ (см. Lens.h) ==================
+    // Группы: показания (зонд по частоте и самые громкие пики), третьоктавные полосы, настройки.
+    int          a11yGroupCount() const override { return 3; }
+    juce::String a11yGroupName (int group) const override;
+    int          a11yRowCount (int group) const override;
+    juce::String a11yRowName (int group, int row) const override;
+    juce::String a11yRowValue (int group, int row) const override;
+    bool         a11yIsAdjustable (int group, int row) const override;
+    bool         a11yAdjust (int group, int row, int step) override;
+
+    // Настройка с клавиатуры: шаг вперёд/назад без перехода по кругу (мышь по-прежнему ходит по кругу).
+    bool stepControl (int control, int step);
+
 protected:
     void renderStatic (juce::Graphics&, int width, int height) override;
     void paintLive (juce::Graphics&) override;
@@ -143,6 +156,24 @@ private:
     int   hovered = -1;      // botón bajo el cursor
     int   cursorX = -1;      // columna bajo el cursor dentro del plot, -1 = afuera
     int   lastRangeDb = 0;   // para rehornear la rejilla cuando cambia la escala
+
+    // ---- доступность: сырые бины последнего кадра (картинка хранит только столбцы по пикселям) ----
+    struct Peak { double hz = 0.0; float db = 0.0f; };
+    static constexpr int kA11yPeaks = 5;
+    std::vector<float> a11yMag[SpectrumFrame::kMaxSpectra], a11yHold[SpectrumFrame::kMaxSpectra];
+    int    a11yBins = 0, a11ySpectra = 0;
+    double a11yBinHz = 0.0;
+    bool   a11yHasFrame = false;
+    juce::uint32 a11yFrameSerial = 0;          // растёт с каждым новым кадром (кэш пиков)
+    int    probeMidi = 69;                     // зонд стоит на нотах: 69 = A 4, 440 Гц
+    mutable juce::uint32 peaksFrame = 0xffffffffu;
+    mutable std::vector<Peak> peaks;           // пики считаются по запросу, не чаще раза на кадр
+
+    float  a11yLevelAt (int slot, double hz, bool hold) const;   // уровень у частоты, как на графике
+    const std::vector<Peak>& a11yPeaks() const;
+    juce::String a11yLevels (double hz, bool withHold) const;    // "L -18 dB, R -20 dB"
+    juce::String a11yBandValue (int band) const;
+    juce::String a11yControlValue (int control) const;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (SpectrumLens)
 };

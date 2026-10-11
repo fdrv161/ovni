@@ -127,6 +127,23 @@ public:
     // «fenÊtre» y «BALANÇO», «balanÇo».
     juce::String trLower (strings::Key k) const { return look::lower (tr (k)); }
 
+    // ================== ДОСТУПНОСТЬ: ПОКАЗАНИЯ ТЕКСТОМ ДЛЯ СКРИНРИДЕРА ==================
+    // Линза рисует картинку, а незрячему нужны те же цифры текстом. Линза отдаёт их группами строк
+    // «Имя, значение» (показания, полосы, настройки); панель A11yGrid в редакторе читает их по стрелкам.
+    // Значение вычисляется в момент запроса из последних данных линзы, поэтому всегда свежее.
+    // По умолчанию у линзы показаний нет: редактор тогда честно говорит, что их пока нет.
+    virtual int          a11yGroupCount() const               { return 0; }
+    virtual juce::String a11yGroupName (int) const             { return {}; }
+    virtual int          a11yRowCount (int) const              { return 0; }
+    virtual juce::String a11yRowName (int, int) const          { return {}; }
+    virtual juce::String a11yRowValue (int, int) const         { return {}; }
+    virtual bool         a11yIsAdjustable (int, int) const     { return false; }
+    // step — шаг из a11y/A11yWidgets.h (±1, ±10 крупный, ±1000 до предела). true — значение изменилось.
+    virtual bool         a11yAdjust (int, int, int)            { return false; }
+    // Строка-кнопка: Enter выполняет действие, возвращает фразу о результате (или пустую).
+    virtual bool         a11yIsActivatable (int, int) const    { return false; }
+    virtual juce::String a11yActivate (int, int)               { return {}; }
+
 private:
     juce::Component::SafePointer<juce::Component> pixelAnchor;
     static inline bool directPaintForTest = false;

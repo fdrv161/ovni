@@ -1,5 +1,6 @@
 #pragma once
 #include <memory>
+#include <vector>
 #include "analysis/FileAnalyzer.h"
 #include "analysis/ReferenceFrame.h"
 #include "lenses/Lens.h"
@@ -78,6 +79,16 @@ public:
     // Los tres botones, en el orden en que se dibujan. Público para que el test los apriete sin clicks.
     enum Control { ctrlReset = 0, ctrlLoad, ctrlClear, kNumControls };
     void pressControl (int control);
+
+    // ================== ДОСТУПНОСТЬ (см. Lens.h) ==================
+    // Группы: итог (состояние, референс, тракт, самые большие расхождения), третьоктавные полосы, действия.
+    int          a11yGroupCount() const override { return 3; }
+    juce::String a11yGroupName (int group) const override;
+    int          a11yRowCount (int group) const override;
+    juce::String a11yRowName (int group, int row) const override;
+    juce::String a11yRowValue (int group, int row) const override;
+    bool         a11yIsActivatable (int group, int row) const override;
+    juce::String a11yActivate (int group, int row) override;
 
     // El texto de estado, como DATO (la lente lo dibuja; el test lo lee).
     juce::String stateText() const;
@@ -164,6 +175,11 @@ private:
     void paintHead (juce::Graphics&) const;
     void paintReadout (juce::Graphics&) const;
     void paintButton (juce::Graphics&, juce::Rectangle<int>, const juce::String& label, bool hovered) const;
+
+    // Доступность
+    static constexpr int kA11yDiffs = 5;          // сколько самых больших расхождений называть
+    juce::String a11yBandValue (int band) const;
+    std::vector<int> a11yLargestDiffs() const;    // полосы, отсортированные по модулю расхождения
 
     TelescopeProcessor& processor;
 
