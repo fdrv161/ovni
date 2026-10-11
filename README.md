@@ -6,9 +6,9 @@ This is an accessible build of [TELESCOPE by OVNI Audio](https://github.com/ovni
 
 ## Download
 
-**[Download TELESCOPE Accessible for Windows](https://github.com/fdrv161/ovni/releases/latest/download/TELESCOPE-accessible-windows-vst3.zip)**: a ZIP with the VST3 plugin and the manual, for Windows 10 and 11, 64-bit.
+**[Download TELESCOPE Accessible for Windows](https://github.com/fdrv161/telescope-accessible/releases/latest/download/TELESCOPE-accessible-windows-vst3.zip)**: a ZIP with the VST3 plugin and the manual, for Windows 10 and 11, 64-bit.
 
-Release notes and older versions: [Releases](https://github.com/fdrv161/ovni/releases).
+Release notes and older versions: [Releases](https://github.com/fdrv161/telescope-accessible/releases).
 
 Install: extract the ZIP and copy the `TELESCOPE.vst3` folder into `C:\Program Files\Common Files\VST3` (or another folder your DAW scans), then rescan plugins.
 
@@ -29,7 +29,7 @@ Tested with NVDA in REAPER on Windows.
 
 ## Source and licence
 
-TELESCOPE is free and open source under the **GNU AGPLv3**. The original is by [OVNI Audio](https://ovniaudio.com). This fork, with the accessibility layer, is on the [`accessible`](https://github.com/fdrv161/ovni/tree/accessible) branch, and the full source of every release is available at its tag.
+TELESCOPE is free and open source under the **GNU AGPLv3**. The original is by [OVNI Audio](https://ovniaudio.com). This fork, with the accessibility layer, is on the [`accessible`](https://github.com/fdrv161/telescope-accessible/tree/accessible) branch, and the full source of every release is available at its tag.
 
 - Plugin source: [`plugins/telescope`](plugins/telescope)
 - Accessibility code: [`plugins/telescope/source/a11y`](plugins/telescope/source/a11y)
@@ -39,4 +39,4 @@ TELESCOPE is free and open source under the **GNU AGPLv3**. The original is by [
 
 ## Feedback
 
-Found something that is not readable, a key that does not work, or a phrase that sounds wrong in your language? [Open an issue](https://github.com/fdrv161/ovni/issues).
+Found something that is not readable, a key that does not work, or a phrase that sounds wrong in your language? [Open an issue](https://github.com/fdrv161/telescope-accessible/issues).

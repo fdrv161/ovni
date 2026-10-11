@@ -19,10 +19,10 @@ Tested with NVDA in REAPER. The build passes pluginval at strictness 10.
 
 ## Manual
 
-[MANUAL.md](https://github.com/fdrv161/ovni/blob/telescope-accessible-0.2.0-a11y.1/MANUAL.md): installing, first steps, all keys, and every lens explained.
+[MANUAL.md](https://github.com/fdrv161/telescope-accessible/blob/telescope-accessible-0.2.0-a11y.1/MANUAL.md): installing, first steps, all keys, and every lens explained.
 
 ## Licence and source
 
-GNU AGPLv3. TELESCOPE is by [OVNI Audio](https://github.com/ovniaudio/ovni); the accessibility layer was added in this fork. The full source of this release is at the tag [`telescope-accessible-0.2.0-a11y.1`](https://github.com/fdrv161/ovni/tree/telescope-accessible-0.2.0-a11y.1).
+GNU AGPLv3. TELESCOPE is by [OVNI Audio](https://github.com/ovniaudio/ovni); the accessibility layer was added in this fork. The full source of this release is at the tag [`telescope-accessible-0.2.0-a11y.1`](https://github.com/fdrv161/telescope-accessible/tree/telescope-accessible-0.2.0-a11y.1).
 
 `SHA256SUMS.txt` holds the checksum of the ZIP.

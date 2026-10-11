@@ -2,7 +2,7 @@
 
 TELESCOPE is an audio analyser that also draws conclusions. This manual covers the accessible build: every lens, what it measures and how to read it, and how to use all of it with a keyboard and a screen reader.
 
-The analysis engine, the lenses and the measurement notes come from the original [TELESCOPE by OVNI Audio](https://github.com/ovniaudio/ovni), free and open source under AGPLv3. The keyboard and screen reader layer was added in [this fork](https://github.com/fdrv161/ovni/tree/accessible). Where this manual explains what a lens measures, it follows the author's manual, shortened. The full original, with every formula and test result, is in [`plugins/telescope/docs/manual/README.md`](plugins/telescope/docs/manual/README.md).
+The analysis engine, the lenses and the measurement notes come from the original [TELESCOPE by OVNI Audio](https://github.com/ovniaudio/ovni), free and open source under AGPLv3. The keyboard and screen reader layer was added in [this fork](https://github.com/fdrv161/telescope-accessible/tree/accessible). Where this manual explains what a lens measures, it follows the author's manual, shortened. The full original, with every formula and test result, is in [`plugins/telescope/docs/manual/README.md`](plugins/telescope/docs/manual/README.md).
 
 ## Contents
 
@@ -64,7 +64,7 @@ Tested with NVDA in REAPER on Windows. Other screen readers that use UI Automati
 
 This build is a **VST3 plugin for Windows 10 or 11, 64-bit**.
 
-1. Download [`TELESCOPE-accessible-windows-vst3.zip`](https://github.com/fdrv161/ovni/releases/latest/download/TELESCOPE-accessible-windows-vst3.zip) from the [latest release](https://github.com/fdrv161/ovni/releases/latest).
+1. Download [`TELESCOPE-accessible-windows-vst3.zip`](https://github.com/fdrv161/telescope-accessible/releases/latest/download/TELESCOPE-accessible-windows-vst3.zip) from the [latest release](https://github.com/fdrv161/telescope-accessible/releases/latest).
 2. Extract the ZIP. Inside is a folder named `TELESCOPE.vst3`. Copy that whole folder into your VST3 folder:
    - the standard one is `C:\Program Files\Common Files\VST3` (Windows asks for administrator permission to copy there);
    - or any folder you added to your DAW's VST3 paths. In REAPER: Options, Preferences, Plug-ins, VST, "VST plug-in paths".
@@ -536,5 +536,5 @@ Units (dB, Hz, kHz, ms, LUFS) and industry terms that are normally left in Engli
 ## Licence and credits
 
 - **TELESCOPE** is by [OVNI Audio](https://ovniaudio.com), free and open source under the **GNU AGPLv3**. Original source: <https://github.com/ovniaudio/ovni>.
-- The accessibility layer, the speech translations and the Russian translation were added in [fdrv161/ovni](https://github.com/fdrv161/ovni/tree/accessible), under the same licence. The full source of every release is in that repository, at the release tag.
+- The accessibility layer, the speech translations and the Russian translation were added in [fdrv161/telescope-accessible](https://github.com/fdrv161/telescope-accessible/tree/accessible), under the same licence. The full source of every release is in that repository, at the release tag.
 - Third-party notices: [`NOTICE.md`](NOTICE.md).

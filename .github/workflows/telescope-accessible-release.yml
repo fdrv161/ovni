@@ -78,8 +78,8 @@ jobs:
             "Install: copy the TELESCOPE.vst3 folder into C:\\Program Files\\Common Files\\VST3" \
             "(or another folder your DAW scans for VST3 plugins), then rescan plugins." \
             "" \
-            "Manual: MANUAL.md in this ZIP, or https://github.com/fdrv161/ovni/blob/${GITHUB_REF_NAME}/MANUAL.md" \
-            "Source: https://github.com/fdrv161/ovni/tree/${GITHUB_REF_NAME} (GNU AGPLv3)" \
+            "Manual: MANUAL.md in this ZIP, or https://github.com/fdrv161/telescope-accessible/blob/${GITHUB_REF_NAME}/MANUAL.md" \
+            "Source: https://github.com/fdrv161/telescope-accessible/tree/${GITHUB_REF_NAME} (GNU AGPLv3)" \
             > dist/pkg/README.txt
           (cd dist/pkg && 7z a -tzip ../TELESCOPE-accessible-windows-vst3.zip . > /dev/null)
           (cd dist && sha256sum TELESCOPE-accessible-windows-vst3.zip > SHA256SUMS.txt && cat SHA256SUMS.txt)
