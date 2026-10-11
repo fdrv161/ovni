@@ -380,6 +380,7 @@ void TelescopeEditor::showLens (int index)
     // Доступность: картинка линзы — только для глаз, её цифры читает панель показаний поверх неё.
     // Список и панель следуют за линзой, откуда бы ни пришла смена (клик, автоматизация, пресет), молча.
     lens->setAccessible (false);
+    lens->setMouseClickGrabsKeyboardFocus (false);   // см. setupAccessibility: клик мышью не забирает клавиатуру
     a11yLensList.setCursor (0, index, false);
     a11yPanel.setCursor (panelCursor[(size_t) index].first, panelCursor[(size_t) index].second, false);
     a11yPanel.toFront (false);
@@ -470,6 +471,14 @@ void TelescopeEditor::setupAccessibility()
     setTitle ("TELESCOPE");
     // Нарисованная полоса линз — только для глаз: всё, что в ней есть, дают элементы ниже.
     strip.setAccessible (false);
+
+    // Для зрячих всё как было: щелчок мышью по нарисованному НЕ переводит клавиатурный фокус на невидимые
+    // элементы. Иначе JUCE поднимался бы от места щелчка к холсту и отдавал фокус списку линз, и стрелки,
+    // буквы, Delete после клика уходили бы в плагин, а не в REAPER. Холст — единственный прямой ребёнок
+    // редактора (см. PluginEditorBase).
+    strip.setMouseClickGrabsKeyboardFocus (false);
+    for (auto* child : getChildren())
+        child->setMouseClickGrabsKeyboardFocus (false);
 
     lensListSource  = std::make_unique<LensListSource>();
     lensPanelSource = std::make_unique<LensPanelSource> (*this);
