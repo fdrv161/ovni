@@ -1086,7 +1086,7 @@ juce::String SpectrumLens::a11yRowValue (int group, int row) const
     const int k = row - kFirstFeatureRow, peaks = (int) sh.peaks.size(), dips = (int) sh.dips.size();
     if (k < peaks)        return a11yFeatureValue (sh.peaks[(size_t) k], false);
     if (k - peaks < dips) return a11yFeatureValue (sh.dips[(size_t) (k - peaks)], true);
-    return a11ytext::TF ("none standing out by {0} dB or more", { spoken::trimmed (sh.threshold, 0) });
+    return a11ytext::TF ("none standing out by {0} dB or more", { spoken::trimmed (sh.threshold, 1) });
 }
 
 bool SpectrumLens::a11yIsAdjustable (int group, int row) const
@@ -1231,7 +1231,8 @@ juce::String SpectrumLens::a11yRowHelp (int group, int row) const
         "it with Infinite. A resonance shows in both the level and the hold; a peak only in the hold was a short hit.",
         // 10: range
         "Range: how far below 0 dB the plot goes. Anything lower is spoken as below the range and is not searched "
-        "for peaks.",
+        "for peaks. It also sets what counts as standing out: a twentieth of the range, 3 dB at 60, 6 dB at 120, "
+        "because a wider range makes every bump smaller on screen.",
         // 11: FFT size
         "FFT size: more points give finer detail, above all in the lows, but react more slowly.",
         // 12: window
@@ -1245,7 +1246,7 @@ juce::String SpectrumLens::a11yRowHelp (int group, int row) const
         "Display: on screen, a curve or bars in third-octave or Bark bands. Speech does not change: the bands are "
         "always spoken in third octaves.",
         // 16: shape
-        "Shape against the line: the stretches of the curve that lie more than 3 dB above or below the line, from "
+        "Shape against the line: the stretches of the curve that lie clearly above or below the line, from "
         "low to high, with their average distance. It uses a broad 1/3 octave view whatever the Smoothing, like a "
         "first glance at the picture."
     };
@@ -1450,7 +1451,7 @@ juce::String SpectrumLens::a11yShapeValue() const
 {
     const auto& sh = a11yShape();
     if (! sh.lineValid) return a11ytext::T ("not enough signal");
-    if (sh.stretches.empty()) return a11ytext::T ("all within 3 dB of the line");
+    if (sh.stretches.empty()) return a11ytext::TF ("all within {0} dB of the line", { spoken::trimmed (sh.threshold, 1) });
     juce::StringArray parts;
     for (const auto& s : sh.stretches)
     {
@@ -1491,8 +1492,11 @@ const SpectrumLens::A11yShape& SpectrumLens::a11yShape() const
 
     shape = {};
     const int denom = smoothDenom (smoothIdx);
-    // Unsmoothed, the curve is grass: only clear resonances count. Smoothed, 3 dB is already a visible hump.
-    shape.threshold = denom <= 0 ? 6.0f : (denom >= 24 ? 4.0f : 3.0f);
+    // What counts as standing out is what the eye would notice: an analyser has no threshold, the eye sees a bump
+    // when it has some height on screen. That height follows the Range: the plot always spans the same pixels, so
+    // a 3 dB bump is a twentieth of the plot at 60 dB and half that at 120 dB. A twentieth of the range it is,
+    // the same at every smoothing; the smoothing alone decides how many bumps there are, as on screen.
+    shape.threshold = (float) sets.rangeDb() / 20.0f;
     const int n = (int) c.top.size();
     if (! a11yHasFrame || n < 3) return shape;
 
@@ -1526,7 +1530,7 @@ const SpectrumLens::A11yShape& SpectrumLens::a11yShape() const
         shape.lineValid = shape.lineDb > floorDb + 1.0f;
     }
 
-    // THE SHAPE: stretches of the broad curve more than 3 dB above or below the line. A stretch shorter than 1/3
+    // THE SHAPE: stretches of the broad curve above or below the line by the threshold. A stretch shorter than 1/3
     // octave is a detail, not shape (peaks and dips cover it); a gap shorter than 1/6 octave inside one stretch
     // does not split it. At most 6 stretches, the biggest (distance times width), then back in frequency order.
     if (shape.lineValid)
@@ -1535,7 +1539,7 @@ const SpectrumLens::A11yShape& SpectrumLens::a11yShape() const
         for (int i = 0; i < n; ++i)
         {
             const float d = broad[(size_t) i] - shape.lineDb;
-            side[(size_t) i] = d >= 3.0f ? 1 : (d <= -3.0f ? -1 : 0);
+            side[(size_t) i] = d >= shape.threshold ? 1 : (d <= -shape.threshold ? -1 : 0);
         }
         struct Run { int lo, hi, side; };
         const auto runsOf = [&]
@@ -1703,22 +1707,26 @@ const SpectrumLens::A11yShape& SpectrumLens::a11yShape() const
     };
 
     // The most prominent first; two features closer than twice the smoothing width (at least a semitone) are one.
+    // All of them are counted, so the Smoothing row can say how busy the picture is (unsmoothed, dozens of
+    // spikes; at 1/6 octave, a few humps); the list keeps the most prominent, as the eye picks the tallest spikes.
     const double minApart = juce::jmax (1.0 / 12.0, 2.0 * scaleOct);
     const auto pick = [&] (std::vector<Candidate>& cands, bool dip, int maxCount, std::vector<Feature>& out)
     {
         std::sort (cands.begin(), cands.end(), [] (const Candidate& x, const Candidate& y) { return x.prominence > y.prominence; });
         for (const auto& cand : cands)
         {
-            if ((int) out.size() >= maxCount) break;
             const auto f = describe (cand, dip);
             if (f.hz < kMinHz || f.hz > kMaxHz) continue;
             const bool tooClose = std::any_of (out.begin(), out.end(), [&] (const Feature& o)
                                                { return std::abs (std::log2 (f.hz / o.hz)) < minApart; });
             if (! tooClose) out.push_back (f);
         }
+        const int total = (int) out.size();
+        if (total > maxCount) out.resize ((size_t) maxCount);
+        return total;
     };
-    pick (peakCands, false, kMaxPeaks, shape.peaks);
-    pick (dipCands,  true,  kMaxDips,  shape.dips);
+    shape.totalPeaks = pick (peakCands, false, kMaxPeaks, shape.peaks);
+    shape.totalDips  = pick (dipCands,  true,  kMaxDips,  shape.dips);
     return shape;
 }
 
@@ -1784,7 +1792,7 @@ juce::String SpectrumLens::a11yControlValue (int item) const
             if (a11yHasFrame)
             {
                 const auto& sh = a11yShape();
-                const auto np = juce::String ((int) sh.peaks.size()), nd = juce::String ((int) sh.dips.size());
+                const auto np = juce::String (sh.totalPeaks), nd = juce::String (sh.totalDips);
                 t << ", " << (denom <= 0 ? a11ytext::TF ("peaks: {0}", { np }) : a11ytext::TF ("peaks: {0}, dips: {1}", { np, nd }));
             }
             return t;

@@ -193,9 +193,10 @@ private:
         bool  tiltValid = false;  float tiltDbPerOct = 0.0f;   // the signal's own tilt, without the slope
         std::vector<Stretch> stretches;                        // the shape against the line, low to high
         std::vector<Feature> peaks, dips;
-        float threshold = 3.0f;   // how far a feature must stand out to be listed
+        int   totalPeaks = 0, totalDips = 0;   // how many stand out, before the list is cut
+        float threshold = 3.0f;   // how far a stretch or a feature must stand out to count
     };
-    static constexpr int kMaxPeaks = 5, kMaxDips = 3;
+    static constexpr int kMaxPeaks = 10, kMaxDips = 10;
 
     mutable A11yCurve curve;
     mutable A11yShape shape;
