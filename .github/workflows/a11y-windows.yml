@@ -55,6 +55,8 @@ jobs:
           bundle=$(find build -type d -path '*telescope_artefacts/Release/VST3/*.vst3' | head -1)
           [ -n "$bundle" ] || { echo "VST3 bundle not found"; exit 1; }
           echo "VST3_BUNDLE=$bundle" >> "$GITHUB_ENV"
+          # Папка, в которой лежит TELESCOPE.vst3: её и выгружаем, чтобы в ZIP была папка плагина целиком.
+          echo "VST3_DIR=$(dirname "$bundle")" >> "$GITHUB_ENV"
           echo "bundle: $bundle"
 
       # Артефакт выгружаем до pluginval: даже если валидатор найдёт что-то, сборку можно проверить руками.
@@ -62,7 +64,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: TELESCOPE-accessible-windows-vst3
-          path: ${{ env.VST3_BUNDLE }}/..
+          path: ${{ env.VST3_DIR }}
           if-no-files-found: error
           retention-days: 30
 
