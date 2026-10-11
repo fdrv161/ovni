@@ -2,6 +2,8 @@
 #include "lenses/Look.h"
 #include "PluginProcessor.h"
 #include "data/StreamingTargets.h"
+#include "a11y/A11yWidgets.h"
+#include "a11y/SpokenFormat.h"
 #include "ui-kit/Fonts.h"
 #include "ui-kit/Theme.h"
 #include <cmath>
@@ -542,6 +544,8 @@ bool LoudnessLens::advanceFrame()
     shortTermIsPartial = ! hasReading (f.loudness.shortTerm) && hasReading (f.shortTermPartial);
     const float mTarget = momentaryIsPartial ? f.momentaryPartial : f.loudness.momentary;
     const float sTarget = shortTermIsPartial ? f.shortTermPartial : f.loudness.shortTerm;
+    a11yMomentary = mTarget;
+    a11yShortTerm = sTarget;
 
     tpMaxL = f.truePeakMaxL;
     tpMaxR = f.truePeakMaxR;
@@ -575,5 +579,122 @@ void LoudnessLens::mouseMove (const juce::MouseEvent& e)
 void LoudnessLens::mouseExit (const juce::MouseEvent&)
 {
     if (hovered != -1) { hovered = -1; repaint(); }
+}
+
+//======================================================================================== доступность
+// Те же числа, что на экране, без сглаживания стрелок. Пока окна измерения не заполнились, значение
+// помечается «partial», как полупрозрачная полоса на картинке.
+namespace
+{
+enum LoudRow { lrIntegrated = 0, lrShortTerm, lrMomentary, lrRange, lrTruePeak, lrMaxShort, lrMaxMomentary,
+               lrTarget, kLoudRows };
+enum LoudAction { laTarget = 0, laPause, laReset, kLoudActions };
+
+juce::String lufs (float v, bool partial = false)
+{
+    if (! hasReading (v)) return "no reading";
+    return spoken::trimmed (v, 1) + " LUFS" + (partial ? ", partial" : "");
+}
+
+juce::String dbtp (float v)
+{
+    return hasReading (v) ? spoken::trimmed (v, 1) + " dBTP" : juce::String ("no reading");
+}
+}
+
+juce::String LoudnessLens::a11yGroupName (int group) const
+{
+    return group == 0 ? "Readings" : "Actions";
+}
+
+int LoudnessLens::a11yRowCount (int group) const
+{
+    return group == 0 ? (int) kLoudRows : (int) kLoudActions;
+}
+
+juce::String LoudnessLens::a11yRowName (int group, int row) const
+{
+    if (group == 1)
+    {
+        static const char* const actions[kLoudActions] = { "Platform target", "Pause", "Reset" };
+        return actions[juce::jlimit (0, (int) kLoudActions - 1, row)];
+    }
+    static const char* const names[kLoudRows] = { "Integrated", "Short-term", "Momentary", "Loudness range",
+                                                  "True peak max", "Max short-term", "Max momentary", "Target" };
+    return names[juce::jlimit (0, (int) kLoudRows - 1, row)];
+}
+
+juce::String LoudnessLens::a11yRowValue (int group, int row) const
+{
+    if (group == 1)
+    {
+        if (row == laTarget) return streamingTarget (processor.targetIndex()).name;
+        if (row == laPause)  return processor.isAnalysisPaused() ? "paused" : "running";
+        return {};
+    }
+
+    switch (row)
+    {
+        case lrIntegrated:   return latest.integratedValid ? lufs (latest.integrated) : juce::String ("no reading yet");
+        case lrShortTerm:    return lufs (a11yShortTerm, shortTermIsPartial);
+        case lrMomentary:    return lufs (a11yMomentary, momentaryIsPartial);
+        case lrRange:        return latest.integratedValid ? spoken::trimmed (latest.lra, 1) + " LU" : juce::String ("no reading yet");
+        case lrTruePeak:
+        {
+            // Общий максимум и по каналам: какой канал дал пик, видно на картинке по двум полосам.
+            auto t = dbtp (latest.truePeakMax);
+            if (hasReading (tpMaxL) || hasReading (tpMaxR)) t << ", L " << dbtp (tpMaxL) << ", R " << dbtp (tpMaxR);
+            return t;
+        }
+        case lrMaxShort:     return lufs (latest.shortTermMax);
+        case lrMaxMomentary: return lufs (latest.momentaryMax);
+        case lrTarget:       return spoken::clean (targetLine());
+        default:             return {};
+    }
+}
+
+bool LoudnessLens::a11yIsAdjustable (int group, int row) const
+{
+    return group == 1 && row == laTarget;
+}
+
+// Цель платформы — параметр хоста «target»: меняем с жестом, как это сделал бы пользователь в DAW.
+bool LoudnessLens::a11yAdjust (int group, int row, int step)
+{
+    if (! a11yIsAdjustable (group, row)) return false;
+    auto* param = processor.apvts.getParameter ("target");
+    if (param == nullptr) return false;
+    const int now  = processor.targetIndex();
+    const int size = std::abs (step) >= a11yui::kExtreme ? kNumTargets : 1;
+    const int next = juce::jlimit (0, kNumTargets - 1, now + (step > 0 ? size : -size));
+    if (next == now) return false;
+    param->beginChangeGesture();
+    param->setValueNotifyingHost (param->convertTo0to1 ((float) next));
+    param->endChangeGesture();
+    repaint();
+    return true;
+}
+
+bool LoudnessLens::a11yIsActivatable (int group, int row) const
+{
+    return group == 1 && row != laTarget;
+}
+
+juce::String LoudnessLens::a11yActivate (int group, int row)
+{
+    if (group != 1) return {};
+    if (row == laPause)
+    {
+        processor.setAnalysisPaused (! processor.isAnalysisPaused());
+        repaint();
+        return processor.isAnalysisPaused() ? "Paused" : "Running";
+    }
+    if (row == laReset)
+    {
+        processor.resetAnalysis();
+        repaint();
+        return "Analysis reset";
+    }
+    return {};
 }
 }

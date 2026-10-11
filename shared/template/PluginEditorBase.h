@@ -46,6 +46,7 @@ public:
     // El factor que de verdad se aplica en una pantalla con esta área útil (el clamp de applyZoom, puro).
     static float fitZoomToArea (float wanted, juce::Rectangle<int> userArea, int baseW, int baseH) noexcept;
     void setZoom   (Zoom z);                     // aplica + persiste (lo usa el selector)
+    Zoom getZoom() const noexcept { return zoom; }   // доступность: текущий размер для скринридера
 
     // ======== header browser on/off (H14 · app-mode) ========
     // La app standalone esconde el chrome de PLUGIN (presets/A-B/power/zoom) y pone su propia barra.

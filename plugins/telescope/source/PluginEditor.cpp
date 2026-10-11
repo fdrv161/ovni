@@ -67,6 +67,143 @@ struct TelescopeEditor::LensPanelSource final : a11yui::GridSource
     TelescopeEditor& ed;
 };
 
+// ================== ПАНЕЛЬ «PLUGIN»: шапка, язык, тема ==================
+struct TelescopeEditor::PluginRowsSource final : a11yui::GridSource
+{
+    enum Row { rowBypass = 0, rowPreset, rowSave, rowAb, rowAbCopy, rowSize, rowLanguage, rowTheme, kRows };
+
+    explicit PluginRowsSource (TelescopeEditor& e) : ed (e) {}
+
+    juce::RangedAudioParameter* bypassParam() const { return ed.proc.apvts.getParameter (ed.proc.bypassParamID()); }
+    bool isBypassed() const { auto* p = bypassParam(); return p != nullptr && p->getValue() >= 0.5f; }
+
+    void setBypassed (bool on)
+    {
+        if (auto* p = bypassParam())
+        {
+            p->beginChangeGesture();
+            p->setValueNotifyingHost (on ? 1.0f : 0.0f);
+            p->endChangeGesture();
+        }
+        ed.repaint();
+    }
+
+    using Zoom = ovni::PluginEditorBase::Zoom;
+    static int zoomIndex (Zoom z) { return z == Zoom::small ? 0 : (z == Zoom::large ? 2 : 1); }
+
+    int          groupCount() const override    { return 1; }
+    juce::String groupName (int) const override { return "Plugin"; }
+    int          rowCount (int) const override  { return kRows; }
+
+    juce::String rowName (int, int r) const override
+    {
+        static const char* const names[kRows] = { "Bypass", "Preset", "Save preset", "A B slot",
+                                                  "Copy this slot to the other", "Window size", "Language", "Theme" };
+        return names[juce::jlimit (0, kRows - 1, r)];
+    }
+
+    juce::String rowValue (int, int r) const override
+    {
+        auto& p = ed.proc;
+        switch (r)
+        {
+            case rowBypass: return isBypassed() ? "On" : "Off";
+            case rowPreset:
+            {
+                const auto c = p.presets().current();
+                const auto n = c.name.isEmpty() ? juce::String ("Init") : c.name;
+                return c.modified ? n + ", modified" : n;
+            }
+            case rowAb:       return juce::String::charToString ((juce::juce_wchar) p.ab().activeSlot());
+            case rowSize:
+            {
+                static const char* const sizes[] = { "Small", "Medium", "Large" };
+                return sizes[zoomIndex (ed.getZoom())];
+            }
+            case rowLanguage: return strings::endonymOf (strings::languageOf (p.apvts.state));
+            case rowTheme:    return look::theme() == look::Theme::light ? "Light" : "Dark";
+            default:          return {};
+        }
+    }
+
+    bool isAdjustable (int, int r) const override
+    {
+        return r == rowBypass || r == rowPreset || r == rowAb || r == rowSize || r == rowLanguage || r == rowTheme;
+    }
+
+    // Размер окна меняется только шагами (Enter на нём — режим правки), остальное Enter нажимает.
+    bool isActivatable (int, int r) const override { return r != rowSize; }
+
+    bool adjust (int, int r, int step) override
+    {
+        const bool up = step > 0;
+        auto& p = ed.proc;
+        switch (r)
+        {
+            case rowBypass:
+                if (isBypassed() == up) return false;
+                setBypassed (up);
+                return true;
+            case rowPreset:
+                if (up) p.presets().next(); else p.presets().prev();
+                ed.repaint();
+                return true;
+            case rowAb:
+                if ((p.ab().activeSlot() == 'B') == up) return false;   // плюс — B, минус — A
+                p.ab().toggle();
+                ed.repaint();
+                return true;
+            case rowSize:
+            {
+                const int now = zoomIndex (ed.getZoom());
+                const int next = juce::jlimit (0, 2, now + (up ? 1 : -1));
+                if (next == now) return false;
+                ed.setZoom (next == 0 ? Zoom::small : (next == 2 ? Zoom::large : Zoom::medium));
+                return true;
+            }
+            case rowLanguage:
+            {
+                const auto codes = strings::availableLanguages();
+                const int now  = juce::jmax (0, codes.indexOf (strings::languageOf (p.apvts.state)));
+                const int next = juce::jlimit (0, codes.size() - 1, now + (up ? 1 : -1));
+                if (next == now) return false;
+                strings::setLanguage (p.apvts.state, codes[next]);
+                return true;
+            }
+            case rowTheme:
+                if ((look::theme() == look::Theme::light) == up) return false;   // плюс — светлая
+                ed.toggleTheme();
+                return true;
+            default: return false;
+        }
+    }
+
+    juce::String activate (int, int r) override
+    {
+        auto& p = ed.proc;
+        switch (r)
+        {
+            case rowBypass:   setBypassed (! isBypassed()); return "Bypass " + rowValue (0, rowBypass);
+            case rowPreset:   ed.showPresetMenuA11y(); return {};
+            case rowSave:     ed.showSaveDialogA11y(); return {};
+            case rowAb:       p.ab().toggle(); ed.repaint(); return "Slot " + rowValue (0, rowAb);
+            case rowAbCopy:
+            {
+                const auto from = rowValue (0, rowAb);
+                p.ab().copyActiveToOther();
+                ed.repaint();
+                return "Copied " + from + " to " + (from == "A" ? "B" : "A");
+            }
+            case rowLanguage: ed.strip.cycleLanguage(); return rowValue (0, rowLanguage);
+            case rowTheme:    ed.toggleTheme(); return rowValue (0, rowTheme);
+            default:          return {};
+        }
+    }
+
+    TelescopeEditor& ed;
+};
+
+
 // Las lentes CONSTRUIDAS. Las que todavía no existen caen en PlaceholderLens: un panel con su nombre y
 // nada más (ni "coming soon" ni promesas — ver PlaceholderLens.h).
 std::unique_ptr<Lens> TelescopeEditor::makeLens (LensId id)
@@ -347,10 +484,11 @@ void TelescopeEditor::setupAccessibility()
 
     a11yPanel.setSource (lensPanelSource.get());
     a11yPanel.helpText = "Readings of the current lens. Up and Down arrows: rows. Left and Right arrows: groups. "
-                         "Alt plus Up or Down arrow: change a setting or move the probe. "
-                         "Alt plus Page Up or Page Down: bigger step. Alt plus Home or End: minimum or maximum. "
-                         "Enter or F5: read the row again with a fresh value. Escape: back to the lens list. "
-                         "Space starts and stops the host transport.";
+                         "Plus or minus: change a setting or move the probe. "
+                         "Enter on a setting: edit mode, then Up and Down arrows change it, Page Up and Page Down "
+                         "make a bigger step, Enter or Escape finish. Enter on an action: do it. "
+                         "Alt plus arrows also change a value. F5: read the row again with a fresh value. "
+                         "Escape: back to the lens list. Space starts and stops the host transport.";
     a11yPanel.contextName = [this]
     {
         return currentLens >= 0 ? juce::String (kSpokenLensNames[currentLens]) : juce::String();
@@ -361,26 +499,17 @@ void TelescopeEditor::setupAccessibility()
         if (currentLens >= 0) panelCursor[(size_t) currentLens] = { g, r };
     };
 
-    a11yLanguage.getTitleText = [this] { return "Language, " + strings::endonymOf (strings::languageOf (proc.apvts.state)); };
-    a11yLanguage.helpText = "Language of the on-screen labels. Enter or Space: next language.";
-    a11yLanguage.onPress = [this]
-    {
-        strip.cycleLanguage();
-        a11yLanguage.say (strings::endonymOf (strings::languageOf (proc.apvts.state)));
-    };
-
-    a11yTheme.getTitleText = [] { return juce::String ("Theme, ") + (look::theme() == look::Theme::light ? "Light" : "Dark"); };
-    a11yTheme.helpText = "Colour theme of the window. Enter or Space: switch between dark and light.";
-    a11yTheme.onPress = [this]
-    {
-        toggleTheme();
-        a11yTheme.say (look::theme() == look::Theme::light ? "Light" : "Dark");
-    };
+    pluginRowsSource = std::make_unique<PluginRowsSource> (*this);
+    a11yPlugin.setSource (pluginRowsSource.get());
+    a11yPlugin.contextName = [] { return juce::String ("Plugin"); };
+    a11yPlugin.helpText = "Plugin controls: bypass, presets, A and B comparison, window size, language of the "
+                          "on-screen labels and colour theme. Up and Down arrows: rows. Plus or minus: change. "
+                          "Enter: switch, open the preset menu or the save dialog. Escape: back to the lens list.";
+    a11yPlugin.onEscape = [this] { focusA11y (a11yLensList); };
 
     // Порядок Tab задан явно: JUCE иначе сортирует элементы по положению на экране.
     int order = 1;
-    for (auto* c : { static_cast<a11yui::FocusOverlay*> (&a11yLensList), static_cast<a11yui::FocusOverlay*> (&a11yPanel),
-                     static_cast<a11yui::FocusOverlay*> (&a11yLanguage), static_cast<a11yui::FocusOverlay*> (&a11yTheme) })
+    for (auto* c : { &a11yLensList, &a11yPanel, &a11yPlugin })
     {
         c->setExplicitFocusOrder (order++);
         c->onTab = [this, c] (bool forward) { cycleA11yFocus (*c, forward); };
@@ -393,9 +522,79 @@ void TelescopeEditor::layoutAccessibility()
 {
     const auto s = strip.getBounds();
     a11yLensList.setBounds (s.withHeight (juce::jmin (s.getHeight(), strip.listHeight())));
-    a11yTheme.setBounds (strip.themeRow() + s.getPosition());
-    a11yLanguage.setBounds (strip.languageRow() + s.getPosition());
     a11yPanel.setBounds (lensArea);
+    // Шапка — всё, что выше полосы линз.
+    a11yPlugin.setBounds (0, 0, lensArea.getRight(), juce::jmax (1, s.getY()));
+}
+
+// Меню пресетов для клавиатуры: то же, что по клику на имя пресета, но открывается у панели и после
+// закрытия возвращает фокус туда же (иначе фокус остаётся «нигде» и NVDA молчит).
+void TelescopeEditor::showPresetMenuA11y()
+{
+    namespace pr = ovni::presets;
+    juce::PopupMenu prod, sd, user, root;
+    const auto& all = pr::factoryPresets();
+    for (int i = 0; i < (int) all.size(); ++i)
+    {
+        auto& sub = (all[(size_t) i].category == pr::Category::Production) ? prod : sd;
+        sub.addItem (i + 1, juce::String::fromUTF8 (all[(size_t) i].name));
+    }
+    int uid = 10001;
+    for (auto& f : proc.presets().userPresets())
+        user.addItem (uid++, f.getFileNameWithoutExtension());
+
+    root.addSubMenu ("Production", prod);
+    root.addSubMenu ("Sound design", sd);
+    if (proc.presets().userPresets().size() > 0)
+        root.addSubMenu ("User", user);
+
+    root.showMenuAsync (juce::PopupMenu::Options().withTargetComponent (&a11yPlugin),
+        [safe = juce::Component::SafePointer<TelescopeEditor> (this)] (int r)
+        {
+            if (safe == nullptr) return;
+            auto& pm = safe->proc.presets();
+            if (r >= 1 && r <= (int) pr::factoryPresets().size())
+                pm.applyFactory (r - 1);
+            else if (r >= 10001)
+            {
+                const auto users = pm.userPresets();
+                const int idx = r - 10001;
+                if (idx >= 0 && idx < users.size()) pm.applyUserFile (users[idx]);
+            }
+            safe->repaint();
+            // Возврат фокуса сам прочитает строку «Preset, <имя>»: отдельный анонс наложился бы на неё.
+            safe->focusA11yLater (safe->a11yPlugin);
+        });
+}
+
+void TelescopeEditor::showSaveDialogA11y()
+{
+    auto* w = new juce::AlertWindow ("Save preset", "Preset name:", juce::MessageBoxIconType::NoIcon, this);
+    w->addTextEditor ("name", "My Preset", "Preset name");
+    if (auto* te = w->getTextEditor ("name")) te->setTitle ("Preset name");
+    w->addButton ("Save",   1, juce::KeyPress (juce::KeyPress::returnKey));
+    w->addButton ("Cancel", 0, juce::KeyPress (juce::KeyPress::escapeKey));
+    w->enterModalState (true, juce::ModalCallbackFunction::create (
+        [safe = juce::Component::SafePointer<TelescopeEditor> (this), w] (int res)
+        {
+            if (safe == nullptr) return;
+            if (res == 1)
+            {
+                const auto nm = w->getTextEditorContents ("name").trim();
+                if (nm.isNotEmpty()) safe->proc.presets().saveUser (nm);
+            }
+            safe->repaint();
+            safe->focusA11yLater (safe->a11yPlugin);
+        }), true);   // deleteWhenDismissed
+}
+
+// Фокус после закрытия меню или диалога: с задержкой, чтобы JUCE и хост закончили свою смену фокуса.
+void TelescopeEditor::focusA11yLater (juce::Component& target)
+{
+    juce::Timer::callAfterDelay (60, [safe = juce::Component::SafePointer<juce::Component> (&target), ed = juce::Component::SafePointer<TelescopeEditor> (this)]
+    {
+        if (safe != nullptr && ed != nullptr) ed->focusA11y (*safe);
+    });
 }
 
 // Перенос фокуса по рецепту, проверенному в REAPER: клавиатурный фокус JUCE и отдельно фокус UIA,
@@ -407,10 +606,10 @@ void TelescopeEditor::focusA11y (juce::Component& target)
     if (auto* h = target.getAccessibilityHandler()) h->grabFocus();
 }
 
-// Tab и Shift+Tab ходят по кругу между четырьмя элементами (по кругу — как принято для Tab).
+// Tab и Shift+Tab ходят по кругу между тремя панелями (по кругу — как принято для Tab).
 void TelescopeEditor::cycleA11yFocus (juce::Component& from, bool forward)
 {
-    const std::array<juce::Component*, 4> order { &a11yLensList, &a11yPanel, &a11yLanguage, &a11yTheme };
+    const std::array<juce::Component*, 3> order { &a11yLensList, &a11yPanel, &a11yPlugin };
     const int n = (int) order.size();
     int i = 0;
     while (i < n && order[(size_t) i] != &from) ++i;

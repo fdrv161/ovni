@@ -125,7 +125,9 @@ protected:
 //   Стрелки вверх/вниз — строки группы; влево/вправо — соседняя группа; Home/End — край группы;
 //   Ctrl+Home/End — начало/конец всей сетки; Page Up/Down — на 10 строк;
 //   Alt+Стрелка вверх/вниз — изменить значение на шаг; Alt+Page Up/Down — крупный шаг;
-//   Alt+Home/End — минимум/максимум; Enter или F5 — перечитать строку со свежим значением;
+//   Alt+Home/End — минимум/максимум; плюс и минус — шаг значения; Enter на изменяемой строке — режим
+//   правки (обычные стрелки меняют значение, Enter или Esc — выход), на строке-кнопке — нажать,
+//   на остальных — перечитать; F5 — перечитать строку со свежим значением;
 //   буква или цифра — следующая строка на этот знак (Shift — назад); F1 — справка; Esc — назад.
 // Края тихие, без перехода по кругу.
 // ========================================================================================================
@@ -166,6 +168,8 @@ public:
         juce::StringArray parts;
         if (contextName) parts.add (contextName());
         if (source != nullptr && source->groupCount() > 1) parts.add (source->groupName (grp));
+        if (source != nullptr && source->rowCount (grp) > 0 && source->isAdjustable (grp, rw))
+            parts.add ("plus or minus to change");
         parts.removeEmptyStrings();
         return parts.joinIntoString (", ");
     }
@@ -173,6 +177,7 @@ public:
     // Программная установка курсора (без речи, если speak = false).
     void setCursor (int g, int r, bool speak, bool withGroup = false)
     {
+        editing = false;
         grp = g; rw = r;
         clampCursor();
         repaint();
@@ -191,6 +196,7 @@ public:
 
     bool keyPressed (const juce::KeyPress& key) override
     {
+        if (editing && source != nullptr && handleEditKey (key)) return true;
         if (handleCommonKey (key)) return true;
         if (source == nullptr) return swallowUnknown (key);
 
@@ -201,6 +207,15 @@ public:
         const bool alt   = mods.isAltDown() && ! mods.isCtrlDown() && ! mods.isShiftDown();
         const int  rows  = source->rowCount (grp);
         const int  groups = source->groupCount();
+
+        // Плюс и минус (основная клавиатура и цифровой блок) меняют значение на шаг. Символ берём из
+        // getTextCharacter: на основной клавиатуре «+» — это Shift+«=», поэтому «=» тоже считаем плюсом.
+        if (! mods.isCtrlDown() && ! mods.isAltDown() && ! mods.isCommandDown())
+        {
+            const auto ch = key.getTextCharacter();
+            if (code == juce::KeyPress::numberPadAdd || ch == '+' || ch == '=')      { applyStep (kStep);  return true; }
+            if (code == juce::KeyPress::numberPadSubtract || ch == '-' || ch == '_') { applyStep (-kStep); return true; }
+        }
 
         if (plain)
         {
@@ -218,6 +233,12 @@ public:
                 {
                     const auto message = source->activate (grp, rw);
                     if (message.isNotEmpty()) say (message, a11y::SpeechQueue::keepAll);
+                }
+                else if (rows > 0 && source->isAdjustable (grp, rw))
+                {
+                    // Режим правки: дальше обычные стрелки меняют значение, Enter или Esc — выход.
+                    editing = true;
+                    say ("Edit");
                 }
                 else if (onEnter) onEnter();
                 else speakCurrent (false);
@@ -243,13 +264,7 @@ public:
             else if (code == juce::KeyPress::endKey)      step = kExtreme;
             else if (code == juce::KeyPress::homeKey)     step = -kExtreme;
 
-            if (step != 0)
-            {
-                if (! source->isAdjustable (grp, rw)) { say ("Read only"); return true; }
-                // Изменилось — говорим только новое значение. На краю — тишина.
-                if (source->adjust (grp, rw, step)) say (source->rowValue (grp, rw));
-                return true;
-            }
+            if (step != 0) { applyStep (step); return true; }
         }
 
         // Поиск по первому знаку имени. getTextCharacter, а не код клавиши: иначе стрелки и Page Up
@@ -274,7 +289,42 @@ public:
         return makeHandler (role);
     }
 
+    void focusLost (FocusChangeType t) override { editing = false; FocusOverlay::focusLost (t); }
+
 private:
+    // Изменить значение текущей строки. Изменилось — говорим только новое значение, на краю — тишина.
+    void applyStep (int step)
+    {
+        if (source == nullptr || source->rowCount (grp) <= 0) return;
+        if (! source->isAdjustable (grp, rw)) { say ("Read only"); return; }
+        if (source->adjust (grp, rw, step)) say (source->rowValue (grp, rw));
+    }
+
+    // Клавиши режима правки. false — клавиша идёт дальше по обычным правилам (Tab, F1, плюс и минус).
+    bool handleEditKey (const juce::KeyPress& key)
+    {
+        const auto mods  = key.getModifiers();
+        const int  code  = key.getKeyCode();
+        if (code == juce::KeyPress::tabKey) { editing = false; return false; }
+        if (mods.isAnyModifierKeyDown()) return false;
+
+        if (code == juce::KeyPress::returnKey || code == juce::KeyPress::escapeKey)
+        {
+            editing = false;
+            say ("Done");
+            return true;
+        }
+        if (code == juce::KeyPress::upKey)       { applyStep (kStep);     return true; }
+        if (code == juce::KeyPress::downKey)     { applyStep (-kStep);    return true; }
+        if (code == juce::KeyPress::pageUpKey)   { applyStep (kCoarse);   return true; }
+        if (code == juce::KeyPress::pageDownKey) { applyStep (-kCoarse);  return true; }
+        if (code == juce::KeyPress::endKey)      { applyStep (kExtreme);  return true; }
+        if (code == juce::KeyPress::homeKey)     { applyStep (-kExtreme); return true; }
+        if (code == juce::KeyPress::F5Key)       { say (source->rowValue (grp, rw)); return true; }
+        if (code == juce::KeyPress::leftKey || code == juce::KeyPress::rightKey) return true;   // не уходим из строки
+        return false;
+    }
+
     void clampCursor()
     {
         const int groups = source != nullptr ? source->groupCount() : 0;
@@ -285,6 +335,7 @@ private:
 
     void moveTo (int g, int r, bool withGroup)
     {
+        editing = false;
         const int oldG = grp, oldR = rw;
         grp = g; rw = r;
         clampCursor();
@@ -316,6 +367,7 @@ private:
     juce::AccessibilityRole role;
     GridSource* source = nullptr;
     int grp = 0, rw = 0;
+    bool editing = false;   // режим правки (Enter на изменяемой строке)
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (A11yGrid)
 };

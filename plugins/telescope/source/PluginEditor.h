@@ -102,21 +102,27 @@ private:
 
     // ================== ДОСТУПНОСТЬ (скринридер и клавиатура) ==================
     // Невидимые элементы поверх нарисованного интерфейса. Порядок Tab: список линз, показания линзы,
-    // язык, тема. Объявлены последними: удаляются первыми, пока линза и источники ещё живы.
+    // панель плагина (шапка, язык, тема). Объявлены последними: удаляются первыми, пока линза и источники
+    // ещё живы.
     struct LensListSource;    // строки списка линз
     struct LensPanelSource;   // строки показаний текущей линзы
-    std::unique_ptr<LensListSource>  lensListSource;
-    std::unique_ptr<LensPanelSource> lensPanelSource;
-    a11yui::A11yGrid   a11yLensList { juce::AccessibilityRole::list };
-    a11yui::A11yGrid   a11yPanel    { juce::AccessibilityRole::list };
-    a11yui::A11yButton a11yLanguage, a11yTheme;
+    struct PluginRowsSource;  // bypass, пресеты, A/B, размер, язык, тема
+    std::unique_ptr<LensListSource>   lensListSource;
+    std::unique_ptr<LensPanelSource>  lensPanelSource;
+    std::unique_ptr<PluginRowsSource> pluginRowsSource;
+    a11yui::A11yGrid a11yLensList { juce::AccessibilityRole::list };
+    a11yui::A11yGrid a11yPanel    { juce::AccessibilityRole::list };
+    a11yui::A11yGrid a11yPlugin   { juce::AccessibilityRole::list };
     std::array<std::pair<int, int>, kNumLenses> panelCursor {};   // где стоял курсор показаний в каждой линзе
 
     void setupAccessibility();
     void layoutAccessibility();
     void focusA11y (juce::Component& target);
+    void focusA11yLater (juce::Component& target);
     void cycleA11yFocus (juce::Component& from, bool forward);
     void focusGained (FocusChangeType) override;
+    void showPresetMenuA11y();
+    void showSaveDialogA11y();
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (TelescopeEditor)
 };

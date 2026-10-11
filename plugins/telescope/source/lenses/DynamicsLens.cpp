@@ -2,6 +2,8 @@
 #include "lenses/Look.h"
 #include "PluginProcessor.h"
 #include "analysis/modules/Loudness.h"
+#include "a11y/A11yWidgets.h"
+#include "a11y/SpokenFormat.h"
 #include "ui-kit/Fonts.h"
 #include "ui-kit/Theme.h"
 #include <cmath>
@@ -436,5 +438,126 @@ void DynamicsLens::mouseMove (const juce::MouseEvent& e)
 void DynamicsLens::mouseExit (const juce::MouseEvent&)
 {
     if (hovered != -1) { hovered = -1; repaint(); }
+}
+
+//======================================================================================== доступность
+// PLR и PSR — главные числа линзы; гистограмма пересказана одной строкой (самый частый уровень), полоса
+// клипов — числом за последние 10 минут и давностью последнего. Цвет-предупреждение у PSR сказан словом.
+namespace
+{
+enum DynRow { drPlr = 0, drPsr, drShortTerm, drMostFrequent, drClips, drRecentClips, kDynRows };
+enum DynAction { daThreshold = 0, daPause, daReset, kDynActions };
+}
+
+juce::String DynamicsLens::a11yGroupName (int group) const
+{
+    return group == 0 ? "Readings" : "Actions";
+}
+
+int DynamicsLens::a11yRowCount (int group) const
+{
+    return group == 0 ? (int) kDynRows : (int) kDynActions;
+}
+
+juce::String DynamicsLens::a11yRowName (int group, int row) const
+{
+    if (group == 1)
+    {
+        static const char* const actions[kDynActions] = { "Clip threshold", "Pause", "Reset" };
+        return actions[juce::jlimit (0, (int) kDynActions - 1, row)];
+    }
+    static const char* const names[kDynRows] = { "PLR", "PSR", "Short-term", "Most frequent short-term",
+                                                 "Clip events", "Clips in the last 10 minutes" };
+    return names[juce::jlimit (0, (int) kDynRows - 1, row)];
+}
+
+juce::String DynamicsLens::a11yRowValue (int group, int row) const
+{
+    if (group == 1)
+    {
+        if (row == daThreshold) return spoken::trimmed (processor.clipThresholdDbtp(), 1) + " dBTP";
+        if (row == daPause)     return processor.isAnalysisPaused() ? "paused" : "running";
+        return {};
+    }
+
+    switch (row)
+    {
+        case drPlr: return plrValid ? spoken::trimmed (plr, 1) + " dB" : juce::String ("no reading yet");
+        case drPsr:
+            if (! psrValid) return "no reading yet";
+            return spoken::trimmed (psr, 1) + " dB" + (psr < kPsrAlert ? ", low" : "");
+        case drShortTerm:
+            return latest.shortTerm > -100.0f ? spoken::trimmed (latest.shortTerm, 1) + " LUFS" : juce::String ("no reading");
+        case drMostFrequent:
+        {
+            juce::uint64 total = 0;
+            int best = -1;
+            for (int i = 0; i < kBins; ++i)
+            {
+                total += histogram[i];
+                if (histogram[i] > 0 && (best < 0 || histogram[i] > histogram[best])) best = i;
+            }
+            if (best < 0 || total == 0) return "no reading yet";
+            const int pct = juce::roundToInt (100.0 * (double) histogram[best] / (double) total);
+            return juce::String (best + kBinsFloorLufs) + " LUFS, " + juce::String (pct) + " percent of the time";
+        }
+        case drClips:
+            return juce::String ((int) clipEvents) + " above " + spoken::trimmed (processor.clipThresholdDbtp(), 1) + " dBTP";
+        case drRecentClips:
+        {
+            juce::uint64 n = 0;
+            int lastIdx = -1;
+            for (int i = 0; i < (int) timelineBuf.size(); ++i)
+                if (timelineBuf[(size_t) i] > 0) { n += timelineBuf[(size_t) i]; lastIdx = i; }
+            if (n == 0) return "none";
+            const int ago = (int) timelineBuf.size() - 1 - lastIdx;   // одна ячейка — секунда анализа, последняя — самая свежая
+            return juce::String ((juce::int64) n) + ", the latest " + juce::String (ago) + " seconds back in the analysis";
+        }
+        default: return {};
+    }
+}
+
+bool DynamicsLens::a11yIsAdjustable (int group, int row) const
+{
+    return group == 1 && row == daThreshold;
+}
+
+// Порог клипа: шаг 0.1 dB, крупный шаг 0.5 dB. Ручку на картинке двигаем вслед, без её уведомления:
+// оно асинхронное, и строка прочиталась бы со старым значением.
+bool DynamicsLens::a11yAdjust (int group, int row, int step)
+{
+    if (! a11yIsAdjustable (group, row)) return false;
+    const float now = processor.clipThresholdDbtp();
+    const float size = std::abs (step) >= a11yui::kExtreme ? 100.0f : (std::abs (step) >= a11yui::kCoarse ? 0.5f : 0.1f);
+    const float next = juce::jlimit (Loudness::kMinClipThresholdDbtp, Loudness::kMaxClipThresholdDbtp,
+                                     std::round ((now + (step > 0 ? size : -size)) * 10.0f) / 10.0f);
+    if (std::abs (next - now) < 1.0e-4f) return false;
+    processor.setClipThresholdDbtp (next);
+    threshold.setValue ((double) processor.clipThresholdDbtp(), juce::dontSendNotification);
+    repaint();
+    return true;
+}
+
+bool DynamicsLens::a11yIsActivatable (int group, int row) const
+{
+    return group == 1 && row != daThreshold;
+}
+
+juce::String DynamicsLens::a11yActivate (int group, int row)
+{
+    if (group != 1) return {};
+    if (row == daPause)
+    {
+        processor.setAnalysisPaused (! processor.isAnalysisPaused());
+        repaint();
+        return processor.isAnalysisPaused() ? "Paused" : "Running";
+    }
+    if (row == daReset)
+    {
+        processor.resetAnalysis();
+        repaint();
+        return "Analysis reset";
+    }
+    return {};
 }
 }

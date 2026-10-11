@@ -37,6 +37,18 @@ public:
     void mouseMove (const juce::MouseEvent&) override;
     void mouseExit (const juce::MouseEvent&) override;
 
+    // ================== ДОСТУПНОСТЬ (см. Lens.h) ==================
+    // Группы: показания (LUFS, LRA, true peak, цель платформы) и действия (цель, пауза, сброс).
+    int          a11yGroupCount() const override { return 2; }
+    juce::String a11yGroupName (int group) const override;
+    int          a11yRowCount (int group) const override;
+    juce::String a11yRowName (int group, int row) const override;
+    juce::String a11yRowValue (int group, int row) const override;
+    bool         a11yIsAdjustable (int group, int row) const override;
+    bool         a11yAdjust (int group, int row, int step) override;
+    bool         a11yIsActivatable (int group, int row) const override;
+    juce::String a11yActivate (int group, int row) override;
+
 protected:
     void renderStatic (juce::Graphics&, int width, int height) override;
     void paintLive (juce::Graphics&) override;
@@ -99,6 +111,7 @@ private:
     // canal y las ventanas parciales. Ver analysis/AnalysisFrame.h.
     float tpMaxL = -300.0f, tpMaxR = -300.0f;
     bool  momentaryIsPartial = false, shortTermIsPartial = false;
+    float a11yMomentary = -300.0f, a11yShortTerm = -300.0f;   // доступность: без сглаживания картинки
     juce::uint32 dropped = 0;
 
     std::vector<LoudnessHistory::Point> historyBuf;
