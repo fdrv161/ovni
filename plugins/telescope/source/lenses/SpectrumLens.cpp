@@ -906,15 +906,67 @@ void SpectrumLens::mouseExit (const juce::MouseEvent&)
 }
 
 //======================================================================================== accessibility
-// Text readings for the screen reader. The numbers match what a sighted user sees: FFT levels with the slope,
-// like the curve on the plot; third-octave bands without the slope, like the bars (for pink noise both are
-// flat, so they mean the same).
+// Text readings for the screen reader. A sighted user sees the whole curve at once and what stands out of it;
+// speech gives one number at a time. So here the display settings change what is said and how much, not the
+// levels themselves:
+//
+//   SLOPE      levels are true levels, as a meter reads them. The slope sets THE LINE: flat on the plot, at the
+//              median height of the curve. A mix that follows it sounds balanced. The probe says how far above or
+//              below the line it is; the signal tilt row says how much brighter or darker the signal is.
+//   SMOOTHING  the probe reads the curve smoothed as it is drawn, and the smoothing sets the size of the peaks
+//              and dips that are listed: off lists narrow resonances, 1/6 octave lists broad humps and holes.
+//   AVERAGE    how much the numbers move between key presses; Pause holds all of them at one moment.
+//
+// Third-octave bands are spoken as before: band power, which is already flat for pink noise.
 namespace
 {
-constexpr int kProbeMinMidi = 16;    // 20.6 Hz, the bottom edge of the plot
-constexpr int kProbeMaxMidi = 135;   // 19.9 kHz, the top edge
+constexpr int    kProbeMinMidi = 16;    // 20.6 Hz, the bottom edge of the plot
+constexpr int    kProbeMaxMidi = 135;   // 19.9 kHz, the top edge
+constexpr int    kGridPerOct   = 96;
+constexpr double kGridLoHz     = 20.0;
+constexpr juce::uint32 kShapeHoldMs = 1000;   // while music plays, the peak list holds still this long
 
-double midiHz (int midi) { return 440.0 * std::pow (2.0, (double) (midi - 69) / 12.0); }
+double midiHz (int midi)   { return 440.0 * std::pow (2.0, (double) (midi - 69) / 12.0); }
+int    gridSize()          { return (int) std::floor (kGridPerOct * std::log2 (20000.0 / kGridLoHz)) + 1; }
+double gridHz (double i)   { return kGridLoHz * std::pow (2.0, i / kGridPerOct); }
+double gridPos (double hz) { return kGridPerOct * std::log2 (hz / kGridLoHz); }
+
+// Settings rows: the actions and the settings that matter most for listening come first.
+enum SettingItem { siPause = SpectrumLens::kNumControls, siReset, siAvgTime };
+constexpr int kSettingRows[] = { siPause, siReset, SpectrumLens::slope, SpectrumLens::smooth, SpectrumLens::average,
+                                 siAvgTime, SpectrumLens::hold, SpectrumLens::range, SpectrumLens::fftSize,
+                                 SpectrumLens::window, SpectrumLens::overlap, SpectrumLens::channel,
+                                 SpectrumLens::bandsMode };
+constexpr int kNumSettingRows = (int) (sizeof (kSettingRows) / sizeof (kSettingRows[0]));
+
+// Running average times offered from the keyboard (the engine accepts 0.1 to 10 seconds).
+constexpr float kAvgTimes[] = { 0.1f, 0.2f, 0.3f, 0.5f, 1.0f, 2.0f, 3.0f, 5.0f, 10.0f };
+constexpr int   kNumAvgTimes = (int) (sizeof (kAvgTimes) / sizeof (kAvgTimes[0]));
+
+// Smoothing as the denominator of the octave fraction, 0 = off.
+int smoothDenom (int index)
+{
+    return TelescopeProcessor::kSpectrumSmoothDenom[juce::jlimit (0, TelescopeProcessor::kNumSpectrumSmoothOptions - 1, index)];
+}
+
+float medianOf (const std::vector<float>& v, int lo, int hi, std::vector<float>& scratch)
+{
+    scratch.assign (v.begin() + lo, v.begin() + hi + 1);
+    const auto mid = scratch.begin() + (std::ptrdiff_t) (scratch.size() / 2);
+    std::nth_element (scratch.begin(), mid, scratch.end());
+    return *mid;
+}
+}
+
+int SpectrumLens::a11ySettingItem (int row) const
+{
+    return kSettingRows[juce::jlimit (0, kNumSettingRows - 1, row)];
+}
+
+int SpectrumLens::a11yFeatureRows() const
+{
+    const auto& sh = a11yShape();
+    return juce::jmax (1, (int) (sh.peaks.size() + sh.dips.size()));
 }
 
 juce::String SpectrumLens::a11yGroupName (int group) const
@@ -931,51 +983,92 @@ int SpectrumLens::a11yRowCount (int group) const
 {
     switch (group)
     {
-        case 0:  return 1 + kA11yPeaks;
+        case 0:  return 2 + a11yFeatureRows();
         case 1:  return SpectrumFrame::kNumThird;
-        case 2:  return kNumControls;
+        case 2:  return kNumSettingRows;
         default: return 0;
     }
 }
 
 juce::String SpectrumLens::a11yRowName (int group, int row) const
 {
-    if (group == 0) return row == 0 ? juce::String (a11ytext::T ("Probe")) : a11ytext::T ("Peak ") + juce::String (row);
+    if (group == 0)
+    {
+        if (row == 0) return a11ytext::T ("Probe");
+        if (row == 1) return a11ytext::T ("Signal tilt");
+        const auto& sh = a11yShape();
+        const int k = row - 2, peaks = (int) sh.peaks.size(), dips = (int) sh.dips.size();
+        if (k < peaks)        return a11ytext::TF ("Peak {0}", { juce::String (k + 1) });
+        if (k - peaks < dips) return a11ytext::TF ("Dip {0}", { juce::String (k - peaks + 1) });
+        return a11ytext::T ("Peaks and dips");
+    }
     if (group == 1) return spoken::hz (kThirdOctaveHz[juce::jlimit (0, SpectrumFrame::kNumThird - 1, row)]);
 
+    const int item = a11ySettingItem (row);
+    if (item == siPause)   return a11ytext::T ("Pause");
+    if (item == siReset)   return a11ytext::T ("Reset");
+    if (item == siAvgTime) return a11ytext::T ("Average time");
     static const char* const names[kNumControls] = { "FFT size", "Window", "Overlap", "Channel", "Display",
                                                      "Slope", "Average", "Peak hold", "Range", "Smoothing" };
-    return a11ytext::T (names[juce::jlimit (0, kNumControls - 1, row)]);
+    return a11ytext::T (names[juce::jlimit (0, kNumControls - 1, item)]);
 }
 
 juce::String SpectrumLens::a11yRowValue (int group, int row) const
 {
-    if (group == 2) return a11yControlValue (row);
+    if (group == 2) return a11yControlValue (a11ySettingItem (row));
     if (! a11yHasFrame) return a11ytext::T ("no data yet");
     if (group == 1) return a11yBandValue (juce::jlimit (0, SpectrumFrame::kNumThird - 1, row));
 
     if (row == 0)
     {
         const double hz = midiHz (probeMidi);
-        return spoken::hz (hz) + ", " + spoken::note (noteFor (hz)) + ", " + a11yLevels (hz, true);
+        auto t = spoken::hz (hz) + ", " + spoken::note (noteFor (hz)) + ", " + a11yLevels (hz, true);
+        const auto line = a11yLineDeviation (hz);
+        if (line.isNotEmpty()) t << ", " << line;
+        return t;
     }
+    if (row == 1) return a11yTiltValue();
 
-    const auto& list = a11yPeaks();
-    if (row - 1 >= (int) list.size())
-        return a11ytext::T ("no peak above -") + juce::String (sets.rangeDb()) + a11ytext::T (" dB");
-    const auto& p = list[(size_t) (row - 1)];
-    return spoken::hz (p.hz) + ", " + spoken::noteWithCents (noteFor (p.hz)) + ", "
-         + spoken::db (p.db, sets.rangeDb());
+    const auto& sh = a11yShape();
+    const int k = row - 2, peaks = (int) sh.peaks.size(), dips = (int) sh.dips.size();
+    if (k < peaks)        return a11yFeatureValue (sh.peaks[(size_t) k], false);
+    if (k - peaks < dips) return a11yFeatureValue (sh.dips[(size_t) (k - peaks)], true);
+    return a11ytext::TF ("none standing out by {0} dB or more", { spoken::trimmed (sh.threshold, 0) });
 }
 
 bool SpectrumLens::a11yIsAdjustable (int group, int row) const
 {
-    return group == 2 || (group == 0 && row == 0);
+    if (group == 2)
+    {
+        const int item = a11ySettingItem (row);
+        return item < kNumControls || item == siAvgTime;
+    }
+    return group == 0 && row == 0;
 }
 
 bool SpectrumLens::a11yAdjust (int group, int row, int step)
 {
-    if (group == 2) return stepControl (row, step);
+    if (group == 2)
+    {
+        const int item = a11ySettingItem (row);
+        if (item < kNumControls) return stepControl (item, step);
+        if (item != siAvgTime) return false;
+
+        // The running average time moves through a short list; a value from elsewhere snaps to the nearest one.
+        auto s = processor.spectrumSettings();
+        int idx = 0;
+        for (int i = 1; i < kNumAvgTimes; ++i)
+            if (std::abs (kAvgTimes[i] - s.avgSeconds) < std::abs (kAvgTimes[idx] - s.avgSeconds)) idx = i;
+        const int size = std::abs (step) >= a11yui::kExtreme ? kNumAvgTimes : (std::abs (step) >= a11yui::kCoarse ? 2 : 1);
+        const int next = juce::jlimit (0, kNumAvgTimes - 1, idx + (step > 0 ? size : -size));
+        if (next == idx && std::abs (kAvgTimes[idx] - s.avgSeconds) < 1.0e-4f) return false;
+        s.avgSeconds = kAvgTimes[next];
+        processor.setSpectrumSettings (s);
+        sets = processor.spectrumSettings();
+        invalidateStatic();
+        repaint();
+        return true;
+    }
     if (group != 0 || row != 0) return false;
 
     // The probe moves by notes: step is a semitone, coarse step an octave.
@@ -990,32 +1083,258 @@ bool SpectrumLens::a11yAdjust (int group, int row, int step)
     return true;
 }
 
-float SpectrumLens::a11yLevelAt (int slot, double hz, bool hold) const
+bool SpectrumLens::a11yIsActivatable (int group, int row) const
 {
+    if (group == 2)
+    {
+        const int item = a11ySettingItem (row);
+        return item == siPause || item == siReset;
+    }
+    if (group != 0 || row < 2 || ! a11yHasFrame) return false;
+    const auto& sh = a11yShape();
+    return row - 2 < (int) (sh.peaks.size() + sh.dips.size());
+}
+
+juce::String SpectrumLens::a11yActivate (int group, int row)
+{
+    if (group == 2)
+    {
+        const int item = a11ySettingItem (row);
+        if (item == siPause)
+        {
+            // The same pause as in Loudness and Dynamics: it holds every lens.
+            processor.setAnalysisPaused (! processor.isAnalysisPaused());
+            repaint();
+            return processor.isAnalysisPaused() ? a11ytext::T ("Paused") : a11ytext::T ("Running");
+        }
+        if (item == siReset)
+        {
+            processor.resetAnalysis();
+            repaint();
+            return a11ytext::T ("Analysis reset");
+        }
+        return {};
+    }
+    if (! a11yIsActivatable (group, row)) return {};
+
+    // Enter on a peak or a dip puts the probe on it, so the user can walk around it by semitones and hear how
+    // wide it is. The editor then moves the cursor to the probe row (a11yTakeCursorRequest).
+    const auto& sh = a11yShape();
+    const int k = row - 2, peaks = (int) sh.peaks.size();
+    const double hz = k < peaks ? sh.peaks[(size_t) k].hz : sh.dips[(size_t) (k - peaks)].hz;
+    probeMidi = juce::jlimit (kProbeMinMidi, kProbeMaxMidi, juce::roundToInt (69.0 + 12.0 * std::log2 (hz / 440.0)));
+    cursorX = juce::roundToInt (xForFreq (midiHz (probeMidi)));
+    cursorToProbe = true;
+    repaint();
+    return {};
+}
+
+bool SpectrumLens::a11yTakeCursorRequest (int& group, int& row)
+{
+    if (! cursorToProbe) return false;
+    cursorToProbe = false;
+    group = 0;
+    row = 0;
+    return true;
+}
+
+// F1 on a row: what it is for and when to use it. Each text is one catalog key, whole.
+juce::String SpectrumLens::a11yRowHelp (int group, int row) const
+{
+    static const char* const helps[] = {
+        // 0: probe
+        "Probe: the level at one note. Plus and minus move it a semitone, Alt with Page Up or Page Down an octave. "
+        "It also says how far it is from the line: the straight line through the middle of the curve, tilted by "
+        "the Slope setting. A mix that follows the line sounds balanced.",
+        // 1: signal tilt
+        "Signal tilt: how fast the level falls from the lows to the highs, measured from 50 Hz to 10 kHz. Pink "
+        "noise falls 3 dB per octave, a typical mix about 4.5. Brighter than the line means more highs than the "
+        "Slope setting expects, darker means more lows.",
+        // 2: peaks and dips
+        "Peaks and dips: places where the curve stands out from the neighbouring frequencies, the biggest first. "
+        "Smoothing sets their size: off lists narrow resonances, 1/6 octave lists broad humps and holes. Enter "
+        "moves the probe there.",
+        // 3: pause
+        "Pause holds the analysis of all lenses, so every reading comes from the same moment, like a still "
+        "picture. Enter switches it.",
+        // 4: reset
+        "Reset clears the averages, the peak hold and the readings of all lenses and starts again. Use it before "
+        "measuring a whole song with an infinite average or hold.",
+        // 5: slope
+        "Slope tilts the picture and the line around 1 kHz. 3 dB per octave makes pink noise flat, 4.5 matches a "
+        "typical finished mix. It changes no level, only the line the levels are compared with.",
+        // 6: smoothing
+        "Smoothing sets how big a detail counts. Off: narrow resonances and many small peaks. 1/24 and 1/12 "
+        "octave: medium details. 1/6 octave: broad humps and holes, the overall balance. The probe reads the "
+        "smoothed curve too.",
+        // 7: average
+        "Average sets how the curve settles. Off: every frame, the numbers jump. Seconds: a running average over "
+        "the Average time. Infinite: everything since the start or the last reset, for a whole song.",
+        // 8: average time
+        "Average time of the running average. Longer gives steadier numbers between key presses but reacts more "
+        "slowly. 2 to 3 seconds suits reading by ear.",
+        // 9: peak hold
+        "Peak hold remembers the highest level at each frequency, then lets it fall at the chosen speed, or keeps "
+        "it with Infinite. A resonance shows in both the level and the hold; a peak only in the hold was a short hit.",
+        // 10: range
+        "Range: how far below 0 dB the plot goes. Anything lower is spoken as below the range and is not searched "
+        "for peaks.",
+        // 11: FFT size
+        "FFT size: more points give finer detail, above all in the lows, but react more slowly.",
+        // 12: window
+        "Window: the shape of the FFT window. Hann suits most work. Blackman-Harris and Kaiser keep quiet details "
+        "next to loud peaks apart better.",
+        // 13: overlap
+        "Overlap: how often a new frame is computed. More overlap moves more smoothly and uses more processor time.",
+        // 14: channel
+        "Channel: what is analysed. Left, right, mid, side, or left and right as two curves.",
+        // 15: display
+        "Display: on screen, a curve or bars in third-octave or Bark bands. Speech does not change: the bands are "
+        "always spoken in third octaves."
+    };
+
+    int index = -1;
+    if (group == 0) index = juce::jmin (row, 2);
+    else if (group == 2)
+    {
+        switch (a11ySettingItem (row))
+        {
+            case siPause:   index = 3;  break;
+            case siReset:   index = 4;  break;
+            case slope:     index = 5;  break;
+            case smooth:    index = 6;  break;
+            case average:   index = 7;  break;
+            case siAvgTime: index = 8;  break;
+            case hold:      index = 9;  break;
+            case range:     index = 10; break;
+            case fftSize:   index = 11; break;
+            case window:    index = 12; break;
+            case overlap:   index = 13; break;
+            case channel:   index = 14; break;
+            case bandsMode: index = 15; break;
+            default: break;
+        }
+    }
+    return index >= 0 ? a11ytext::T (helps[index]) : juce::String();
+}
+
+// ---- the curve for speech ----
+const SpectrumLens::A11yCurve& SpectrumLens::a11yCurve() const
+{
+    const int smoothIdx = processor.spectrumSmoothIndex();
+    if (curveFrame == a11yFrameSerial && curveSmooth == smoothIdx) return curve;
+    curveFrame  = a11yFrameSerial;
+    curveSmooth = smoothIdx;
+
+    const int n = gridSize();
+    if ((int) curve.oct.size() != n)
+    {
+        curve.oct.resize ((size_t) n);
+        for (int i = 0; i < n; ++i) curve.oct[(size_t) i] = (float) std::log2 (gridHz (i) / 1000.0);
+    }
+    curve.top.assign ((size_t) n, SpectrumFrame::kFloorDb);
+    curve.topBin.assign ((size_t) n, -1);
+    for (int s = 0; s < SpectrumFrame::kMaxSpectra; ++s)
+    {
+        curve.rawDb[s].assign ((size_t) n, SpectrumFrame::kFloorDb);
+        curve.holdDb[s].assign ((size_t) n, SpectrumFrame::kFloorDb);
+        curve.smoothDb[s].assign ((size_t) n, SpectrumFrame::kFloorDb);
+    }
+    if (! a11yHasFrame) return curve;
+
+    // Each grid cell takes the loudest bin inside it, like a picture column; where the cell is narrower than a bin
+    // (low end, small FFT) it interpolates in dB between the two neighbours, as rebuildColumns does.
+    const double half = std::pow (2.0, 0.5 / kGridPerOct);
+    std::vector<float> loudest ((size_t) n, SpectrumFrame::kFloorDb);
+    for (int s = 0; s < a11ySpectra; ++s)
+    {
+        const auto& mag = a11yMag[s];
+        const auto& hd  = a11yHold[s];
+        if ((int) mag.size() < a11yBins || (int) hd.size() < a11yBins) continue;
+        for (int i = 0; i < n; ++i)
+        {
+            const double f  = gridHz (i);
+            const int    k0 = juce::jmax (1, (int) std::ceil (f / half / a11yBinHz));
+            const int    k1 = juce::jmin (a11yBins - 1, (int) std::ceil (f * half / a11yBinHz) - 1);
+            float m = SpectrumFrame::kFloorDb, h = SpectrumFrame::kFloorDb;
+            int   best = -1;
+            if (k1 >= k0)
+            {
+                for (int k = k0; k <= k1; ++k)
+                {
+                    if (mag[(size_t) k] > m) { m = mag[(size_t) k]; best = k; }
+                    h = juce::jmax (h, hd[(size_t) k]);
+                }
+            }
+            else
+            {
+                const double pos = f / a11yBinHz;
+                const int    ka  = juce::jlimit (0, a11yBins - 1, (int) std::floor (pos));
+                const int    kb  = juce::jmin (a11yBins - 1, ka + 1);
+                const auto   t   = (float) juce::jlimit (0.0, 1.0, pos - (double) ka);
+                m = mag[(size_t) ka] + t * (mag[(size_t) kb] - mag[(size_t) ka]);
+                h = hd[(size_t) ka]  + t * (hd[(size_t) kb]  - hd[(size_t) ka]);
+                best = t < 0.5f ? ka : kb;
+            }
+            curve.rawDb[s][(size_t) i]  = m;
+            curve.holdDb[s][(size_t) i] = h;
+            if (m > loudest[(size_t) i]) { loudest[(size_t) i] = m; curve.topBin[(size_t) i] = best; }
+        }
+    }
+
+    // Smoothing: a moving average in dB over the chosen fraction of an octave, with the edges held, the same as
+    // buildDeviceCurve does to the drawn curve (on a log axis a fraction of an octave is a fixed number of points).
+    const int denom  = smoothDenom (smoothIdx);
+    const int radius = denom <= 0 ? 0 : juce::jmax (1, (int) std::lround ((double) kGridPerOct / (2.0 * denom)));
+    for (int s = 0; s < a11ySpectra; ++s)
+    {
+        const auto& src = curve.rawDb[s];
+        auto&       dst = curve.smoothDb[s];
+        if (radius == 0) { dst = src; continue; }
+        double run = 0.0;
+        for (int x = -radius; x <= radius; ++x) run += src[(size_t) juce::jlimit (0, n - 1, x)];
+        for (int x = 0; x < n; ++x)
+        {
+            dst[(size_t) x] = (float) (run / (double) (2 * radius + 1));
+            run -= src[(size_t) juce::jlimit (0, n - 1, x - radius)];
+            run += src[(size_t) juce::jlimit (0, n - 1, x + radius + 1)];
+        }
+    }
+    for (int i = 0; i < n; ++i)
+    {
+        float v = curve.smoothDb[0][(size_t) i];
+        if (a11ySpectra >= 2) v = juce::jmax (v, curve.smoothDb[1][(size_t) i]);
+        curve.top[(size_t) i] = v;
+    }
+    return curve;
+}
+
+float SpectrumLens::a11yCurveAt (const std::vector<float>& v, double hz) const
+{
+    if (v.empty()) return SpectrumFrame::kFloorDb;
+    const double pos = juce::jlimit (0.0, (double) v.size() - 1.0, gridPos (hz));
+    const int    i   = juce::jmin ((int) v.size() - 2, (int) pos);
+    if (i < 0) return v[0];
+    const auto t = (float) (pos - (double) i);
+    return v[(size_t) i] + t * (v[(size_t) i + 1] - v[(size_t) i]);
+}
+
+// The probe level: the smoothed curve where it is drawn smoothed; otherwise the highest point within a quarter tone
+// either side, so a narrow peak between two probe notes is not missed. The hold is never smoothed (as on screen).
+float SpectrumLens::a11yProbeLevel (int slot, double hz, bool hold) const
+{
+    const auto& c = a11yCurve();
     if (! a11yHasFrame || slot >= a11ySpectra) return SpectrumFrame::kFloorDb;
-    const auto& v = hold ? a11yHold[slot] : a11yMag[slot];
-    if ((int) v.size() < a11yBins) return SpectrumFrame::kFloorDb;
+    if (! hold && smoothDenom (processor.spectrumSmoothIndex()) > 0) return a11yCurveAt (c.smoothDb[slot], hz);
 
-    // A semitone window around the frequency (+-1/24 octave), take the maximum, just as a picture column takes
-    // the maximum of its bins. If bins are wider than the window (low end, small FFT), interpolate between neighbours.
-    const double lo = hz * std::pow (2.0, -1.0 / 24.0), hi = hz * std::pow (2.0, 1.0 / 24.0);
-    const int k0 = juce::jmax (0, (int) std::ceil (lo / a11yBinHz));
-    const int k1 = juce::jmin (a11yBins - 1, (int) std::floor (hi / a11yBinHz));
-
-    float db = SpectrumFrame::kFloorDb;
-    if (k1 >= k0)
-    {
-        for (int k = k0; k <= k1; ++k) db = juce::jmax (db, v[(size_t) k]);
-    }
-    else
-    {
-        const double pos = hz / a11yBinHz;
-        const int    ka  = juce::jlimit (0, a11yBins - 1, (int) std::floor (pos));
-        const int    kb  = juce::jmin (a11yBins - 1, ka + 1);
-        const auto   t   = (float) juce::jlimit (0.0, 1.0, pos - (double) ka);
-        db = v[(size_t) ka] + t * (v[(size_t) kb] - v[(size_t) ka]);
-    }
-    return spectrumDisplayDb (db, hz, sets.slopeDbPerOct);
+    const auto& v = hold ? c.holdDb[slot] : c.rawDb[slot];
+    const int    n = (int) v.size();
+    const double centre = gridPos (hz);
+    const int    lo = juce::jlimit (0, n - 1, (int) std::ceil (centre - kGridPerOct / 24.0));
+    const int    hi = juce::jlimit (0, n - 1, (int) std::floor (centre + kGridPerOct / 24.0));
+    float db = a11yCurveAt (v, hz);
+    for (int i = lo; i <= hi; ++i) db = juce::jmax (db, v[(size_t) i]);
+    return db;
 }
 
 juce::String SpectrumLens::a11yLevels (double hz, bool withHold) const
@@ -1024,12 +1343,210 @@ juce::String SpectrumLens::a11yLevels (double hz, bool withHold) const
     const bool hold = withHold && sets.peakHold;
     const auto one = [&] (int slot)
     {
-        auto t = spoken::db (a11yLevelAt (slot, hz, false), floorDb);
-        if (hold) t << a11ytext::T (", hold ") << spoken::db (a11yLevelAt (slot, hz, true), floorDb);
+        auto t = spoken::db (a11yProbeLevel (slot, hz, false), floorDb);
+        if (hold) t << a11ytext::T (", hold ") << spoken::db (a11yProbeLevel (slot, hz, true), floorDb);
         return t;
     };
     if (a11ySpectra >= 2) return a11ytext::T ("L ") + one (0) + a11ytext::T ("; R ") + one (1);
     return one (0);
+}
+
+// How far the probe is from the line, in whole dB (the louder channel, as on the plot). Nothing below the plot.
+juce::String SpectrumLens::a11yLineDeviation (double hz) const
+{
+    const auto& sh = a11yShape();
+    if (! sh.lineValid) return {};
+    float level = a11yProbeLevel (0, hz, false);
+    if (a11ySpectra >= 2) level = juce::jmax (level, a11yProbeLevel (1, hz, false));
+    const float onPlot = level + sets.slopeDbPerOct * (float) std::log2 (hz / 1000.0);
+    if (onPlot <= -(float) sets.rangeDb()) return {};
+    const int d = juce::roundToInt (onPlot - sh.lineDb);
+    if (d == 0) return a11ytext::T ("on the line");
+    return a11ytext::TF (d > 0 ? "{0} dB above the line" : "{0} dB below the line", { juce::String (std::abs (d)) });
+}
+
+juce::String SpectrumLens::a11yTiltValue() const
+{
+    const auto& sh = a11yShape();
+    if (! sh.tiltValid) return a11ytext::T ("not enough signal");
+    const auto amount = spoken::trimmed (std::abs (sh.tiltDbPerOct), 1);
+    const auto own = amount == "0" ? a11ytext::T ("no tilt")
+                   : a11ytext::TF (sh.tiltDbPerOct < 0.0f ? "falls {0} dB per octave" : "rises {0} dB per octave", { amount });
+    return own + ", " + a11yTiltVersusLine();
+}
+
+// On the plot the signal leans by its own tilt plus the slope: rising to the right is brighter than the line.
+// Under a quarter of a dB per octave (2.5 dB over the whole range) it counts as following the line.
+juce::String SpectrumLens::a11yTiltVersusLine() const
+{
+    const auto& sh = a11yShape();
+    if (! sh.tiltValid) return {};
+    const float onPlot = sh.tiltDbPerOct + sets.slopeDbPerOct;
+    if (std::abs (onPlot) < 0.25f) return a11ytext::T ("follows the line");
+    return a11ytext::TF (onPlot > 0.0f ? "brighter than the line by {0}" : "darker than the line by {0}",
+                         { spoken::trimmed (std::abs (onPlot), 1) });
+}
+
+juce::String SpectrumLens::a11yFeatureValue (const Feature& f, bool dip) const
+{
+    // Cents only when the curve is not smoothed: a smoothed hump has no exact pitch.
+    const bool precise = smoothDenom (processor.spectrumSmoothIndex()) <= 0;
+    const auto width = f.widthOct < 1.0f / 6.0f ? a11ytext::T ("narrow")
+                     : (f.widthOct < 2.0f / 3.0f ? a11ytext::T ("medium") : a11ytext::T ("wide"));
+    const auto by = juce::String (juce::jmax (1, juce::roundToInt (f.prominence)));
+    return spoken::hz (f.hz) + ", "
+         + (precise ? spoken::noteWithCents (noteFor (f.hz)) : spoken::note (noteFor (f.hz))) + ", "
+         + width + ", "
+         + a11ytext::TF (dip ? "{0} dB below surroundings" : "{0} dB above surroundings", { by }) + ", "
+         + spoken::dB (f.db);
+}
+
+// ---- the line, the tilt, the peaks and dips ----
+const SpectrumLens::A11yShape& SpectrumLens::a11yShape() const
+{
+    const auto& c = a11yCurve();
+    const int   smoothIdx = processor.spectrumSmoothIndex();
+    const auto  now = juce::Time::getMillisecondCounter();
+    const bool  settingsChanged = smoothIdx != shapeSmooth || sets.slopeDbPerOct != shapeSlope || sets.rangeDb() != shapeRange;
+    const bool  stale = shapeFrame != a11yFrameSerial && (now - shapeTimeMs >= kShapeHoldMs || shapeHadFrame != a11yHasFrame);
+    if (! settingsChanged && ! stale) return shape;
+
+    shapeFrame    = a11yFrameSerial;
+    shapeSmooth   = smoothIdx;
+    shapeSlope    = sets.slopeDbPerOct;
+    shapeRange    = sets.rangeDb();
+    shapeTimeMs   = now;
+    shapeHadFrame = a11yHasFrame;
+
+    shape = {};
+    const int denom = smoothDenom (smoothIdx);
+    // Unsmoothed, the curve is grass: only clear resonances count. Smoothed, 3 dB is already a visible hump.
+    shape.threshold = denom <= 0 ? 6.0f : (denom >= 24 ? 4.0f : 3.0f);
+    const int n = (int) c.top.size();
+    if (! a11yHasFrame || n < 3) return shape;
+
+    // The curve as it is drawn: louder channel, smoothed, with the slope, held at the edges of the plot.
+    const float floorDb = -(float) sets.rangeDb();
+    std::vector<float> view ((size_t) n), scratch;
+    for (int i = 0; i < n; ++i)
+        view[(size_t) i] = juce::jlimit (floorDb, 0.0f, c.top[(size_t) i] + sets.slopeDbPerOct * c.oct[(size_t) i]);
+
+    // THE LINE: flat on the plot, at the median height of the curve between 40 Hz and 16 kHz. The median, not the
+    // mean: a few big humps (a kick, a bass note) must not lift the line the rest is compared with.
+    {
+        const int lo = juce::jlimit (0, n - 1, (int) std::lround (gridPos (40.0)));
+        const int hi = juce::jlimit (lo, n - 1, (int) std::lround (gridPos (16000.0)));
+        shape.lineDb    = medianOf (view, lo, hi, scratch);
+        shape.lineValid = shape.lineDb > floorDb + 1.0f;
+    }
+
+    // SIGNAL TILT: a straight-line fit of the third-octave band levels from 50 Hz to 10 kHz. Band power is flat for
+    // pink noise while a bin falls 3 dB per octave, so the fit minus 3 is the tilt in the terms of the Slope
+    // setting: pink noise falls 3 dB per octave, and a Slope of 3 makes it flat.
+    {
+        double sx = 0.0, sy = 0.0, sxx = 0.0, sxy = 0.0;
+        int count = 0;
+        for (int b = 0; b < SpectrumFrame::kNumThird; ++b)
+        {
+            const double fc = kThirdOctaveHz[b];
+            if (fc < 50.0 || fc > 10000.0) continue;
+            double power = 0.0;
+            for (int s = 0; s < a11ySpectra; ++s) power += std::pow (10.0, (double) bandDb[s][b] / 10.0);
+            const double db = 10.0 * std::log10 (juce::jmax (1.0e-30, power / (double) juce::jmax (1, a11ySpectra)));
+            if (db < (double) floorDb) continue;   // under the plot: noise floor, not signal
+            const double x = std::log2 (fc / 1000.0);
+            sx += x; sy += db; sxx += x * x; sxy += x * db;
+            ++count;
+        }
+        const double den = (double) count * sxx - sx * sx;
+        if (count >= 8 && den > 1.0e-9)
+        {
+            shape.tiltDbPerOct = (float) (((double) count * sxy - sx * sy) / den - 10.0 * std::log10 (2.0));
+            shape.tiltValid = true;
+        }
+    }
+
+    // PEAKS AND DIPS on the drawn curve: a local maximum (minimum) that differs from the median of its
+    // neighbourhood by the threshold. The neighbourhood grows with the smoothing, about 8 times its width and at
+    // least 1/3 octave, so the list holds details of the size the smoothing shows. Dips only on a smoothed curve:
+    // unsmoothed, every gap between two bins would be one.
+    const double scaleOct = denom > 0 ? 1.0 / denom : 1.0 / 48.0;
+    const int    halfWin  = juce::jmax (kGridPerOct / 6, (int) std::lround (kGridPerOct * 8.0 * scaleOct / 2.0));
+
+    struct Candidate { int i; float prominence; };
+    std::vector<Candidate> peakCands, dipCands;
+    for (int i = 1; i < n - 1; ++i)
+    {
+        const float v = view[(size_t) i];
+        const bool isPeak = v > view[(size_t) i - 1] && v >= view[(size_t) i + 1];
+        const bool isDip  = denom > 0 && v < view[(size_t) i - 1] && v <= view[(size_t) i + 1];
+        if (! isPeak && ! isDip) continue;
+        const float base = medianOf (view, juce::jmax (0, i - halfWin), juce::jmin (n - 1, i + halfWin), scratch);
+        if (isPeak && v > floorDb && v - base >= shape.threshold)                    peakCands.push_back ({ i, v - base });
+        if (isDip && base > floorDb + shape.threshold && base - v >= shape.threshold) dipCands.push_back ({ i, base - v });
+    }
+
+    const auto describe = [&] (const Candidate& cand, bool dip)
+    {
+        const int i = cand.i;
+        Feature f;
+        f.prominence = cand.prominence;
+
+        // Width at half the prominence, in octaves.
+        const float edge = dip ? view[(size_t) i] + 0.5f * cand.prominence : view[(size_t) i] - 0.5f * cand.prominence;
+        const auto inside = [&] (int j) { return dip ? view[(size_t) j] < edge : view[(size_t) j] > edge; };
+        int l = i, r = i;
+        while (l > 0 && inside (l - 1)) --l;
+        while (r < n - 1 && inside (r + 1)) ++r;
+        f.widthOct = (float) (r - l + 1) / (float) kGridPerOct;
+
+        // Between grid points: a parabola through the three points.
+        const double a = view[(size_t) i - 1], b = view[(size_t) i], e = view[(size_t) i + 1];
+        const double den = a - 2.0 * b + e;
+        const double p = std::abs (den) > 1.0e-9 ? juce::jlimit (-0.5, 0.5, 0.5 * (a - e) / den) : 0.0;
+        f.hz = gridHz ((double) i + p);
+        f.db = c.top[(size_t) i];
+
+        // An unsmoothed peak is refined on the bins themselves (louder channel), or on a small FFT it would jump
+        // along the bin grid: climb to the top bin, then a parabola over three bins.
+        int k = c.topBin[(size_t) i];
+        if (! dip && denom <= 0 && k >= 1 && k <= a11yBins - 2 && (int) a11yMag[0].size() >= a11yBins)
+        {
+            const auto lvl = [&] (int kk)
+            {
+                float v = a11yMag[0][(size_t) kk];
+                if (a11ySpectra >= 2 && (int) a11yMag[1].size() > kk) v = juce::jmax (v, a11yMag[1][(size_t) kk]);
+                return (double) v;
+            };
+            for (int guard = 0; guard < 4 && k < a11yBins - 2 && lvl (k + 1) > lvl (k); ++guard) ++k;
+            for (int guard = 0; guard < 4 && k > 1 && lvl (k - 1) > lvl (k); ++guard) --k;
+            const double ka = lvl (k - 1), kb = lvl (k), kc = lvl (k + 1);
+            const double d2 = ka - 2.0 * kb + kc;
+            const double q  = d2 < 0.0 ? juce::jlimit (-0.5, 0.5, 0.5 * (ka - kc) / d2) : 0.0;
+            f.hz = ((double) k + q) * a11yBinHz;
+            f.db = (float) (kb - 0.25 * (ka - kc) * q);
+        }
+        return f;
+    };
+
+    // The most prominent first; two features closer than twice the smoothing width (at least a semitone) are one.
+    const double minApart = juce::jmax (1.0 / 12.0, 2.0 * scaleOct);
+    const auto pick = [&] (std::vector<Candidate>& cands, bool dip, int maxCount, std::vector<Feature>& out)
+    {
+        std::sort (cands.begin(), cands.end(), [] (const Candidate& x, const Candidate& y) { return x.prominence > y.prominence; });
+        for (const auto& cand : cands)
+        {
+            if ((int) out.size() >= maxCount) break;
+            const auto f = describe (cand, dip);
+            if (f.hz < kMinHz || f.hz > kMaxHz) continue;
+            const bool tooClose = std::any_of (out.begin(), out.end(), [&] (const Feature& o)
+                                               { return std::abs (std::log2 (f.hz / o.hz)) < minApart; });
+            if (! tooClose) out.push_back (f);
+        }
+    };
+    pick (peakCands, false, kMaxPeaks, shape.peaks);
+    pick (dipCands,  true,  kMaxDips,  shape.dips);
+    return shape;
 }
 
 juce::String SpectrumLens::a11yBandValue (int band) const
@@ -1040,56 +1557,18 @@ juce::String SpectrumLens::a11yBandValue (int band) const
     return spoken::db (bandDb[0][band], floorDb);
 }
 
-// The loudest peaks: local maxima of the bins (louder of the two channels, with the slope, as on the plot),
-// at least 1/6 octave apart, above the plot floor. The frequency is refined with a parabola over three bins,
-// otherwise on a small FFT the peak would jump along the bin grid.
-const std::vector<SpectrumLens::Peak>& SpectrumLens::a11yPeaks() const
-{
-    if (peaksFrame == a11yFrameSerial) return peaks;
-    peaksFrame = a11yFrameSerial;
-    peaks.clear();
-    if (! a11yHasFrame || (int) a11yMag[0].size() < a11yBins) return peaks;
-
-    const int   n = a11yBins;
-    const float floorDb = -(float) sets.rangeDb();
-    std::vector<float> lvl ((size_t) n, SpectrumFrame::kFloorDb);
-    for (int k = 1; k < n; ++k)
-    {
-        const double f = (double) k * a11yBinHz;
-        if (f < kMinHz * 0.9 || f > kMaxHz * 1.1) continue;
-        float v = a11yMag[0][(size_t) k];
-        if (a11ySpectra >= 2 && (int) a11yMag[1].size() >= n) v = juce::jmax (v, a11yMag[1][(size_t) k]);
-        lvl[(size_t) k] = spectrumDisplayDb (v, f, sets.slopeDbPerOct);
-    }
-
-    std::vector<Peak> candidates;
-    for (int k = 2; k < n - 1; ++k)
-    {
-        const float b = lvl[(size_t) k];
-        if (b <= floorDb || b <= lvl[(size_t) k - 1] || b < lvl[(size_t) k + 1]) continue;
-        const double a = lvl[(size_t) k - 1], c = lvl[(size_t) k + 1];
-        const double den = a - 2.0 * b + c;
-        const double p = den < 0.0 ? juce::jlimit (-0.5, 0.5, 0.5 * (a - c) / den) : 0.0;
-        candidates.push_back ({ ((double) k + p) * a11yBinHz, (float) (b - 0.25 * (a - c) * p) });
-    }
-    std::sort (candidates.begin(), candidates.end(), [] (const Peak& x, const Peak& y) { return x.db > y.db; });
-
-    for (const auto& c : candidates)
-    {
-        if ((int) peaks.size() >= kA11yPeaks) break;
-        if (c.hz < kMinHz || c.hz > kMaxHz) continue;
-        const bool tooClose = std::any_of (peaks.begin(), peaks.end(), [&c] (const Peak& p)
-                                           { return std::abs (std::log2 (c.hz / p.hz)) < 1.0 / 6.0; });
-        if (! tooClose) peaks.push_back (c);
-    }
-    return peaks;
-}
-
-juce::String SpectrumLens::a11yControlValue (int control) const
+juce::String SpectrumLens::a11yControlValue (int item) const
 {
     const auto s = processor.spectrumSettings();
-    switch (control)
+    switch (item)
     {
+        case siPause: return processor.isAnalysisPaused() ? a11ytext::T ("paused") : a11ytext::T ("running");
+        case siReset: return {};
+        case siAvgTime:
+        {
+            const auto t = spoken::seconds (s.avgSeconds);
+            return s.avgMode == Spectrum::avgExp ? t : a11ytext::TF ("{0}, not used now", { t });
+        }
         case fftSize: return juce::String (s.fftSize()) + a11ytext::T (" points");
         case window:
             return s.window == Spectrum::hann ? a11ytext::T ("Hann")
@@ -1107,7 +1586,14 @@ juce::String SpectrumLens::a11yControlValue (int control) const
         case bandsMode:
             return s.bandsMode == Spectrum::bandsThird ? a11ytext::T ("Third-octave bars")
                  : (s.bandsMode == Spectrum::bandsBark ? a11ytext::T ("Bark bars") : a11ytext::T ("FFT curve"));
-        case slope:   return spoken::trimmed (s.slopeDbPerOct, 1) + a11ytext::T (" dB per octave");
+        case slope:
+        {
+            // With its effect, so a change is heard at once: how the signal now sits against the line.
+            auto t = spoken::trimmed (s.slopeDbPerOct, 1) + a11ytext::T (" dB per octave");
+            const auto versus = a11yHasFrame ? a11yTiltVersusLine() : juce::String();
+            if (versus.isNotEmpty()) t << ", " << versus;
+            return t;
+        }
         case average:
             if (s.avgMode == Spectrum::avgNone)     return a11ytext::T ("Off");
             if (s.avgMode == Spectrum::avgInfinite) return a11ytext::T ("Infinite");
@@ -1119,9 +1605,16 @@ juce::String SpectrumLens::a11yControlValue (int control) const
         case range: return juce::String (s.rangeDb()) + a11ytext::T (" dB");
         case smooth:
         {
-            const int denom = TelescopeProcessor::kSpectrumSmoothDenom[
-                juce::jlimit (0, TelescopeProcessor::kNumSpectrumSmoothOptions - 1, processor.spectrumSmoothIndex())];
-            return denom <= 0 ? juce::String (a11ytext::T ("Off")) : "1/" + juce::String (denom) + a11ytext::T (" octave");
+            // With its effect: how many peaks and dips this smoothing leaves, the spoken amount of detail.
+            const int denom = smoothDenom (processor.spectrumSmoothIndex());
+            auto t = denom <= 0 ? juce::String (a11ytext::T ("Off")) : "1/" + juce::String (denom) + a11ytext::T (" octave");
+            if (a11yHasFrame)
+            {
+                const auto& sh = a11yShape();
+                const auto np = juce::String ((int) sh.peaks.size()), nd = juce::String ((int) sh.dips.size());
+                t << ", " << (denom <= 0 ? a11ytext::TF ("peaks: {0}", { np }) : a11ytext::TF ("peaks: {0}, dips: {1}", { np, nd }));
+            }
+            return t;
         }
         default: return {};
     }

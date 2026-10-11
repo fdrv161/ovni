@@ -34,6 +34,8 @@ struct GridSource
     // e.g. when a dialog opens: the screen reader announces it by itself).
     virtual bool         isActivatable (int, int) const { return false; }
     virtual juce::String activate (int, int) { return {}; }
+    // F1 on this row: what it is for. Empty means the general help of the control.
+    virtual juce::String rowHelp (int, int) const { return {}; }
 };
 
 // Shared part: live name for the screen reader, focus frame, Tab and F1.
@@ -134,7 +136,8 @@ protected:
 //   Alt+Home/End: minimum/maximum; plus and minus: a value step; Enter on an adjustable row: edit
 //   mode (plain arrows change the value, Enter or Esc leave it), on a button row: press it,
 //   on other rows: read again; F5: read the row again with a fresh value;
-//   a letter or digit: next row starting with it (Shift: backwards); F1: help; Esc: back.
+//   a letter or digit: next row starting with it (Shift: backwards); F1: help of the row if it has one,
+//   otherwise of the control; Esc: back.
 // Edges are silent, no wrapping around.
 // ========================================================================================================
 class A11yGrid : public FocusOverlay
@@ -204,6 +207,12 @@ public:
     {
         sync();
         if (editing && source != nullptr && handleEditKey (key)) return true;
+        if (key.getKeyCode() == juce::KeyPress::F1Key && ! key.getModifiers().isAnyModifierKeyDown()
+            && source != nullptr && source->rowCount (grp) > 0)
+        {
+            const auto help = source->rowHelp (grp, rw);
+            if (help.isNotEmpty()) { say (help, a11y::SpeechQueue::keepAll); return true; }
+        }
         if (handleCommonKey (key)) return true;
         if (source == nullptr) return swallowUnknown (key);
 

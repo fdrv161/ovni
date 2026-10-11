@@ -144,6 +144,11 @@ public:
     // Button row: Enter runs the action and returns a phrase about the result (or an empty one).
     virtual bool         a11yIsActivatable (int, int) const    { return false; }
     virtual juce::String a11yActivate (int, int)               { return {}; }
+    // F1 on a row: what it is for (empty: the general help of the panel).
+    virtual juce::String a11yRowHelp (int, int) const          { return {}; }
+    // After a11yActivate: true if the action asks the readings cursor to move to (group, row), which is then
+    // spoken instead of a message. Returns the request once.
+    virtual bool         a11yTakeCursorRequest (int&, int&)    { return false; }
     // The editor asks a few times a second whether something happened that should be spoken on its own
     // (a background file analysis finished). Return the phrase once, otherwise empty.
     virtual juce::String a11yPollEvent()                        { return {}; }

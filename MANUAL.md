@@ -163,7 +163,7 @@ When a value changes, only the new value is spoken. At the end of a range nothin
 Other keys:
 
 - **Escape**: back to the lens list (or out of edit mode).
-- **F1**: spoken help.
+- **F1**: spoken help. On a row that has its own help (the Spectrum settings, for example) it explains that row; elsewhere it gives the help of the panel.
 - **Tab / Shift+Tab**: next or previous panel.
 
 ### Keys that go to your DAW
@@ -272,19 +272,41 @@ The 8 dB line on screen is a reference, not a judgement. Judgements are Verdict'
 - **Full-scale white noise does not read 0 dBFS per bin.** Its energy is spread over thousands of bins, so each one reads far lower.
 - **Changing the FFT size moves the noise floor, not the tones.** Doubling the size splits each bin in two: a tone keeps its level, noise drops 3 dB per bin.
 
-**Why the default slope is 3 dB per octave.** An FFT bin is a fixed width in hertz, while music and hearing work in octaves. Pink noise, the neutral reference, falls 3 dB per octave in a raw spectrum. With a slope of 3, pink noise reads flat. The slope is a display setting: it does not change the data, and it is not applied to the band modes, which already measure in fractions of an octave.
+**Why the default slope is 3 dB per octave.** An FFT bin is a fixed width in hertz, while music and hearing work in octaves. Pink noise, the neutral reference, falls 3 dB per octave in a raw spectrum. With a slope of 3, pink noise reads flat. A typical finished mix falls a little faster, which is why many analysers use 4.5. The slope is a display setting: it does not change the data, and it is not applied to the band modes, which already measure in fractions of an octave.
 
-**Smoothing is a screen setting only.** It smooths the drawn curve; every reported number still comes from the raw bins.
+**Smoothing does not change the data either.** It smooths the drawn curve: off shows every narrow peak (a busy picture, good for hunting resonances), 1/6 octave shows only broad humps and holes (the overall balance).
 
 **A band with no bin in it is not a band at zero.** With a small FFT, low bands can be narrower than one bin. That means "cannot be measured at this resolution", not "no energy". For bass, use a big FFT.
 
 ### With the keyboard
 
+Slope and Smoothing exist to help the eye: Slope makes a balanced mix look flat, Smoothing decides how big a detail must be to show. Speech uses them the same way. They never change a spoken level; they change what the level is compared with and how much is listed.
+
+**The line.** A straight line with the Slope setting, at the median height of the curve between 40 Hz and 16 kHz. On screen it would be a flat line through the middle of the curve. With Slope at 4.5, a typical finished mix lies along it: a place well above it has more energy than a balanced mix, a place well below has less.
+
 - **Readings**:
-  - **Probe**: a frequency cursor that moves by notes. Plus and minus move it a semitone, a big step is an octave, and the range is about 20 Hz to 20 kHz. It reads the frequency, the note name and the level of the left and right channels, with peak hold if it is on. The crosshair on screen follows it, so a sighted helper can see where you are.
-  - **Peak 1 to 5**: the five loudest peaks of the spectrum, each with frequency, note and level.
+  - **Probe**: a frequency cursor that moves by notes. Plus and minus move it a semitone, a big step is an octave, and the range is about 20 Hz to 20 kHz. It reads the frequency, the note name, the level of the left and right channels (with peak hold if it is on) and how far it is from the line, for example "3 dB above the line". With smoothing on, the level is that of the smoothed curve, as drawn. The crosshair on screen follows the probe, so a sighted helper can see where you are.
+  - **Signal tilt**: how fast the level falls from 50 Hz to 10 kHz, for example "falls 4.2 dB per octave", and how that compares with the line: "brighter than the line by 0.3", "darker than the line by 1.5" or "follows the line".
+  - **Peak 1 to 5, Dip 1 to 3**: places where the curve stands out from the neighbouring frequencies, the most prominent first. Each gives the frequency, the note, the width (narrow, medium or wide), how many dB it stands out and its level. Smoothing sets their size: off lists narrow resonances and strong notes, 1/6 octave lists broad humps and holes. Only what stands out enough is listed (6 dB with smoothing off, 4 dB at 1/24 octave, 3 dB at 1/12 and 1/6), so the list can be short or say "none". Dips are listed only with smoothing on. **Enter** on a peak or a dip moves the probe there and the cursor to the probe row, so you can walk around it by semitones and hear how wide it is. While music plays, the list holds still for a second, so rows read one after another agree.
 - **Third-octave bands**: the 30 standard bands from 25 Hz to 20 kHz, with the level of each.
-- **Settings**: FFT size (1,024 to 32,768 points), Window (Hann, Blackman-Harris, Kaiser), Overlap, Channel (left, right, mid, side, left and right), Display (FFT curve, third-octave bars, Bark bars), Slope, Average (off, a time constant, or infinite), Peak hold (off, 12 dB per second, 30 dB per second, infinite), Range, Smoothing (off, 1/24, 1/12, 1/6 octave).
+- **Settings**, in this order:
+  - **Pause**: Enter holds the analysis of all lenses, so every reading comes from the same moment, like a still picture. It is the same pause as in Loudness and Dynamics.
+  - **Reset**: Enter clears the averages, the peak hold and the readings of all lenses.
+  - **Slope**: 0 to 4.5 dB per octave. The value is followed by how the signal now sits against the line, so you hear the effect at once.
+  - **Smoothing**: off, 1/24, 1/12 or 1/6 octave. The value is followed by how many peaks and dips are listed.
+  - **Average**: off, a running average (its time is spoken), or infinite.
+  - **Average time**: 0.1 to 10 seconds for the running average. 2 or 3 seconds keeps the numbers from jumping between key presses. It says "not used now" when Average is off or infinite.
+  - **Peak hold**: off, 12 dB per second, 30 dB per second, infinite.
+  - **Range**, **FFT size** (1,024 to 32,768 points), **Window** (Hann, Blackman-Harris, Kaiser), **Overlap**, **Channel** (left, right, mid, side, left and right), **Display** (FFT curve, third-octave bars, Bark bars).
+- **F1** on the probe, the signal tilt, a peak or dip, or any setting explains it in a sentence or two.
+
+A way to use it while mixing:
+
+1. Set Average time to 2 or 3 seconds. For a whole song, set Average to infinite and press Reset at the start.
+2. Read Signal tilt: is the mix brighter or darker than the line?
+3. Smoothing at 1/6 octave: the peaks and dips are the broad humps and holes of the tonal balance.
+4. Smoothing off: the peaks are narrow resonances and strong notes. A resonance shows in both the level and the peak hold; a peak that is only in the hold was a short hit.
+5. Enter on a peak, then plus and minus around it to hear its width. Pause when you need every number from the same moment.
 
 The FFT settings are shared with Spectrogram, Waterfall and the other spectral lenses: it is one setting, not a copy.
 

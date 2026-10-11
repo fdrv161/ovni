@@ -62,7 +62,23 @@ struct TelescopeEditor::LensPanelSource final : a11yui::GridSource
     bool isAdjustable (int g, int r) const override         { return hasReadings() && lens()->a11yIsAdjustable (g, r); }
     bool adjust (int g, int r, int step) override           { return hasReadings() && lens()->a11yAdjust (g, r, step); }
     bool isActivatable (int g, int r) const override        { return hasReadings() && lens()->a11yIsActivatable (g, r); }
-    juce::String activate (int g, int r) override           { return hasReadings() ? lens()->a11yActivate (g, r) : juce::String(); }
+    juce::String rowHelp (int g, int r) const override      { return hasReadings() ? lens()->a11yRowHelp (g, r) : juce::String(); }
+
+    juce::String activate (int g, int r) override
+    {
+        if (! hasReadings()) return {};
+        const auto message = lens()->a11yActivate (g, r);
+        // The action moved something the cursor should follow (Spectrum: the probe jumps to a peak): go there
+        // and read that row; a message on top of it would cut it off.
+        int ng = 0, nr = 0;
+        if (lens()->a11yTakeCursorRequest (ng, nr))
+        {
+            ed.a11yPanel.setCursor (ng, nr, true);
+            if (ed.currentLens >= 0) ed.panelCursor[(size_t) ed.currentLens] = { ed.a11yPanel.group(), ed.a11yPanel.row() };
+            return {};
+        }
+        return message;
+    }
 
     TelescopeEditor& ed;
 };
@@ -498,6 +514,7 @@ void TelescopeEditor::setupAccessibility()
                          "Enter on a setting: edit mode, then Up and Down arrows change it, Page Up and Page Down "
                          "make a bigger step, Enter or Escape finish. Enter on an action: do it. "
                          "Alt plus arrows also change a value. F5: read the row again with a fresh value. "
+                         "Some rows have their own help on F1. "
                          "Escape: back to the lens list. Space starts and stops the host transport.";
     a11yPanel.contextName = [this]
     {

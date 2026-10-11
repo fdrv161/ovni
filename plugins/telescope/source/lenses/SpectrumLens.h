@@ -76,7 +76,7 @@ public:
     void cycleControl (int control);
 
     // ================== ACCESSIBILITY (see Lens.h) ==================
-    // Groups: readings (frequency probe and the loudest peaks), third-octave bands, settings.
+    // Groups: readings (probe, signal tilt, peaks and dips), third-octave bands, settings.
     int          a11yGroupCount() const override { return 3; }
     juce::String a11yGroupName (int group) const override;
     int          a11yRowCount (int group) const override;
@@ -84,6 +84,10 @@ public:
     juce::String a11yRowValue (int group, int row) const override;
     bool         a11yIsAdjustable (int group, int row) const override;
     bool         a11yAdjust (int group, int row, int step) override;
+    bool         a11yIsActivatable (int group, int row) const override;
+    juce::String a11yActivate (int group, int row) override;
+    juce::String a11yRowHelp (int group, int row) const override;
+    bool         a11yTakeCursorRequest (int& group, int& row) override;
 
     // Setting from the keyboard: step forward/back without wrapping (the mouse still wraps).
     bool stepControl (int control, int step);
@@ -158,22 +162,58 @@ private:
     int   lastRangeDb = 0;   // para rehornear la rejilla cuando cambia la escala
 
     // ---- accessibility: raw bins of the latest frame (the picture keeps only per-pixel columns) ----
-    struct Peak { double hz = 0.0; float db = 0.0f; };
-    static constexpr int kA11yPeaks = 5;
     std::vector<float> a11yMag[SpectrumFrame::kMaxSpectra], a11yHold[SpectrumFrame::kMaxSpectra];
     int    a11yBins = 0, a11ySpectra = 0;
     double a11yBinHz = 0.0;
     bool   a11yHasFrame = false;
-    juce::uint32 a11yFrameSerial = 0;          // grows with every new frame (peak cache)
+    juce::uint32 a11yFrameSerial = 0;          // grows with every new frame (curve cache)
     int    probeMidi = 69;                     // the probe sits on notes: 69 = A 4, 440 Hz
-    mutable juce::uint32 peaksFrame = 0xffffffffu;
-    mutable std::vector<Peak> peaks;           // peaks are computed on request, at most once per frame
+    bool   cursorToProbe = false;              // Enter on a peak asked the readings cursor to go to the probe
 
-    float  a11yLevelAt (int slot, double hz, bool hold) const;   // level at a frequency, as on the plot
-    const std::vector<Peak>& a11yPeaks() const;
+    // The curve for speech: the bins on a fixed log grid (96 points per octave, about one pixel column of a
+    // big window), so the numbers do not depend on the window size. Levels are true levels without the slope;
+    // the slope only sets the line they are compared with. See "the line" in SpectrumLens.cpp.
+    struct A11yCurve
+    {
+        std::vector<float> rawDb[SpectrumFrame::kMaxSpectra];      // unsmoothed, per channel
+        std::vector<float> holdDb[SpectrumFrame::kMaxSpectra];     // peak hold, never smoothed (as on screen)
+        std::vector<float> smoothDb[SpectrumFrame::kMaxSpectra];   // smoothed like the drawn curve
+        std::vector<float> top;                                    // louder channel, smoothed
+        std::vector<int>   topBin;                                 // the loudest bin of each grid cell (or -1)
+        std::vector<float> oct;                                    // octaves from 1 kHz, for the slope
+    };
+    // A peak or a dip of the curve: where it stands out from its neighbourhood.
+    struct Feature { double hz = 0.0; float db = 0.0f; float prominence = 0.0f; float widthOct = 0.0f; };
+    struct A11yShape
+    {
+        bool  lineValid = false;  float lineDb = 0.0f;         // the line's level, in dB with the slope (flat on the plot)
+        bool  tiltValid = false;  float tiltDbPerOct = 0.0f;   // the signal's own tilt, without the slope
+        std::vector<Feature> peaks, dips;
+        float threshold = 3.0f;   // how far a feature must stand out to be listed
+    };
+    static constexpr int kMaxPeaks = 5, kMaxDips = 3;
+
+    mutable A11yCurve curve;
+    mutable A11yShape shape;
+    mutable juce::uint32 curveFrame = 0xffffffffu, shapeFrame = 0xffffffffu;
+    mutable int    curveSmooth = -1, shapeSmooth = -1, shapeRange = -1;
+    mutable float  shapeSlope = -1.0f;
+    mutable juce::uint32 shapeTimeMs = 0;
+    mutable bool   shapeHadFrame = false;
+
+    const A11yCurve& a11yCurve() const;   // rebuilt at most once per frame
+    const A11yShape& a11yShape() const;   // the list holds still for a second, so rows read in a row agree
+    float  a11yCurveAt (const std::vector<float>& v, double hz) const;
+    float  a11yProbeLevel (int slot, double hz, bool hold) const;
     juce::String a11yLevels (double hz, bool withHold) const;    // "L -18 dB, R -20 dB"
+    juce::String a11yLineDeviation (double hz) const;            // "3 dB above the line"
+    juce::String a11yTiltValue() const;
+    juce::String a11yTiltVersusLine() const;                     // "brighter than the line by 0.5"
+    juce::String a11yFeatureValue (const Feature& f, bool dip) const;
     juce::String a11yBandValue (int band) const;
-    juce::String a11yControlValue (int control) const;
+    juce::String a11yControlValue (int item) const;
+    int          a11yFeatureRows() const;
+    int          a11ySettingItem (int row) const;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (SpectrumLens)
 };
