@@ -8,9 +8,11 @@ This is an accessible build of [TELESCOPE by OVNI Audio](https://github.com/ovni
 
 **[Download TELESCOPE Accessible for Windows](https://github.com/fdrv161/telescope-accessible/releases/latest/download/TELESCOPE-accessible-windows-vst3.zip)**: a ZIP with the VST3 plugin and the manual, for Windows 10 and 11, 64-bit.
 
+**[macOS, experimental](https://github.com/fdrv161/telescope-accessible/releases/latest/download/TELESCOPE-accessible-macos.zip)**: VST3 and AU, Apple Silicon and Intel. It builds and passes validation, but the accessibility layer has only been tested with NVDA on Windows: VoiceOver may or may not work well. Reports are welcome.
+
 Release notes and older versions: [Releases](https://github.com/fdrv161/telescope-accessible/releases).
 
-Install: extract the ZIP and copy the `TELESCOPE.vst3` folder into `C:\Program Files\Common Files\VST3` (or another folder your DAW scans), then rescan plugins.
+Install on Windows: extract the ZIP and copy the `TELESCOPE.vst3` folder into `C:\Program Files\Common Files\VST3` (or another folder your DAW scans), then rescan plugins. For macOS, see [Installing](MANUAL.md#installing) in the manual.
 
 ## Manual
 
@@ -25,7 +27,7 @@ Install: extract the ZIP and copy the `TELESCOPE.vst3` folder into `C:\Program F
 - Speech in English, Spanish, Portuguese, French, German, Italian and Russian. The screen in the same languages.
 - It never changes your audio: zero latency, bit-exact pass-through.
 
-Tested with NVDA in REAPER on Windows.
+Tested with NVDA in REAPER on Windows. The macOS build is experimental.
 
 ## Source and licence
 

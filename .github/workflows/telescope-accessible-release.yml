@@ -1,4 +1,5 @@
-# Publishes a release of TELESCOPE Accessible (VST3, Windows x64).
+# Publishes a release of TELESCOPE Accessible: VST3 for Windows x64, and an experimental macOS build
+# (VST3 + AU, universal arm64 + x86_64, ad hoc signed, accessibility untested with VoiceOver).
 # Triggered by pushing a tag named telescope-accessible-<version>, e.g. telescope-accessible-0.2.0-a11y.1.
 # The tag does not start with "v", so the upstream release.yml (tags v*) never runs for it.
 # Release notes come from .github/release-notes/<tag>.md, which must exist: a release without notes fails.
@@ -12,25 +13,16 @@ permissions:
   contents: write
 
 jobs:
-  release:
-    name: Build and publish
+  windows:
+    name: Windows VST3
     runs-on: windows-2022
     timeout-minutes: 60
     defaults:
       run:
         shell: bash
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
-      - name: Check release notes
-        run: |
-          set -euo pipefail
-          notes=".github/release-notes/${GITHUB_REF_NAME}.md"
-          [ -f "$notes" ] || { echo "Missing $notes"; exit 1; }
-          echo "NOTES=$notes" >> "$GITHUB_ENV"
-          echo "VERSION=${GITHUB_REF_NAME#telescope-accessible-}" >> "$GITHUB_ENV"
 
       - name: Cache FetchContent deps
         uses: actions/cache@v4
@@ -66,7 +58,7 @@ jobs:
           unzip -oq pluginval.zip
           ./pluginval.exe --strictness-level 10 --validate "$VST3_BUNDLE"
 
-      # The ZIP name has no version, so releases/latest/download/<name> always points to the newest build.
+      # ZIP names have no version, so releases/latest/download/<name> always points to the newest build.
       - name: Package
         run: |
           set -euo pipefail
@@ -74,7 +66,7 @@ jobs:
           cp -r "$VST3_BUNDLE" dist/pkg/TELESCOPE.vst3
           cp MANUAL.md LICENSE NOTICE.md dist/pkg/
           printf '%s\r\n' \
-            "TELESCOPE Accessible ${GITHUB_REF_NAME#telescope-accessible-}" \
+            "TELESCOPE Accessible ${GITHUB_REF_NAME#telescope-accessible-} for Windows" \
             "" \
             "Install: copy the TELESCOPE.vst3 folder into C:\\Program Files\\Common Files\\VST3" \
             "(or another folder your DAW scans for VST3 plugins), then rescan plugins." \
@@ -83,7 +75,118 @@ jobs:
             "Source: https://github.com/fdrv161/telescope-accessible/tree/${GITHUB_REF_NAME} (GNU AGPLv3)" \
             > dist/pkg/README.txt
           (cd dist/pkg && 7z a -tzip ../TELESCOPE-accessible-windows-vst3.zip . > /dev/null)
-          (cd dist && sha256sum TELESCOPE-accessible-windows-vst3.zip > SHA256SUMS.txt && cat SHA256SUMS.txt)
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-windows
+          path: dist/TELESCOPE-accessible-windows-vst3.zip
+          if-no-files-found: error
+
+  macos:
+    name: macOS VST3 + AU (experimental)
+    runs-on: macos-latest
+    timeout-minutes: 60
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Ninja
+        run: brew install ninja
+
+      - name: Cache FetchContent deps
+        uses: actions/cache@v4
+        with:
+          path: build/_deps
+          key: deps-macos-${{ hashFiles('CMakeLists.txt') }}
+          restore-keys: |
+            deps-macos-
+
+      - name: Configure
+        run: >
+          cmake -B build -G Ninja
+          -DCMAKE_BUILD_TYPE=Release
+          -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64"
+          -DOVNI_BUILD_TESTS=OFF
+          -DOVNI_WITH_SOFA=OFF
+          -DOVNI_COPY_PLUGIN_AFTER_BUILD=OFF
+          .
+
+      - name: Build TELESCOPE VST3 and AU
+        run: cmake --build build --target telescope_VST3 telescope_AU
+
+      - name: Find bundles and sign ad hoc
+        run: |
+          set -euo pipefail
+          vst3=$(find build -type d -path '*telescope_artefacts/Release/VST3/*.vst3' | head -1)
+          au=$(find build -type d -path '*telescope_artefacts/Release/AU/*.component' | head -1)
+          [ -n "$vst3" ] && [ -n "$au" ] || { echo "bundles not found"; exit 1; }
+          # Ad hoc signature (no Apple account): Apple Silicon refuses to load unsigned code.
+          codesign --force --deep --sign - "$vst3"
+          codesign --force --deep --sign - "$au"
+          echo "VST3_BUNDLE=$vst3" >> "$GITHUB_ENV"
+          echo "AU_BUNDLE=$au" >> "$GITHUB_ENV"
+
+      - name: Pluginval VST3 (strictness 10)
+        run: |
+          set -euo pipefail
+          curl -fsSL -o pluginval.zip "https://github.com/Tracktion/pluginval/releases/download/v1.0.4/pluginval_macOS.zip"
+          unzip -oq pluginval.zip
+          ./pluginval.app/Contents/MacOS/pluginval --strictness-level 10 --validate "$VST3_BUNDLE"
+
+      # ditto keeps the bundle structure and signatures intact inside the ZIP.
+      - name: Package
+        run: |
+          set -euo pipefail
+          mkdir -p dist/pkg
+          cp -R "$VST3_BUNDLE" dist/pkg/TELESCOPE.vst3
+          cp -R "$AU_BUNDLE" dist/pkg/TELESCOPE.component
+          cp MANUAL.md LICENSE NOTICE.md dist/pkg/
+          printf '%s\n' \
+            "TELESCOPE Accessible ${GITHUB_REF_NAME#telescope-accessible-} for macOS (experimental)" \
+            "" \
+            "The accessibility layer has only been tested with NVDA on Windows. VoiceOver may or may not work well." \
+            "" \
+            "Install:" \
+            "  TELESCOPE.vst3      -> ~/Library/Audio/Plug-Ins/VST3" \
+            "  TELESCOPE.component -> ~/Library/Audio/Plug-Ins/Components" \
+            "The build is not notarized. After copying, run in Terminal:" \
+            "  xattr -dr com.apple.quarantine ~/Library/Audio/Plug-Ins/VST3/TELESCOPE.vst3 ~/Library/Audio/Plug-Ins/Components/TELESCOPE.component" \
+            "Then rescan plugins in your DAW." \
+            "" \
+            "Manual: MANUAL.md in this ZIP, or https://github.com/fdrv161/telescope-accessible/blob/${GITHUB_REF_NAME}/MANUAL.md" \
+            "Source: https://github.com/fdrv161/telescope-accessible/tree/${GITHUB_REF_NAME} (GNU AGPLv3)" \
+            > dist/pkg/README.txt
+          (cd dist && ditto -c -k --keepParent pkg TELESCOPE-accessible-macos.zip)
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-macos
+          path: dist/TELESCOPE-accessible-macos.zip
+          if-no-files-found: error
+
+  publish:
+    name: Publish release
+    needs: [windows, macos]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Check release notes
+        run: |
+          set -euo pipefail
+          notes=".github/release-notes/${GITHUB_REF_NAME}.md"
+          [ -f "$notes" ] || { echo "Missing $notes"; exit 1; }
+          echo "NOTES=$notes" >> "$GITHUB_ENV"
+          echo "VERSION=${GITHUB_REF_NAME#telescope-accessible-}" >> "$GITHUB_ENV"
+
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: Checksums
+        run: cd dist && sha256sum *.zip > SHA256SUMS.txt && cat SHA256SUMS.txt
 
       - name: Publish release
         uses: softprops/action-gh-release@v2
@@ -92,5 +195,6 @@ jobs:
           body_path: ${{ env.NOTES }}
           files: |
             dist/TELESCOPE-accessible-windows-vst3.zip
+            dist/TELESCOPE-accessible-macos.zip
             dist/SHA256SUMS.txt
           make_latest: true

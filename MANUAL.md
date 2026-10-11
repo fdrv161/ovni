@@ -62,7 +62,9 @@ Tested with NVDA in REAPER on Windows. Other screen readers that use UI Automati
 
 ## Installing
 
-This build is a **VST3 plugin for Windows 10 or 11, 64-bit**.
+### Windows
+
+A **VST3 plugin for Windows 10 or 11, 64-bit**. This is the tested build.
 
 1. Download [`TELESCOPE-accessible-windows-vst3.zip`](https://github.com/fdrv161/telescope-accessible/releases/latest/download/TELESCOPE-accessible-windows-vst3.zip) from the [latest release](https://github.com/fdrv161/telescope-accessible/releases/latest).
 2. Extract the ZIP. Inside is a folder named `TELESCOPE.vst3`. Copy that whole folder into your VST3 folder:
@@ -74,6 +76,22 @@ This build is a **VST3 plugin for Windows 10 or 11, 64-bit**.
 To update, close the DAW and replace the `TELESCOPE.vst3` folder with the new one.
 
 The build is not code-signed. That does not affect a VST3 loaded by a DAW.
+
+### macOS (experimental)
+
+VST3 and AU, universal (Apple Silicon and Intel), macOS 11 or newer. It builds and passes pluginval, but **the accessibility layer has only been tested with NVDA on Windows**. JUCE exposes the same controls to VoiceOver and the announcements use VoiceOver's own mechanism, so it may work well, partly, or not at all. If you try it, please [report how it goes](https://github.com/fdrv161/telescope-accessible/issues).
+
+1. Download [`TELESCOPE-accessible-macos.zip`](https://github.com/fdrv161/telescope-accessible/releases/latest/download/TELESCOPE-accessible-macos.zip) and open it.
+2. Copy `TELESCOPE.vst3` into `~/Library/Audio/Plug-Ins/VST3` and `TELESCOPE.component` into `~/Library/Audio/Plug-Ins/Components`.
+3. The build is signed ad hoc, not notarized by Apple, so macOS blocks it until you remove the quarantine flag. In Terminal:
+
+   ```bash
+   xattr -dr com.apple.quarantine ~/Library/Audio/Plug-Ins/VST3/TELESCOPE.vst3 ~/Library/Audio/Plug-Ins/Components/TELESCOPE.component
+   ```
+
+4. Rescan plugins in your DAW. Logic may need a restart to list the AU.
+
+On macOS the keys are the same as below, with Option in place of Alt.
 
 ---
 
@@ -528,7 +546,7 @@ Units (dB, Hz, kHz, ms, LUFS) and industry terms that are normally left in Engli
 
 ## Known limits
 
-- Windows VST3 only. The original also builds VST3 and AU on macOS, but this fork's accessible layer has only been built and tested on Windows.
+- The macOS build is experimental: it builds and passes validation, but has not been tested with VoiceOver.
 - Tested with NVDA in REAPER. Other hosts and screen readers should work but have not been tested.
 - The main fonts have no Cyrillic. With Russian selected, the system substitutes a font, so Russian text looks different from the rest.
 - Polar level (Hemisphere) gives its numbers but not the direction of the strongest energy as text.

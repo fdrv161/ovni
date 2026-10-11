@@ -2,7 +2,10 @@ The first release of **TELESCOPE Accessible**: the TELESCOPE 0.2.0 audio analyse
 
 ## Download
 
-`TELESCOPE-accessible-windows-vst3.zip` below: VST3 for Windows 10 and 11, 64-bit. Extract it and copy the `TELESCOPE.vst3` folder into `C:\Program Files\Common Files\VST3` (or another folder your DAW scans), then rescan plugins. The ZIP also contains the manual.
+- **Windows**: `TELESCOPE-accessible-windows-vst3.zip`, VST3 for Windows 10 and 11, 64-bit. Extract it and copy the `TELESCOPE.vst3` folder into `C:\Program Files\Common Files\VST3` (or another folder your DAW scans), then rescan plugins.
+- **macOS, experimental**: `TELESCOPE-accessible-macos.zip`, VST3 and AU, Apple Silicon and Intel. It builds and passes pluginval, but the accessibility layer has only been tested with NVDA on Windows; VoiceOver may or may not work well. The build is not notarized: see README.txt inside or the manual for the one Terminal command it needs.
+
+Each ZIP also contains the manual.
 
 ## What is in it
 
@@ -15,7 +18,7 @@ The first release of **TELESCOPE Accessible**: the TELESCOPE 0.2.0 audio analyse
 - Speech in English, Spanish, Portuguese, French, German, Italian and Russian; Russian on screen too.
 - Space and DAW shortcuts keep working while the plugin has focus. For sighted users nothing changes.
 
-Tested with NVDA in REAPER. The build passes pluginval at strictness 10.
+Tested with NVDA in REAPER on Windows. Both builds pass pluginval at strictness 10.
 
 ## Manual
 
