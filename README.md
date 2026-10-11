@@ -39,6 +39,8 @@ TELESCOPE is free and open source under the **GNU AGPLv3**. The original is by [
 - The repository also holds OVNI's other plugins, unchanged in this fork. For them, see the [original OVNI README](https://github.com/ovniaudio/ovni#readme).
 - Third-party notices: [`NOTICE.md`](NOTICE.md)
 
+**How this was made.** The accessibility layer, the speech translations, the Russian translation, the build scripts and this documentation were written by Claude, an AI model by Anthropic, working in Claude Code at the request of [fdrv161](https://github.com/fdrv161). fdrv161 tested the Windows build by hand with NVDA in REAPER. The macOS build has not been tested by a person.
+
 ## Feedback
 
 Found something that is not readable, a key that does not work, or a phrase that sounds wrong in your language? [Open an issue](https://github.com/fdrv161/telescope-accessible/issues).

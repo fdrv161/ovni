@@ -556,3 +556,5 @@ Units (dB, Hz, kHz, ms, LUFS) and industry terms that are normally left in Engli
 - **TELESCOPE** is by [OVNI Audio](https://ovniaudio.com), free and open source under the **GNU AGPLv3**. Original source: <https://github.com/ovniaudio/ovni>.
 - The accessibility layer, the speech translations and the Russian translation were added in [fdrv161/telescope-accessible](https://github.com/fdrv161/telescope-accessible/tree/accessible), under the same licence. The full source of every release is in that repository, at the release tag.
 - Third-party notices: [`NOTICE.md`](NOTICE.md).
+
+**How this was made.** The accessibility layer, the speech translations, the Russian translation, the build scripts and this documentation were written by Claude, an AI model by Anthropic, working in Claude Code at the request of [fdrv161](https://github.com/fdrv161). fdrv161 tested the Windows build by hand with NVDA in REAPER. The macOS build has not been tested by a person.

@@ -28,4 +28,6 @@ Tested with NVDA in REAPER on Windows. Both builds pass pluginval at strictness 
 
 GNU AGPLv3. TELESCOPE is by [OVNI Audio](https://github.com/ovniaudio/ovni); the accessibility layer was added in this fork. The full source of this release is at the tag [`telescope-accessible-0.2.0-a11y.1`](https://github.com/fdrv161/telescope-accessible/tree/telescope-accessible-0.2.0-a11y.1).
 
-`SHA256SUMS.txt` holds the checksum of the ZIP.
+**How this was made.** The accessibility layer, the speech translations, the Russian translation, the build scripts and this documentation were written by Claude, an AI model by Anthropic, working in Claude Code at the request of [fdrv161](https://github.com/fdrv161). fdrv161 tested the Windows build by hand with NVDA in REAPER. The macOS build has not been tested by a person.
+
+`SHA256SUMS.txt` holds the checksums of the ZIPs.
