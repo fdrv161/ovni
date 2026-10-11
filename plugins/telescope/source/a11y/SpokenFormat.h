@@ -1,4 +1,5 @@
 #pragma once
+#include <algorithm>
 #include <cmath>
 #include <juce_core/juce_core.h>
 #include "lenses/NoteName.h"
@@ -56,6 +57,73 @@ inline juce::String clean (juce::String t)
          .replace ("\n", ". ");
     while (t.contains ("  ")) t = t.replace ("  ", " ");
     return t.replace (" ,", ",").replace (",,", ",").trim();
+}
+
+// Баланс каналов (плюс — правый громче): "centred", "1.2 dB louder on the right".
+inline juce::String balance (float db)
+{
+    if (std::abs (db) < 0.05f) return "centred";
+    return trimmed (std::abs (db), 1) + " dB louder on the " + (db > 0.0f ? "right" : "left");
+}
+
+// Панорама от -1 (лево) до +1 (право): "centre", "40 percent left".
+inline juce::String pan (float p)
+{
+    const int pct = juce::roundToInt (std::abs (p) * 100.0f);
+    if (pct < 5) return "centre";
+    return juce::String (pct) + " percent " + (p < 0.0f ? "left" : "right");
+}
+
+// Корреляция: число и смысл словами (на экране это цвет и положение стрелки).
+inline juce::String correlation (float c)
+{
+    const auto n = trimmed (c, 2);
+    if (c < 0.0f)  return n + ", out of phase";
+    if (c > 0.9f)  return n + ", nearly mono";
+    return n;
+}
+
+// Название палитры обычным регистром.
+inline juce::String palette (int index)
+{
+    static const char* const names[] = { "Ovni", "Inferno", "Viridis", "Spectrum" };
+    return names[juce::jlimit (0, 3, index)];
+}
+
+// Класс ноты (0 = C) и тональность (mode 1 — минор): "F sharp minor".
+inline juce::String pitchClass (int pc)
+{
+    static const char* const names[12] = { "C", "C sharp", "D", "D sharp", "E", "F", "F sharp", "G",
+                                           "G sharp", "A", "A sharp", "B" };
+    return names[((pc % 12) + 12) % 12];
+}
+
+inline juce::String key (int tonic, int mode)
+{
+    if (tonic < 0 || tonic > 11 || mode < 0) return {};
+    return pitchClass (tonic) + (mode == 1 ? " minor" : " major");
+}
+
+// Тональность с уверенностью: "A minor, confidence 0.82, best 64 percent of the time".
+inline juce::String keyReading (int tonic, int mode, float confidence, float timeFraction)
+{
+    const auto k = key (tonic, mode);
+    if (k.isEmpty()) return "not estimated yet";
+    return k + ", confidence " + trimmed (confidence, 2) + ", best " + juce::String (juce::roundToInt (timeFraction * 100.0f))
+         + " percent of the time";
+}
+
+// Три самых сильных класса нот хроматограммы (12 значений, 0 = C): "A, E, C sharp".
+inline juce::String strongestClasses (const float* chroma12)
+{
+    int order[12];
+    for (int i = 0; i < 12; ++i) order[i] = i;
+    std::sort (order, order + 12, [chroma12] (int a, int b) { return chroma12[a] > chroma12[b]; });
+    if (! (chroma12[order[0]] > 1.0e-6f)) return "no signal";
+    juce::StringArray names;
+    for (int i = 0; i < 3; ++i)
+        if (chroma12[order[i]] >= 0.25f * chroma12[order[0]]) names.add (pitchClass (order[i]));
+    return names.joinIntoString (", ");
 }
 
 // Нота: "C sharp 3", "A 4". Знак # синтезаторы читают как «решётка» или «номер», поэтому словом.

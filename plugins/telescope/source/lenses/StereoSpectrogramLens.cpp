@@ -1,4 +1,5 @@
 #include "lenses/StereoSpectrogramLens.h"
+#include "a11y/SpokenFormat.h"
 #include "lenses/Look.h"
 #include "PluginProcessor.h"
 #include "lenses/LensReadout.h"
@@ -517,5 +518,57 @@ void StereoSpectrogramLens::mouseMove (const juce::MouseEvent& e)
 void StereoSpectrogramLens::mouseExit (const juce::MouseEvent&)
 {
     if (hovered != -1 || cursor.x != -1) { hovered = -1; cursor = { -1, -1 }; repaint(); }
+}
+
+//======================================================================================== доступность
+// Картинка «ширина стерео во времени». Числа по полосам — в BAND CORRELATION; здесь пояснение и настройки.
+juce::String StereoSpectrogramLens::a11yGroupName (int group) const
+{
+    return group == 0 ? "About" : "Settings";
+}
+
+int StereoSpectrogramLens::a11yRowCount (int group) const
+{
+    return group == 0 ? 1 : (int) kNumControls;
+}
+
+juce::String StereoSpectrogramLens::a11yRowName (int group, int row) const
+{
+    if (group == 0) return "Stereo width over time, a picture only. For numbers per band use the Band correlation lens";
+    static const char* const sets[kNumControls] = { "History", "Range", "Window", "Palette" };
+    return sets[juce::jlimit (0, (int) kNumControls - 1, row)];
+}
+
+juce::String StereoSpectrogramLens::a11yRowValue (int group, int row) const
+{
+    if (group == 0) return {};
+    const auto s = processor.spectrumSettings();
+    switch (row)
+    {
+        case ctrlHistory: return juce::String (SpectrogramRing::kHistoryOptions[s.historySecIndex]) + " seconds";
+        case ctrlRange:   return juce::String (s.rangeDb()) + " dB";
+        case ctrlWindow:  return spoken::trimmed (processor.bandsWindowSec(), 1) + " seconds";
+        case ctrlPalette: return spoken::palette (processor.paletteIndex());
+        default:          return {};
+    }
+}
+
+bool StereoSpectrogramLens::a11yIsAdjustable (int group, int) const
+{
+    return group == 1;
+}
+
+bool StereoSpectrogramLens::a11yAdjust (int group, int row, int step)
+{
+    if (group != 1) return false;
+    const auto s = processor.spectrumSettings();
+    switch (row)
+    {
+        case ctrlHistory: return a11yStepCyclic (s.historySecIndex, SpectrogramRing::kNumHistoryOptions, step, [this] { cycleControl (ctrlHistory); });
+        case ctrlRange:   return a11yStepCyclic (s.rangeDbIndex, Spectrum::kNumRanges, step, [this] { cycleControl (ctrlRange); });
+        case ctrlWindow:  return a11yStepCyclic (processor.bandsWindowIndex(), StereoBands::kNumWindowOptions, step, [this] { cycleControl (ctrlWindow); });
+        case ctrlPalette: return a11yStepCyclic (processor.paletteIndex(), look::kNumPalettes, step, [this] { cycleControl (ctrlPalette); });
+        default:          return false;
+    }
 }
 }

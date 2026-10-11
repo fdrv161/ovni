@@ -1,4 +1,5 @@
 #include "lenses/BandCorrelationLens.h"
+#include "a11y/SpokenFormat.h"
 #include "lenses/Look.h"
 #include "PluginProcessor.h"
 #include "lenses/LensReadout.h"
@@ -544,5 +545,88 @@ void BandCorrelationLens::mouseMove (const juce::MouseEvent& e)
 void BandCorrelationLens::mouseExit (const juce::MouseEvent&)
 {
     if (hovered != -1 || cursor.x != -1) { hovered = -1; cursor = { -1, -1 }; repaint(); }
+}
+
+//======================================================================================== доступность
+// Итог (худшие полосы — то же, что строка над графиком), 30 полос со всеми четырьмя числами сразу
+// (на экране вторая строка показывает одно из трёх) и настройки.
+namespace
+{
+enum BcGroup { bcSummary = 0, bcBands, bcSettings };
+enum BcSummaryRow { bsLowestCorr = 0, bsMostMonoLoss, bsMeasured, kBcSummaryRows };
+}
+
+juce::String BandCorrelationLens::a11yGroupName (int group) const
+{
+    switch (group)
+    {
+        case bcSummary: return "Summary";
+        case bcBands:   return "Third-octave bands";
+        default:        return "Settings";
+    }
+}
+
+int BandCorrelationLens::a11yRowCount (int group) const
+{
+    switch (group)
+    {
+        case bcSummary: return kBcSummaryRows;
+        case bcBands:   return StereoBands::kNumBands;
+        default:        return kNumControls;
+    }
+}
+
+juce::String BandCorrelationLens::a11yRowName (int group, int row) const
+{
+    if (group == bcBands) return spoken::hz (kThirdOctaveHz[juce::jlimit (0, StereoBands::kNumBands - 1, row)]);
+    if (group == bcSettings) return row == ctrlWindow ? "Window" : "Lower graph";
+    switch (row)
+    {
+        case bsLowestCorr:   return "Lowest correlation";
+        case bsMostMonoLoss: return "Most mono loss";
+        default:             return "Bands measured";
+    }
+}
+
+juce::String BandCorrelationLens::a11yRowValue (int group, int row) const
+{
+    if (group == bcSettings)
+    {
+        if (row == ctrlWindow)
+            return spoken::trimmed (StereoBands::kWindowSecOptions[juce::jlimit (0, StereoBands::kNumWindowOptions - 1,
+                                                                                 processor.bandsWindowIndex())], 1) + " seconds";
+        return rowMode == rowWidth ? "Width" : (rowMode == rowBalance ? "Balance" : "Mono loss");
+    }
+
+    if (group == bcBands)
+    {
+        const int b = juce::jlimit (0, StereoBands::kNumBands - 1, row);
+        if (bins[b] == 0) return "not measurable at this FFT size";
+        if (corr[b] == 0.0f && width[b] == 0.0f && monoLossDb[b] == 0.0f && balanceDb[b] == 0.0f) return "no signal";
+        return "correlation " + spoken::correlation (corr[b]) + "; width " + spoken::trimmed (width[b], 2)
+             + "; balance " + spoken::balance (balanceDb[b]) + "; mono loss " + spoken::trimmed (monoLossDb[b], 1) + " dB";
+    }
+
+    const auto s = summary();
+    if (row == bsMeasured) return juce::String (s.measured) + " of " + juce::String (StereoBands::kNumBands);
+    if (! s.valid) return "no signal";
+    if (row == bsLowestCorr)
+        return spoken::hz (kThirdOctaveHz[s.worstPhaseBand]) + ", " + spoken::correlation (s.worstCorr);
+    return spoken::hz (kThirdOctaveHz[s.worstMonoBand]) + ", " + spoken::trimmed (s.worstMonoDb, 1) + " dB"
+         + (s.worstMonoDb <= kMonoLossAlertDb ? ", high" : "");
+}
+
+bool BandCorrelationLens::a11yIsAdjustable (int group, int) const
+{
+    return group == bcSettings;
+}
+
+bool BandCorrelationLens::a11yAdjust (int group, int row, int step)
+{
+    if (group != bcSettings) return false;
+    if (row == ctrlWindow)
+        return a11yStepCyclic (processor.bandsWindowIndex(), StereoBands::kNumWindowOptions, step,
+                               [this] { cycleControl (ctrlWindow); });
+    return a11yStepCyclic (rowMode, kNumRows, step, [this] { cycleControl (ctrlRow); });
 }
 }

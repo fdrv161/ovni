@@ -1,4 +1,5 @@
 #pragma once
+#include "a11y/A11yWidgets.h"
 #include "analysis/AnalysisFrame.h"
 #include "lenses/LensIds.h"
 #include "lenses/Look.h"
@@ -143,6 +144,19 @@ public:
     // Строка-кнопка: Enter выполняет действие, возвращает фразу о результате (или пустую).
     virtual bool         a11yIsActivatable (int, int) const    { return false; }
     virtual juce::String a11yActivate (int, int)               { return {}; }
+
+    // Шаг настройки, которая по клику мыши ходит по кругу. С клавиатуры по кругу не ходим: вызываем тот же
+    // «следующий вариант» нужное число раз, а на краях стоим (и редактор молчит).
+    template <typename NextFn>
+    static bool a11yStepCyclic (int current, int count, int step, NextFn&& next)
+    {
+        if (count <= 1) return false;
+        const int size   = std::abs (step) >= a11yui::kExtreme ? count : (std::abs (step) >= a11yui::kCoarse ? 2 : 1);
+        const int target = juce::jlimit (0, count - 1, current + (step > 0 ? size : -size));
+        if (target == current) return false;
+        for (int i = (target - current + count) % count; i > 0; --i) next();
+        return true;
+    }
 
 private:
     juce::Component::SafePointer<juce::Component> pixelAnchor;

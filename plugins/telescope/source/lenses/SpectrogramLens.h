@@ -76,6 +76,15 @@ public:
     enum Control { history = 0, range, channel, ctrlPalette, kNumControls };
     void cycleControl (int control);
 
+    // ================== ДОСТУПНОСТЬ (см. Lens.h) ==================
+    int          a11yGroupCount() const override { return 2; }
+    juce::String a11yGroupName (int group) const override;
+    int          a11yRowCount (int group) const override;
+    juce::String a11yRowName (int group, int row) const override;
+    juce::String a11yRowValue (int group, int row) const override;
+    bool         a11yIsAdjustable (int group, int row) const override;
+    bool         a11yAdjust (int group, int row, int step) override;
+
     // Segundos que entran en el ancho del plot con el mapeo entero vigente (lo rotula el eje de tiempo).
     double visibleSeconds() const;
 

@@ -1,4 +1,5 @@
 #include "lenses/SpiralLens.h"
+#include "a11y/SpokenFormat.h"
 #include "lenses/Look.h"
 #include "PluginProcessor.h"
 #include "lenses/LensReadout.h"
@@ -516,5 +517,49 @@ void SpiralLens::mouseMove (const juce::MouseEvent& e)
 void SpiralLens::mouseExit (const juce::MouseEvent&)
 {
     if (hovered != -1 || cursor.x != -1) { hovered = -1; cursor = { -1, -1 }; repaint(); }
+}
+
+//======================================================================================== доступность
+// Спираль — тот же CQT, свёрнутый по октавам. Текстом: тональность и самые сильные классы нот.
+juce::String SpiralLens::a11yGroupName (int group) const
+{
+    return group == 0 ? "Readings" : "Settings";
+}
+
+int SpiralLens::a11yRowCount (int group) const
+{
+    return group == 0 ? 2 : (int) kNumControls;
+}
+
+juce::String SpiralLens::a11yRowName (int group, int row) const
+{
+    if (group == 1) return row == ctrlChannel ? "Channel" : "Chroma window";
+    return row == 0 ? "Key" : "Strongest pitch classes";
+}
+
+juce::String SpiralLens::a11yRowValue (int group, int row) const
+{
+    if (group == 1)
+    {
+        const auto s = processor.cqtSettings();
+        if (row == ctrlChannel) return s.channel == Cqt::left ? "Left" : (s.channel == Cqt::right ? "Right" : "Mid");
+        return spoken::trimmed (s.chromaSeconds(), 1) + " seconds";
+    }
+    if (row == 0) return spoken::keyReading (keyTonic, keyMode, keyConfidence, keyTimeFraction);
+    return spoken::strongestClasses (chromaSm);
+}
+
+bool SpiralLens::a11yIsAdjustable (int group, int) const
+{
+    return group == 1;
+}
+
+bool SpiralLens::a11yAdjust (int group, int row, int step)
+{
+    if (group != 1) return false;
+    const auto s = processor.cqtSettings();
+    if (row == ctrlChannel)
+        return a11yStepCyclic (s.channel, (int) Cqt::kNumChannels, step, [this] { cycleControl (ctrlChannel); });
+    return a11yStepCyclic (s.chromaSecIndex, Cqt::kNumChromaSecOptions, step, [this] { cycleControl (ctrlChroma); });
 }
 }

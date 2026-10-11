@@ -1,4 +1,5 @@
 #include "lenses/FieldLens.h"
+#include "a11y/SpokenFormat.h"
 #include "PluginProcessor.h"
 #include "lenses/LensReadout.h"
 #include "lenses/Look.h"
@@ -1311,5 +1312,123 @@ void FieldLens::mouseMove (const juce::MouseEvent& e)
 void FieldLens::mouseExit (const juce::MouseEvent&)
 {
     if (hovered != -1 || cursor.x != -1) { hovered = -1; cursor = { -1, -1 }; repaint(); }
+}
+
+//======================================================================================== доступность
+// FIELD — это рельеф «панорама × частота». Текстом он пересказан по октавам: где по панораме центр
+// энергии, от и до какой панорамы она растянута (10-й и 90-й процентили) и насколько октава тише самой
+// громкой. Считается по той же сетке, что нарисована (shownGrid).
+namespace
+{
+constexpr int    kOctaves = 10;
+constexpr double kOctaveHz[kOctaves] = { 31.5, 63.0, 125.0, 250.0, 500.0, 1000.0, 2000.0, 4000.0, 8000.0, 16000.0 };
+constexpr float  kSilentEnergy = 1.0e-12f;
+
+struct OctaveStats { float energy = 0.0f, centre = 0.0f, from = 0.0f, to = 0.0f; };
+
+OctaveStats octaveStats (const std::vector<float>& grid, int octave)
+{
+    OctaveStats s;
+    if (grid.size() < (size_t) FieldFrame::kRows * FieldFrame::kDir) return s;
+
+    const double lo = kOctaveHz[octave] / std::sqrt (2.0), hi = kOctaveHz[octave] * std::sqrt (2.0);
+    float col[FieldFrame::kDir] {};
+    for (int r = 0; r < FieldFrame::kRows; ++r)
+    {
+        const double f = FieldFrame::rowFrequency (r);
+        if (f < lo || f >= hi) continue;
+        for (int c = 0; c < FieldFrame::kDir; ++c) col[c] += grid[(size_t) r * FieldFrame::kDir + (size_t) c];
+    }
+
+    double weighted = 0.0;
+    for (int c = 0; c < FieldFrame::kDir; ++c)
+    {
+        s.energy += col[c];
+        weighted += (double) col[c] * (double) FieldFrame::columnPan (c);
+    }
+    if (s.energy <= kSilentEnergy) return s;
+    s.centre = (float) (weighted / (double) s.energy);
+
+    // Процентили по накопленной энергии: где начинается и где кончается основная часть звука.
+    float acc = 0.0f;
+    bool haveFrom = false;
+    for (int c = 0; c < FieldFrame::kDir; ++c)
+    {
+        acc += col[c];
+        if (! haveFrom && acc >= 0.1f * s.energy) { s.from = FieldFrame::columnPan (c); haveFrom = true; }
+        if (acc >= 0.9f * s.energy) { s.to = FieldFrame::columnPan (c); break; }
+    }
+    return s;
+}
+}
+
+juce::String FieldLens::a11yGroupName (int group) const
+{
+    return group == 0 ? "Octaves" : "Settings";
+}
+
+int FieldLens::a11yRowCount (int group) const
+{
+    return group == 0 ? kOctaves : (int) kNumControls;
+}
+
+juce::String FieldLens::a11yRowName (int group, int row) const
+{
+    if (group == 1)
+    {
+        static const char* const sets[kNumControls] = { "Decay", "Window", "Palette" };
+        return sets[juce::jlimit (0, (int) kNumControls - 1, row)];
+    }
+    return spoken::hz (kOctaveHz[juce::jlimit (0, kOctaves - 1, row)]) + " octave";
+}
+
+juce::String FieldLens::a11yRowValue (int group, int row) const
+{
+    if (group == 1)
+    {
+        switch (row)
+        {
+            case ctrlDecay:   return spoken::trimmed (processor.fieldDecaySec(), 1) + " seconds";
+            case ctrlWindow:  return spoken::trimmed (processor.bandsWindowSec(), 1) + " seconds";
+            case ctrlPalette: return spoken::palette (processor.paletteIndex());
+            default:          return {};
+        }
+    }
+
+    if (shownGrid.empty()) return "no data yet";
+    float loudest = 0.0f;
+    for (int o = 0; o < kOctaves; ++o) loudest = juce::jmax (loudest, octaveStats (shownGrid, o).energy);
+
+    const auto s = octaveStats (shownGrid, juce::jlimit (0, kOctaves - 1, row));
+    if (s.energy <= kSilentEnergy || loudest <= kSilentEnergy) return "silent";
+
+    const float rel = 10.0f * std::log10 (s.energy / loudest);
+    juce::String t = (rel > -0.05f ? juce::String ("loudest octave") : spoken::trimmed (rel, 1) + " dB")
+                   + ", centre " + spoken::pan (s.centre);
+    if (std::abs (s.to - s.from) >= 0.1f)
+        t << ", spread from " << spoken::pan (s.from) << " to " << spoken::pan (s.to);
+    else
+        t << ", narrow";
+    return t;
+}
+
+bool FieldLens::a11yIsAdjustable (int group, int) const
+{
+    return group == 1;
+}
+
+bool FieldLens::a11yAdjust (int group, int row, int step)
+{
+    if (group != 1) return false;
+    switch (row)
+    {
+        case ctrlDecay:
+            return a11yStepCyclic (processor.fieldDecayIndex(), Field::kNumDecayOptions, step, [this] { cycleControl (ctrlDecay); });
+        case ctrlWindow:
+            return a11yStepCyclic (processor.bandsWindowIndex(), StereoBands::kNumWindowOptions, step, [this] { cycleControl (ctrlWindow); });
+        case ctrlPalette:
+            return a11yStepCyclic (processor.paletteIndex(), look::kNumPalettes, step, [this] { cycleControl (ctrlPalette); });
+        default: return false;
+    }
 }
 }

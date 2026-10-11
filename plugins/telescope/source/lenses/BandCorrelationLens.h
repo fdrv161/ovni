@@ -61,6 +61,15 @@ public:
     enum Control { ctrlWindow = 0, ctrlRow, kNumControls };
     void cycleControl (int control);
 
+    // ================== ДОСТУПНОСТЬ (см. Lens.h) ==================
+    int          a11yGroupCount() const override { return 3; }
+    juce::String a11yGroupName (int group) const override;
+    int          a11yRowCount (int group) const override;
+    juce::String a11yRowName (int group, int row) const override;
+    juce::String a11yRowValue (int group, int row) const override;
+    bool         a11yIsAdjustable (int group, int row) const override;
+    bool         a11yAdjust (int group, int row, int step) override;
+
     // Lo que hay bajo el cursor. Público para que el test lo pida sin fabricar eventos de mouse.
     struct Readout
     {

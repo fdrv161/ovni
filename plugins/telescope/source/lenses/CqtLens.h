@@ -70,6 +70,15 @@ public:
     enum Control { ctrlChannel = 0, ctrlChroma, kNumControls };
     void cycleControl (int control);
 
+    // ================== ДОСТУПНОСТЬ (см. Lens.h) ==================
+    int          a11yGroupCount() const override { return 2; }
+    juce::String a11yGroupName (int group) const override;
+    int          a11yRowCount (int group) const override;
+    juce::String a11yRowName (int group, int row) const override;
+    juce::String a11yRowValue (int group, int row) const override;
+    bool         a11yIsAdjustable (int group, int row) const override;
+    bool         a11yAdjust (int group, int row, int step) override;
+
     // El mapeo del eje, público porque es una definición que se testea sola. La CELDA del bin k está
     // CENTRADA en su frecuencia: xForPosition(k) es donde vive f_k, y la celda va de k−0.5 a k+0.5. Que la
     // barra estuviera corrida media celda respecto de su propia frecuencia era un error de medio cuarto de

@@ -1,4 +1,5 @@
 #include "lenses/WaterfallLens.h"
+#include "a11y/SpokenFormat.h"
 #include "lenses/Look.h"
 #include "PluginProcessor.h"
 #include "lenses/LensReadout.h"
@@ -640,5 +641,63 @@ void WaterfallLens::mouseMove (const juce::MouseEvent& e)
 void WaterfallLens::mouseExit (const juce::MouseEvent&)
 {
     if (hovered != -1 || cursor.x != -1) { hovered = -1; cursor = { -1, -1 }; repaint(); }
+}
+
+//======================================================================================== доступность
+// Водопад — объёмная картинка спектра во времени. Пояснение и настройки; числа — в линзе SPECTRUM.
+juce::String WaterfallLens::a11yGroupName (int group) const
+{
+    return group == 0 ? "About" : "Settings";
+}
+
+int WaterfallLens::a11yRowCount (int group) const
+{
+    return group == 0 ? 1 : (int) kNumControls;
+}
+
+juce::String WaterfallLens::a11yRowName (int group, int row) const
+{
+    if (group == 0) return "Spectrum over time in 3D, a picture only. For numbers use the Spectrum lens";
+    static const char* const sets[kNumControls] = { "Lines", "Tilt", "History", "Range", "Palette" };
+    return sets[juce::jlimit (0, (int) kNumControls - 1, row)];
+}
+
+juce::String WaterfallLens::a11yRowValue (int group, int row) const
+{
+    if (group == 0) return {};
+    const auto s = processor.spectrumSettings();
+    switch (row)
+    {
+        case ctrlLines:   return juce::String (processor.waterfallLines());
+        case ctrlTilt:
+        {
+            static const char* const tilts[kNumTilts] = { "Low", "Medium", "High" };
+            return tilts[juce::jlimit (0, kNumTilts - 1, processor.waterfallTiltIndex())];
+        }
+        case ctrlHistory: return juce::String (SpectrogramRing::kHistoryOptions[s.historySecIndex]) + " seconds";
+        case ctrlRange:   return juce::String (s.rangeDb()) + " dB";
+        case ctrlPalette: return spoken::palette (processor.paletteIndex());
+        default:          return {};
+    }
+}
+
+bool WaterfallLens::a11yIsAdjustable (int group, int) const
+{
+    return group == 1;
+}
+
+bool WaterfallLens::a11yAdjust (int group, int row, int step)
+{
+    if (group != 1) return false;
+    const auto s = processor.spectrumSettings();
+    switch (row)
+    {
+        case ctrlLines:   return a11yStepCyclic (processor.waterfallLinesIndex(), TelescopeProcessor::kNumWaterfallLineOptions, step, [this] { cycleControl (ctrlLines); });
+        case ctrlTilt:    return a11yStepCyclic (processor.waterfallTiltIndex(), kNumTilts, step, [this] { cycleControl (ctrlTilt); });
+        case ctrlHistory: return a11yStepCyclic (s.historySecIndex, SpectrogramRing::kNumHistoryOptions, step, [this] { cycleControl (ctrlHistory); });
+        case ctrlRange:   return a11yStepCyclic (s.rangeDbIndex, Spectrum::kNumRanges, step, [this] { cycleControl (ctrlRange); });
+        case ctrlPalette: return a11yStepCyclic (processor.paletteIndex(), look::kNumPalettes, step, [this] { cycleControl (ctrlPalette); });
+        default:          return false;
+    }
 }
 }

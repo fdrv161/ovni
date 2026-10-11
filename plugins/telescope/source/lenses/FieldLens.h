@@ -191,6 +191,15 @@ public:
     enum Control { ctrlDecay = 0, ctrlWindow, ctrlPalette, kNumControls };
     void cycleControl (int control);
 
+    // ================== ДОСТУПНОСТЬ (см. Lens.h) ==================
+    int          a11yGroupCount() const override { return 2; }
+    juce::String a11yGroupName (int group) const override;
+    int          a11yRowCount (int group) const override;
+    juce::String a11yRowName (int group, int row) const override;
+    juce::String a11yRowValue (int group, int row) const override;
+    bool         a11yIsAdjustable (int group, int row) const override;
+    bool         a11yAdjust (int group, int row, int step) override;
+
 protected:
     void renderStatic (juce::Graphics&, int width, int height) override;
     void paintLive (juce::Graphics&) override;

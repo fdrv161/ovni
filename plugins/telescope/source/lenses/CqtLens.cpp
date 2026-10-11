@@ -1,4 +1,5 @@
 #include "lenses/CqtLens.h"
+#include "a11y/SpokenFormat.h"
 #include "lenses/Look.h"
 #include "PluginProcessor.h"
 #include "lenses/LensReadout.h"
@@ -576,5 +577,94 @@ void CqtLens::mouseMove (const juce::MouseEvent& e)
 void CqtLens::mouseExit (const juce::MouseEvent&)
 {
     if (hovered != -1 || cursorX != -1) { hovered = -1; cursorX = -1; repaint(); }
+}
+
+//======================================================================================== доступность
+// CQT — спектр по нотам. Текстом: тональность (как подпись под клавиатурой), самые сильные классы нот
+// хроматограммы и пять самых громких нот спектра с частотой и отклонением в центах.
+namespace
+{
+constexpr int kA11yNotes = 5;
+
+juce::String cqtChannel (int c)
+{
+    return c == Cqt::left ? "Left" : (c == Cqt::right ? "Right" : "Mid");
+}
+}
+
+juce::String CqtLens::a11yGroupName (int group) const
+{
+    return group == 0 ? "Readings" : "Settings";
+}
+
+int CqtLens::a11yRowCount (int group) const
+{
+    return group == 0 ? 2 + kA11yNotes : (int) kNumControls;
+}
+
+juce::String CqtLens::a11yRowName (int group, int row) const
+{
+    if (group == 1) return row == ctrlChannel ? "Channel" : "Chroma window";
+    if (row == 0) return "Key";
+    if (row == 1) return "Strongest pitch classes";
+    return "Note " + juce::String (row - 1);
+}
+
+juce::String CqtLens::a11yRowValue (int group, int row) const
+{
+    if (group == 1)
+    {
+        const auto s = processor.cqtSettings();
+        if (row == ctrlChannel) return cqtChannel (s.channel);
+        return spoken::trimmed (s.chromaSeconds(), 1) + " seconds";
+    }
+    if (row == 0) return spoken::keyReading (keyTonic, keyMode, keyConfidence, keyTimeFraction);
+    if (row == 1) return spoken::strongestClasses (chromaSm);
+
+    // Пики спектра по нотам: локальные максимумы бинов (2 бина на полутон), не ближе полутона друг к другу,
+    // не тише самого громкого больше чем на 40 dB.
+    const int n = juce::jmin (binsSeen, (int) targetDb.size());
+    if (n < 3 || bpoSeen <= 0) return "no data yet";
+    struct P { int k; float db; };
+    std::vector<P> cands;
+    float top = CqtFrame::kFloorDb;
+    for (int k = 1; k < n - 1; ++k)
+    {
+        const float v = targetDb[(size_t) k];
+        if (v > targetDb[(size_t) k - 1] && v >= targetDb[(size_t) k + 1] && v > CqtFrame::kFloorDb + 1.0f)
+        {
+            cands.push_back ({ k, v });
+            top = juce::jmax (top, v);
+        }
+    }
+    std::sort (cands.begin(), cands.end(), [] (const P& a, const P& b) { return a.db > b.db; });
+    std::vector<P> picked;
+    const int minSep = juce::jmax (1, bpoSeen / 12);
+    for (const auto& c : cands)
+    {
+        if ((int) picked.size() >= kA11yNotes || c.db < top - 40.0f) break;
+        if (std::none_of (picked.begin(), picked.end(), [&c, minSep] (const P& p) { return std::abs (p.k - c.k) < minSep; }))
+            picked.push_back (c);
+    }
+
+    const int i = row - 2;
+    if (i >= (int) picked.size()) return "none";
+    const double hz = (double) fMinSeen * std::pow (2.0, (double) picked[(size_t) i].k / (double) bpoSeen);
+    return spoken::noteWithCents (noteForFrequency (hz)) + ", " + spoken::hz (hz) + ", "
+         + spoken::trimmed (picked[(size_t) i].db, 1) + " dB";
+}
+
+bool CqtLens::a11yIsAdjustable (int group, int) const
+{
+    return group == 1;
+}
+
+bool CqtLens::a11yAdjust (int group, int row, int step)
+{
+    if (group != 1) return false;
+    const auto s = processor.cqtSettings();
+    if (row == ctrlChannel)
+        return a11yStepCyclic (s.channel, (int) Cqt::kNumChannels, step, [this] { cycleControl (ctrlChannel); });
+    return a11yStepCyclic (s.chromaSecIndex, Cqt::kNumChromaSecOptions, step, [this] { cycleControl (ctrlChroma); });
 }
 }

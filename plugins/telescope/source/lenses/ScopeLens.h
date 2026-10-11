@@ -78,6 +78,15 @@ public:
     // no donde cree que se dibuja.
     juce::Rectangle<int> correlationArea() const noexcept { return zones.centre; }
 
+    // ================== ДОСТУПНОСТЬ (см. Lens.h) ==================
+    int          a11yGroupCount() const override { return 2; }
+    juce::String a11yGroupName (int group) const override;
+    int          a11yRowCount (int group) const override;
+    juce::String a11yRowName (int group, int row) const override;
+    juce::String a11yRowValue (int group, int row) const override;
+    bool         a11yIsAdjustable (int group, int row) const override;
+    bool         a11yAdjust (int group, int row, int step) override;
+
     // ===== 56 =====
     // Los TRES modos del panel izquierdo. El índice persiste en el ValueTree como `scopeMode`; si esa
     // propiedad no está (un preset guardado ANTES de este modo) se deriva del viejo `scopePolar`, así un

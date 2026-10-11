@@ -1,4 +1,5 @@
 #include "lenses/ScopeLens.h"
+#include "a11y/SpokenFormat.h"
 #include "PluginProcessor.h"
 #include "lenses/Look.h"
 #include "lenses/Strings.h"
@@ -1063,5 +1064,113 @@ void ScopeLens::mouseMove (const juce::MouseEvent& e)
 void ScopeLens::mouseExit (const juce::MouseEvent&)
 {
     if (hovered != -1) { hovered = -1; repaint(); }
+}
+
+//======================================================================================== доступность
+// Цифры стерео — те же, что справа от гониометра; цвет стрелки корреляции сказан словом. Сама картинка
+// (фигура Лиссажу, полусфера) текстом не пересказывается: её смысл как раз в этих числах.
+namespace
+{
+enum ScopeRow { srCorr = 0, srWidth, srBalance, srMonoLoss, srOutOfPhase, srWindow, kScopeRows };
+enum ScopeSet { ssMode = 0, ssTrigger, ssWindow, ssHemiDecay, ssHemiScale, kScopeSets };
+
+int windowIndexFor (int ms)
+{
+    for (int i = 0; i < 3; ++i)
+        if (Stereo::kWindowMsOptions[i] == ms) return i;
+    return 1;
+}
+}
+
+juce::String ScopeLens::a11yGroupName (int group) const
+{
+    return group == 0 ? "Readings" : "Settings";
+}
+
+int ScopeLens::a11yRowCount (int group) const
+{
+    return group == 0 ? (int) kScopeRows : (int) kScopeSets;
+}
+
+juce::String ScopeLens::a11yRowName (int group, int row) const
+{
+    if (group == 1)
+    {
+        static const char* const sets[kScopeSets] = { "Mode", "Oscilloscope trigger", "Window",
+                                                      "Hemisphere decay", "Hemisphere scale" };
+        return sets[juce::jlimit (0, (int) kScopeSets - 1, row)];
+    }
+    static const char* const names[kScopeRows] = { "Correlation", "Width", "Balance", "Mono loss",
+                                                   "Out of phase energy", "Measured over" };
+    return names[juce::jlimit (0, (int) kScopeRows - 1, row)];
+}
+
+juce::String ScopeLens::a11yRowValue (int group, int row) const
+{
+    if (group == 1)
+    {
+        switch (row)
+        {
+            case ssMode:
+                return scopeMode() == Mode::polar ? "Polar" : (scopeMode() == Mode::hemisphere ? "Hemisphere" : "Lissajous");
+            case ssTrigger:   return processor.scopeTrigger() ? "On" : "Off";
+            case ssWindow:    return juce::String (processor.stereoWindowMs()) + " ms";
+            case ssHemiDecay: return spoken::trimmed (hemiDecayDbPerSec(), 0) + " dB per second";
+            case ssHemiScale: return hemiScale() == HemiScale::decibel ? "Decibels" : "Relative";
+            default:          return {};
+        }
+    }
+
+    switch (row)
+    {
+        case srCorr:       return spoken::correlation (corr);
+        case srWidth:      return spoken::trimmed (width, 2);
+        case srBalance:    return spoken::balance (balanceDb);
+        case srMonoLoss:   return spoken::trimmed (monoLossDb, 1) + " dB";
+        case srOutOfPhase: return juce::String (juce::roundToInt (outOfPhasePercent())) + " percent";
+        case srWindow:     return juce::String (juce::roundToInt (windowSec * 1000.0f)) + " ms";
+        default:           return {};
+    }
+}
+
+bool ScopeLens::a11yIsAdjustable (int group, int) const
+{
+    return group == 1;
+}
+
+bool ScopeLens::a11yAdjust (int group, int row, int step)
+{
+    if (group != 1) return false;
+    bool changed = false;
+    switch (row)
+    {
+        case ssMode:
+            changed = a11yStepCyclic ((int) scopeMode(), 3, step,
+                                      [this] { setScopeMode ((Mode) (((int) scopeMode() + 1) % 3)); });
+            break;
+        case ssTrigger:
+            changed = a11yStepCyclic (processor.scopeTrigger() ? 1 : 0, 2, step,
+                                      [this] { processor.setScopeTrigger (! processor.scopeTrigger()); });
+            break;
+        case ssWindow:
+            changed = a11yStepCyclic (windowIndexFor (processor.stereoWindowMs()), 3, step, [this]
+            {
+                processor.setStereoWindowMs (Stereo::kWindowMsOptions[(windowIndexFor (processor.stereoWindowMs()) + 1) % 3]);
+            });
+            break;
+        case ssHemiDecay:
+            changed = a11yStepCyclic (hemiDecayIndex(), kNumHemiDecayOptions, step,
+                                      [this] { setHemiDecayIndex ((hemiDecayIndex() + 1) % kNumHemiDecayOptions); });
+            break;
+        case ssHemiScale:
+            changed = a11yStepCyclic (hemiScale() == HemiScale::decibel ? 1 : 0, 2, step, [this]
+            {
+                setHemiScale (hemiScale() == HemiScale::relative ? HemiScale::decibel : HemiScale::relative);
+            });
+            break;
+        default: break;
+    }
+    if (changed) repaint();
+    return changed;
 }
 }

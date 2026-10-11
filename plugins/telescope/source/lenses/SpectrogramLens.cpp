@@ -1,4 +1,5 @@
 #include "lenses/SpectrogramLens.h"
+#include "a11y/SpokenFormat.h"
 #include "lenses/Look.h"
 #include "PluginProcessor.h"
 #include "lenses/LensReadout.h"
@@ -419,5 +420,73 @@ void SpectrogramLens::mouseMove (const juce::MouseEvent& e)
 void SpectrogramLens::mouseExit (const juce::MouseEvent&)
 {
     if (hovered != -1 || cursor.x != -1) { hovered = -1; cursor = { -1, -1 }; repaint(); }
+}
+
+//======================================================================================== доступность
+// Спектрограмма — картинка «спектр во времени», текстом её не пересказать. Честно говорим это одной строкой
+// и даём все настройки: они общие со SPECTRUM (история, диапазон, канал), так что настраивать можно и здесь.
+namespace
+{
+juce::String spokenChannel (int c)
+{
+    switch (c)
+    {
+        case Spectrum::left:  return "Left";
+        case Spectrum::right: return "Right";
+        case Spectrum::mid:   return "Mid";
+        case Spectrum::side:  return "Side";
+        default:              return "Left and right";
+    }
+}
+}
+
+juce::String SpectrogramLens::a11yGroupName (int group) const
+{
+    return group == 0 ? "About" : "Settings";
+}
+
+int SpectrogramLens::a11yRowCount (int group) const
+{
+    return group == 0 ? 1 : (int) kNumControls;
+}
+
+juce::String SpectrogramLens::a11yRowName (int group, int row) const
+{
+    if (group == 0) return "Spectrum over time, a picture only. For numbers use the Spectrum lens";
+    static const char* const sets[kNumControls] = { "History", "Range", "Channel", "Palette" };
+    return sets[juce::jlimit (0, (int) kNumControls - 1, row)];
+}
+
+juce::String SpectrogramLens::a11yRowValue (int group, int row) const
+{
+    if (group == 0) return {};
+    const auto s = processor.spectrumSettings();
+    switch (row)
+    {
+        case history:     return juce::String (SpectrogramRing::kHistoryOptions[s.historySecIndex]) + " seconds";
+        case range:       return juce::String (s.rangeDb()) + " dB";
+        case channel:     return spokenChannel (s.channel);
+        case ctrlPalette: return spoken::palette (processor.paletteIndex());
+        default:          return {};
+    }
+}
+
+bool SpectrogramLens::a11yIsAdjustable (int group, int) const
+{
+    return group == 1;
+}
+
+bool SpectrogramLens::a11yAdjust (int group, int row, int step)
+{
+    if (group != 1) return false;
+    const auto s = processor.spectrumSettings();
+    switch (row)
+    {
+        case history:     return a11yStepCyclic (s.historySecIndex, SpectrogramRing::kNumHistoryOptions, step, [this] { cycleControl (history); });
+        case range:       return a11yStepCyclic (s.rangeDbIndex, Spectrum::kNumRanges, step, [this] { cycleControl (range); });
+        case channel:     return a11yStepCyclic (s.channel, Spectrum::kNumChannels, step, [this] { cycleControl (channel); });
+        case ctrlPalette: return a11yStepCyclic (processor.paletteIndex(), look::kNumPalettes, step, [this] { cycleControl (ctrlPalette); });
+        default:          return false;
+    }
 }
 }
