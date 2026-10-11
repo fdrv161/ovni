@@ -287,7 +287,12 @@ Slope and Smoothing exist to help the eye: Slope makes a balanced mix look flat,
 - **Readings**:
   - **Probe**: a frequency cursor that moves by notes. Plus and minus move it a semitone, a big step is an octave, and the range is about 20 Hz to 20 kHz. It reads the frequency, the note name, the level of the left and right channels (with peak hold if it is on) and how far it is from the line, for example "3 dB above the line". With smoothing on, the level is that of the smoothed curve, as drawn. The crosshair on screen follows the probe, so a sighted helper can see where you are.
   - **Signal tilt**: how fast the level falls from 50 Hz to 10 kHz, for example "falls 4.2 dB per octave", and how that compares with the line: "brighter than the line by 0.3", "darker than the line by 1.5" or "follows the line".
-  - **Peak 1 to 5, Dip 1 to 3**: places where the curve stands out from the neighbouring frequencies, the most prominent first. Each gives the frequency, the note, the width (narrow, medium or wide), how many dB it stands out and its level. Smoothing sets their size: off lists narrow resonances and strong notes, 1/6 octave lists broad humps and holes. Only what stands out enough is listed (6 dB with smoothing off, 4 dB at 1/24 octave, 3 dB at 1/12 and 1/6), so the list can be short or say "none". Dips are listed only with smoothing on. **Enter** on a peak or a dip moves the probe there and the cursor to the probe row, so you can walk around it by semitones and hear how wide it is. While music plays, the list holds still for a second, so rows read one after another agree.
+  - **Shape against the line**: the first glance at the picture. The stretches of the curve more than 3 dB above or below the line, from low to high, with their average distance, for example "35 to 80 Hz +5 dB, 85 to 400 Hz -4 dB, 450 Hz to 2 kHz +3 dB, above 12 kHz -8 dB". A range that is not mentioned follows the line. It always looks at a broad 1/3 octave view, whatever the Smoothing, so the overview does not change while you zoom into details.
+  - **Peak 1 to 5, Dip 1 to 3**: places where the curve stands out from the neighbouring frequencies, the most prominent first. How much a hump stands out is measured the way the eye sees it: above the higher of the two valleys beside it (for a hole, below the lower of the two crests). Smoothing sets their size:
+    - With smoothing off, the peaks are narrow resonances and strong notes: frequency, note with cents, how many dB it stands out, and its level.
+    - With smoothing on, they are humps and holes: frequency, where it starts and ends (for example "290 to 400 Hz", handy for an EQ band), and how many dB it stands out.
+
+    Only what stands out enough is listed (6 dB with smoothing off, 4 dB at 1/24 octave, 3 dB at 1/12 and 1/6), so the list can be short or say "none". Dips are listed only with smoothing on. **Enter** on a peak or a dip moves the probe there and the cursor to the probe row, so you can walk around it by semitones. While music plays, the list and the shape hold still for a second, so rows read one after another agree.
 - **Third-octave bands**: the 30 standard bands from 25 Hz to 20 kHz, with the level of each.
 - **Settings**, in this order:
   - **Pause**: Enter holds the analysis of all lenses, so every reading comes from the same moment, like a still picture. It is the same pause as in Loudness and Dynamics.
@@ -298,13 +303,13 @@ Slope and Smoothing exist to help the eye: Slope makes a balanced mix look flat,
   - **Average time**: 0.1 to 10 seconds for the running average. 2 or 3 seconds keeps the numbers from jumping between key presses. It says "not used now" when Average is off or infinite.
   - **Peak hold**: off, 12 dB per second, 30 dB per second, infinite.
   - **Range**, **FFT size** (1,024 to 32,768 points), **Window** (Hann, Blackman-Harris, Kaiser), **Overlap**, **Channel** (left, right, mid, side, left and right), **Display** (FFT curve, third-octave bars, Bark bars).
-- **F1** on the probe, the signal tilt, a peak or dip, or any setting explains it in a sentence or two.
+- **F1** on the probe, the signal tilt, the shape, a peak or dip, or any setting explains it in a sentence or two.
 
 A way to use it while mixing:
 
 1. Set Average time to 2 or 3 seconds. For a whole song, set Average to infinite and press Reset at the start.
-2. Read Signal tilt: is the mix brighter or darker than the line?
-3. Smoothing at 1/6 octave: the peaks and dips are the broad humps and holes of the tonal balance.
+2. Read Signal tilt and Shape: is the mix brighter or darker than the line, and which ranges stick out or sag?
+3. Smoothing at 1/6 octave: the peaks and dips are the humps and holes inside those ranges, with their edges.
 4. Smoothing off: the peaks are narrow resonances and strong notes. A resonance shows in both the level and the peak hold; a peak that is only in the hold was a short hit.
 5. Enter on a peak, then plus and minus around it to hear its width. Pause when you need every number from the same moment.
 

@@ -76,7 +76,7 @@ public:
     void cycleControl (int control);
 
     // ================== ACCESSIBILITY (see Lens.h) ==================
-    // Groups: readings (probe, signal tilt, peaks and dips), third-octave bands, settings.
+    // Groups: readings (probe, signal tilt, shape, peaks and dips), third-octave bands, settings.
     int          a11yGroupCount() const override { return 3; }
     juce::String a11yGroupName (int group) const override;
     int          a11yRowCount (int group) const override;
@@ -182,12 +182,16 @@ private:
         std::vector<int>   topBin;                                 // the loudest bin of each grid cell (or -1)
         std::vector<float> oct;                                    // octaves from 1 kHz, for the slope
     };
-    // A peak or a dip of the curve: where it stands out from its neighbourhood.
-    struct Feature { double hz = 0.0; float db = 0.0f; float prominence = 0.0f; float widthOct = 0.0f; };
+    // A peak or a dip of the curve: where it stands out from its neighbourhood, and where its sides cross half
+    // of that height (loHz, hiHz).
+    struct Feature { double hz = 0.0; float db = 0.0f; float prominence = 0.0f; double loHz = 0.0, hiHz = 0.0; };
+    // A stretch of the broad curve that lies away from the line: devDb is its average distance (+ above).
+    struct Stretch { double loHz = 0.0, hiHz = 0.0; float devDb = 0.0f; bool fromBottom = false, toTop = false; };
     struct A11yShape
     {
         bool  lineValid = false;  float lineDb = 0.0f;         // the line's level, in dB with the slope (flat on the plot)
         bool  tiltValid = false;  float tiltDbPerOct = 0.0f;   // the signal's own tilt, without the slope
+        std::vector<Stretch> stretches;                        // the shape against the line, low to high
         std::vector<Feature> peaks, dips;
         float threshold = 3.0f;   // how far a feature must stand out to be listed
     };
@@ -209,6 +213,7 @@ private:
     juce::String a11yLineDeviation (double hz) const;            // "3 dB above the line"
     juce::String a11yTiltValue() const;
     juce::String a11yTiltVersusLine() const;                     // "brighter than the line by 0.5"
+    juce::String a11yShapeValue() const;                         // "35 to 80 Hz +5 dB, 85 to 400 Hz -4 dB"
     juce::String a11yFeatureValue (const Feature& f, bool dip) const;
     juce::String a11yBandValue (int band) const;
     juce::String a11yControlValue (int item) const;

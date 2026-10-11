@@ -208,6 +208,12 @@ inline const Row* rows() noexcept
         { { "Peak hold", nullptr, nullptr, nullptr, nullptr, nullptr, nullptr } },
         { { "Smoothing", "Suavizado", "Suavização", "Lissage", "Glättung", "Lisciatura", "Сглаживание" } },
         { { "Signal tilt", "Pendiente de la señal", "Inclinação do sinal", "Pente du signal", "Neigung des Signals", "Pendenza del segnale", "Наклон сигнала" } },
+        { { "Shape against the line", "Forma respecto a la línea", "Forma em relação à linha", "Forme par rapport à la ligne", "Form gegenüber der Linie", "Forma rispetto alla linea", "Форма относительно линии" } },
+        { { "all within 3 dB of the line", "todo dentro de 3 dB de la línea", "tudo dentro de 3 dB da linha", "tout à moins de 3 dB de la ligne", "alles innerhalb von 3 dB um die Linie", "tutto entro 3 dB dalla linea", "вся кривая в пределах 3 dB от линии" } },
+        { { "{0} to {1}", "de {0} a {1}", "de {0} a {1}", "de {0} à {1}", "{0} bis {1}", "da {0} a {1}", "от {0} до {1}" } },
+        { { "up to {0}", "hasta {0}", "até {0}", "jusqu'à {0}", "bis {0}", "fino a {0}", "до {0}" } },
+        { { "above {0}", "por encima de {0}", "acima de {0}", "au-dessus de {0}", "über {0}", "sopra {0}", "выше {0}" } },
+        { { "Shape against the line: the stretches of the curve that lie more than 3 dB above or below the line, from low to high, with their average distance. It uses a broad 1/3 octave view whatever the Smoothing, like a first glance at the picture.", "Forma respecto a la línea: los tramos de la curva que quedan más de 3 dB por encima o por debajo de la línea, de graves a agudos, con su distancia media. Usa una vista amplia de 1/3 de octava sea cual sea el Suavizado, como un primer vistazo a la imagen.", "Forma em relação à linha: os trechos da curva que ficam mais de 3 dB acima ou abaixo da linha, dos graves aos agudos, com a distância média. Usa uma visão ampla de 1/3 de oitava, seja qual for a Suavização, como uma primeira olhada na imagem.", "Forme par rapport à la ligne : les tronçons de la courbe à plus de 3 dB au-dessus ou au-dessous de la ligne, des graves aux aigus, avec leur écart moyen. Elle utilise une vue large au 1/3 d'octave quel que soit le Lissage, comme un premier coup d'œil à l'image.", "Form gegenüber der Linie: die Abschnitte der Kurve, die mehr als 3 dB über oder unter der Linie liegen, von tief nach hoch, mit ihrem mittleren Abstand. Sie nutzt unabhängig von der Glättung eine breite Ansicht in 1/3 Oktave, wie ein erster Blick auf das Bild.", "Forma rispetto alla linea: i tratti della curva che stanno più di 3 dB sopra o sotto la linea, dai bassi agli acuti, con la loro distanza media. Usa una vista ampia a 1/3 d'ottava qualunque sia la Lisciatura, come un primo sguardo all'immagine.", "Форма относительно линии: участки кривой, которые лежат выше или ниже линии больше чем на 3 dB, от низов к верхам, с их средним отклонением. Она смотрит широко, по 1/3 октавы, при любом Сглаживании, как первый взгляд на картинку." } },
         { { "Peak {0}", "Pico {0}", "Pico {0}", "Pic {0}", "Spitze {0}", "Picco {0}", "Пик {0}" } },
         { { "Dip {0}", "Valle {0}", "Vale {0}", "Creux {0}", "Senke {0}", "Avvallamento {0}", "Провал {0}" } },
         { { "Peaks and dips", "Picos y valles", "Picos e vales", "Pics et creux", "Spitzen und Senken", "Picchi e avvallamenti", "Пики и провалы" } },
@@ -223,9 +229,6 @@ inline const Row* rows() noexcept
         { { "follows the line", "sigue la línea", "segue a linha", "suit la ligne", "folgt der Linie", "segue la linea", "идёт по линии" } },
         { { "brighter than the line by {0}", "más brillante que la línea en {0}", "mais brilhante que a linha em {0}", "plus brillant que la ligne de {0}", "heller als die Linie um {0}", "più brillante della linea di {0}", "ярче линии на {0}" } },
         { { "darker than the line by {0}", "más oscuro que la línea en {0}", "mais escuro que a linha em {0}", "plus sombre que la ligne de {0}", "dunkler als die Linie um {0}", "più scuro della linea di {0}", "темнее линии на {0}" } },
-        { { "narrow", "estrecho", "estreito", "étroit", "schmal", "stretto", "узкий" } },
-        { { "medium", "medio", "médio", "moyen", "mittel", "medio", "средний" } },
-        { { "wide", "ancho", "largo", "large", "breit", "largo", "широкий" } },
         { { "{0} dB above surroundings", "{0} dB por encima del entorno", "{0} dB acima do entorno", "{0} dB au-dessus des fréquences voisines", "{0} dB über der Umgebung", "{0} dB sopra le frequenze vicine", "на {0} dB выше соседних частот" } },
         { { "{0} dB below surroundings", "{0} dB por debajo del entorno", "{0} dB abaixo do entorno", "{0} dB sous les fréquences voisines", "{0} dB unter der Umgebung", "{0} dB sotto le frequenze vicine", "на {0} dB ниже соседних частот" } },
         { { "{0}, not used now", "{0}, sin efecto ahora", "{0}, sem efeito agora", "{0}, sans effet pour l'instant", "{0}, derzeit ohne Wirkung", "{0}, ora senza effetto", "{0}, сейчас не действует" } },
@@ -304,5 +307,5 @@ inline const Row* rows() noexcept
     return table;
 }
 
-inline int numRows() noexcept { return 293; }
+inline int numRows() noexcept { return 296; }
 }
