@@ -1,0 +1,95 @@
+# Publishes a release of TELESCOPE Accessible (VST3, Windows x64).
+# Triggered by pushing a tag named telescope-accessible-<version>, e.g. telescope-accessible-0.2.0-a11y.1.
+# The tag does not start with "v", so the upstream release.yml (tags v*) never runs for it.
+# Release notes come from .github/release-notes/<tag>.md, which must exist: a release without notes fails.
+name: TELESCOPE Accessible release
+
+on:
+  push:
+    tags: ['telescope-accessible-*']
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Build and publish
+    runs-on: windows-2022
+    timeout-minutes: 60
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Check release notes
+        run: |
+          set -euo pipefail
+          notes=".github/release-notes/${GITHUB_REF_NAME}.md"
+          [ -f "$notes" ] || { echo "Missing $notes"; exit 1; }
+          echo "NOTES=$notes" >> "$GITHUB_ENV"
+
+      - name: Cache FetchContent deps
+        uses: actions/cache@v4
+        with:
+          path: build/_deps
+          key: deps-windows-${{ hashFiles('CMakeLists.txt') }}
+          restore-keys: |
+            deps-windows-
+
+      - name: Configure
+        run: >
+          cmake -B build -G "Visual Studio 17 2022" -A x64
+          -DCMAKE_BUILD_TYPE=Release
+          -DOVNI_BUILD_TESTS=OFF
+          -DOVNI_WITH_SOFA=OFF
+          .
+
+      - name: Build TELESCOPE VST3
+        run: cmake --build build --config Release --target telescope_VST3
+
+      - name: Find bundle
+        run: |
+          set -euo pipefail
+          bundle=$(find build -type d -path '*telescope_artefacts/Release/VST3/*.vst3' | head -1)
+          [ -n "$bundle" ] || { echo "VST3 bundle not found"; exit 1; }
+          echo "VST3_BUNDLE=$bundle" >> "$GITHUB_ENV"
+
+      # Publish only a build that passes the validator.
+      - name: Pluginval (strictness 10)
+        run: |
+          set -euo pipefail
+          curl -fsSL -o pluginval.zip "https://github.com/Tracktion/pluginval/releases/download/v1.0.4/pluginval_Windows.zip"
+          unzip -oq pluginval.zip
+          ./pluginval.exe --strictness-level 10 --validate "$VST3_BUNDLE"
+
+      # The ZIP name has no version, so releases/latest/download/<name> always points to the newest build.
+      - name: Package
+        run: |
+          set -euo pipefail
+          mkdir -p dist/pkg
+          cp -r "$VST3_BUNDLE" dist/pkg/TELESCOPE.vst3
+          cp MANUAL.md LICENSE NOTICE.md dist/pkg/
+          printf '%s\r\n' \
+            "TELESCOPE Accessible ${GITHUB_REF_NAME#telescope-accessible-}" \
+            "" \
+            "Install: copy the TELESCOPE.vst3 folder into C:\\Program Files\\Common Files\\VST3" \
+            "(or another folder your DAW scans for VST3 plugins), then rescan plugins." \
+            "" \
+            "Manual: MANUAL.md in this ZIP, or https://github.com/fdrv161/ovni/blob/${GITHUB_REF_NAME}/MANUAL.md" \
+            "Source: https://github.com/fdrv161/ovni/tree/${GITHUB_REF_NAME} (GNU AGPLv3)" \
+            > dist/pkg/README.txt
+          (cd dist/pkg && 7z a -tzip ../TELESCOPE-accessible-windows-vst3.zip . > /dev/null)
+          (cd dist && sha256sum TELESCOPE-accessible-windows-vst3.zip > SHA256SUMS.txt && cat SHA256SUMS.txt)
+
+      - name: Publish release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: TELESCOPE Accessible ${{ github.ref_name }}
+          body_path: ${{ env.NOTES }}
+          files: |
+            dist/TELESCOPE-accessible-windows-vst3.zip
+            dist/SHA256SUMS.txt
+          make_latest: true
