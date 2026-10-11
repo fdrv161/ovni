@@ -581,9 +581,9 @@ void LoudnessLens::mouseExit (const juce::MouseEvent&)
     if (hovered != -1) { hovered = -1; repaint(); }
 }
 
-//======================================================================================== доступность
-// Те же числа, что на экране, без сглаживания стрелок. Пока окна измерения не заполнились, значение
-// помечается «partial», как полупрозрачная полоса на картинке.
+//======================================================================================== accessibility
+// The same numbers as on screen, without the needle smoothing. Until the measurement windows fill up, a value
+// is marked "partial", like the translucent bar in the picture.
 namespace
 {
 enum LoudRow { lrIntegrated = 0, lrShortTerm, lrMomentary, lrRange, lrTruePeak, lrMaxShort, lrMaxMomentary,
@@ -641,7 +641,7 @@ juce::String LoudnessLens::a11yRowValue (int group, int row) const
         case lrRange:        return latest.integratedValid ? spoken::trimmed (latest.lra, 1) + a11ytext::T (" LU") : juce::String (a11ytext::T ("no reading yet"));
         case lrTruePeak:
         {
-            // Общий максимум и по каналам: какой канал дал пик, видно на картинке по двум полосам.
+            // Overall maximum and per channel: the picture shows which channel made the peak with its two bars.
             auto t = dbtp (latest.truePeakMax);
             if (hasReading (tpMaxL) || hasReading (tpMaxR)) t << a11ytext::T (", L ") << dbtp (tpMaxL) << a11ytext::T (", R ") << dbtp (tpMaxR);
             return t;
@@ -658,7 +658,7 @@ bool LoudnessLens::a11yIsAdjustable (int group, int row) const
     return group == 1 && row == laTarget;
 }
 
-// Цель платформы — параметр хоста «target»: меняем с жестом, как это сделал бы пользователь в DAW.
+// The platform target is the host parameter "target": change it with a gesture, as a user in the DAW would.
 bool LoudnessLens::a11yAdjust (int group, int row, int step)
 {
     if (! a11yIsAdjustable (group, row)) return false;

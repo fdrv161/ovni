@@ -17,8 +17,8 @@ namespace a11y
 #if JUCE_WINDOWS
 namespace
 {
-// Значения перечислений из UIAutomationCore.h (Windows 10 1709+). Объявлены здесь,
-// чтобы не зависеть от версии Windows SDK и настройки _WIN32_WINNT.
+// Enum values from UIAutomationCore.h (Windows 10 1709+). Declared here
+// so we do not depend on the Windows SDK version or the _WIN32_WINNT setting.
 constexpr int notificationKindOther          = 4; // NotificationKind_Other
 constexpr int processingImportantAll         = 0; // NotificationProcessing_ImportantAll
 constexpr int processingImportantMostRecent  = 1; // NotificationProcessing_ImportantMostRecent
@@ -30,8 +30,8 @@ struct UiaFunctions
 {
     UiaFunctions()
     {
-        // Загружаем во время работы, а не линкуем: на Windows без этой функции плагин
-        // должен просто молчать, а не отказываться загружаться в DAW.
+        // Loaded at run time, not linked: on Windows without this function the plugin
+        // should simply stay silent instead of failing to load in the DAW.
         if (auto* module = ::LoadLibraryW (L"UIAutomationCore.dll"))
         {
             raise     = reinterpret_cast<RaiseNotificationFn> (::GetProcAddress (module, "UiaRaiseNotificationEvent"));
@@ -59,22 +59,22 @@ void announce (juce::Component& source, const juce::String& text, SpeechQueue qu
         return;
 
    #if JUCE_WINDOWS
-    // Не используем juce::AccessibilityHandler::postAnnouncement: на Windows JUCE
-    // произносит его синтезатором SAPI (голос как у Экранного диктора), а NVDA и JAWS
-    // это сообщение не получают вовсе.
+    // We do not use juce::AccessibilityHandler::postAnnouncement: on Windows JUCE
+    // speaks it with the SAPI synthesizer (the Narrator voice), and NVDA and JAWS
+    // never receive the message.
     const auto& functions = uia();
     if (functions.raise == nullptr)
         return;
     if (functions.listening != nullptr && ! functions.listening())
-        return; // скринридер не запущен — некому говорить
+        return; // no screen reader running: nobody to speak to
 
-    // nullptr, если компонент исключён из дерева доступности (setAccessible(false))
-    // или ещё не на экране: такое событие NVDA не сможет связать с окном.
+    // nullptr if the component is excluded from the accessibility tree (setAccessible(false))
+    // or not on screen yet: NVDA could not tie such an event to the window.
     auto* handler = source.getAccessibilityHandler();
     if (handler == nullptr)
         return;
 
-    // На Windows нативная реализация JUCE — COM-объект провайдера UI Automation.
+    // On Windows the JUCE native implementation is the UI Automation provider COM object.
     auto* unknown = reinterpret_cast<IUnknown*> (handler->getNativeImplementation());
     if (unknown == nullptr)
         return;
@@ -100,7 +100,7 @@ void announce (juce::Component& source, const juce::String& text, SpeechQueue qu
     provider->Release();
    #else
     juce::ignoreUnused (source);
-    // На macOS JUCE передаёт это VoiceOver штатным уведомлением.
+    // On macOS JUCE passes this to VoiceOver as a standard notification.
     juce::AccessibilityHandler::postAnnouncement (text,
         queue == SpeechQueue::replacePrevious ? juce::AccessibilityHandler::AnnouncementPriority::high
                                               : juce::AccessibilityHandler::AnnouncementPriority::medium);

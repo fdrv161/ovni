@@ -198,7 +198,7 @@ std::vector<std::string> wordsOf (const std::string& textIn)
     {
         auto ch = p.getAndAdvance();
         if ((ch >= 'A' && ch <= 'Z') || (ch >= 0xC0 && ch <= 0xDE && ch != 0xD7)) ch += 0x20;
-        else if (ch >= 0x410 && ch <= 0x42F) ch += 0x20;   // русские заглавные (форк с доступностью)
+        else if (ch >= 0x410 && ch <= 0x42F) ch += 0x20;   // Russian capitals (accessibility fork)
         else if (ch >= 0x400 && ch <= 0x40F) ch += 0x50;
         lowered += juce::String::charToString (ch);
     }
@@ -1356,7 +1356,7 @@ TEST_CASE ("telescope: VERDICT mide sin opinar - el numero primero y donde mirar
           { "plattgedrückt", "dünn", "matschig", "hart", "keine", "hohle", "loch", "leise", "laute", "peak" } },
         { "it", "Controlla", { "professionale", "pronto", "cattivo", "brutto", "amatoriale", "rovina" },
           { "schiacciato", "sottile", "impastato", "aspro", "senza", "centro", "buco", "sezione", "raffica" } },
-        // Русский (форк с доступностью): оценочные слова запрещены, фраза находки не начинается с термина сведения.
+        // Russian (accessibility fork): judgement words are banned; a finding never starts with the mixing term.
         { "ru", "Проверьте", { "профессионально", "профессиональный", "готово", "плохо", "плохой", "любительский", "испорчен" },
           { "сплющены", "тонкий", "мутный", "резкий", "нет", "пустой", "провал", "тихий", "громкий", "всплеск" } },
     };

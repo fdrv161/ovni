@@ -61,13 +61,13 @@ TonalBalanceLens::TonalBalanceLens (TelescopeProcessor& p) : Lens (30), processo
         dispLive[b] = dispRef[b] = kNormBottomDb;
         dispDelta[b] = 0.0f;
     }
-    // Доступность: следим за анализом с текущего состояния, чтобы при открытии линзы не сказать «готово»
-    // о старом результате.
+    // Accessibility: track the analysis from the current state, so opening the lens does not say "done"
+    // about an old result.
     a11yLastRevision = processor.referenceRevision();
     a11yWasBusy      = processor.referenceBusy();
 }
 
-// Ожидающий участок (пользователь шагал стрелками и сразу ушёл с линзы) не теряем.
+// Do not lose a pending section (the user stepped with the arrows and left the lens right away).
 TonalBalanceLens::~TonalBalanceLens() { a11yApplyPendingSection(); }
 
 //======================================================================================== geometría
@@ -937,9 +937,9 @@ void TonalBalanceLens::filesDropped (const juce::StringArray& files, int, int)
 void TonalBalanceLens::fileDragEnter (const juce::StringArray&, int, int) { dragOver = true;  repaint(); }
 void TonalBalanceLens::fileDragExit  (const juce::StringArray&)          { dragOver = false; repaint(); }
 
-//======================================================================================== доступность
-// Те же числа, что во всплывающей подсказке под курсором: уровень программы и референса относительно их
-// интегральной громкости и разница между ними. Где сравнить нельзя, строка честно говорит почему.
+//======================================================================================== accessibility
+// The same numbers as the tooltip under the cursor: programme and reference level relative to their
+// integrated loudness, and the difference between them. Where no comparison is possible, the row says why.
 namespace
 {
 enum TbGroup { tbSummary = 0, tbBands, tbActions };
@@ -1080,7 +1080,7 @@ void TonalBalanceLens::a11ySection (double& from, double& to) const
     to = total;
 }
 
-// Шаг — секунда, крупный шаг — 10 секунд, Alt+Home/End — до края файла. Участок не короче минимума процессора.
+// Step is one second, coarse step 10 seconds, Alt+Home/End to the edge of the file. The section is never shorter than the processor minimum.
 bool TonalBalanceLens::a11yAdjust (int group, int row, int step)
 {
     if (! a11yIsAdjustable (group, row)) return false;
@@ -1094,7 +1094,7 @@ bool TonalBalanceLens::a11yAdjust (int group, int row, int step)
     const double oldFrom = from, oldTo = to;
     if (row == actSectionStart) from = juce::jlimit (0.0, juce::jmax (0.0, to - minSpan), from + delta);
     else                        to   = juce::jlimit (juce::jmin (total, from + minSpan), total, to + delta);
-    if (std::abs (from - oldFrom) < 1.0e-6 && std::abs (to - oldTo) < 1.0e-6) return false;   // край
+    if (std::abs (from - oldFrom) < 1.0e-6 && std::abs (to - oldTo) < 1.0e-6) return false;   // edge
 
     pendingFrom = from;
     pendingTo   = to;
@@ -1106,14 +1106,14 @@ void TonalBalanceLens::a11yApplyPendingSection()
 {
     if (pendingFrom < 0.0 || pendingTo < 0.0) return;
     const double total = stripSeconds();
-    // Весь файл целиком — это «без участка», как двойной клик мышью.
+    // The whole file means "no section", like a mouse double-click.
     if (pendingFrom <= 0.0 && pendingTo >= total - 1.0e-3) processor.clearReferenceRange();
     else                                                   processor.setReferenceRange (pendingFrom, pendingTo);
     pendingFrom = pendingTo = -1.0;
     repaint();
 }
 
-// Конец фонового анализа референса (после загрузки файла или смены участка) — сказать результат.
+// End of the background reference analysis (after loading a file or changing the section): speak the result.
 juce::String TonalBalanceLens::a11yPollEvent()
 {
     if (pendingFrom >= 0.0 && (juce::int32) (juce::Time::getMillisecondCounter() - pendingApplyAt) >= 0)
@@ -1154,7 +1154,7 @@ juce::String TonalBalanceLens::a11yActivate (int group, int row)
             return a11ytext::T ("Averaging reset");
         case actLoad:
             pressControl (ctrlLoad);
-            return {};   // открылся диалог выбора файла, его озвучит сам скринридер
+            return {};   // a file chooser opened; the screen reader announces it by itself
         case actClear:
             if (processor.referencePath().isEmpty()) return a11ytext::T ("No reference loaded");
             pendingFrom = pendingTo = -1.0;

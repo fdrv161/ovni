@@ -579,9 +579,9 @@ void CqtLens::mouseExit (const juce::MouseEvent&)
     if (hovered != -1 || cursorX != -1) { hovered = -1; cursorX = -1; repaint(); }
 }
 
-//======================================================================================== доступность
-// CQT — спектр по нотам. Текстом: тональность (как подпись под клавиатурой), самые сильные классы нот
-// хроматограммы и пять самых громких нот спектра с частотой и отклонением в центах.
+//======================================================================================== accessibility
+// CQT is a spectrum by notes. As text: the key (like the caption under the keyboard), the strongest pitch classes
+// of the chromagram, and the five loudest notes of the spectrum with frequency and deviation in cents.
 namespace
 {
 constexpr int kA11yNotes = 5;
@@ -621,8 +621,8 @@ juce::String CqtLens::a11yRowValue (int group, int row) const
     if (row == 0) return spoken::keyReading (keyTonic, keyMode, keyConfidence, keyTimeFraction);
     if (row == 1) return spoken::strongestClasses (chromaSm);
 
-    // Пики спектра по нотам: локальные максимумы бинов (2 бина на полутон), не ближе полутона друг к другу,
-    // не тише самого громкого больше чем на 40 dB.
+    // Spectrum peaks by notes: local maxima of the bins (2 bins per semitone), at least a semitone apart,
+    // and no more than 40 dB below the loudest.
     const int n = juce::jmin (binsSeen, (int) targetDb.size());
     if (n < 3 || bpoSeen <= 0) return a11ytext::T ("no data yet");
     struct P { int k; float db; };

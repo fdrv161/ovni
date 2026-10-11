@@ -547,9 +547,9 @@ void BandCorrelationLens::mouseExit (const juce::MouseEvent&)
     if (hovered != -1 || cursor.x != -1) { hovered = -1; cursor = { -1, -1 }; repaint(); }
 }
 
-//======================================================================================== доступность
-// Итог (худшие полосы — то же, что строка над графиком), 30 полос со всеми четырьмя числами сразу
-// (на экране вторая строка показывает одно из трёх) и настройки.
+//======================================================================================== accessibility
+// Summary (worst bands, the same as the line above the plot), 30 bands with all four numbers at once
+// (on screen the second line shows one of three), and the settings.
 namespace
 {
 enum BcGroup { bcSummary = 0, bcBands, bcSettings };

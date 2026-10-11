@@ -5,19 +5,19 @@
 #include <juce_core/juce_core.h>
 
 // ========================================================================================================
-// Переводы речи для скринридера.
+// Speech translations for the screen reader.
 //
-// Ключ — английская фраза; таблица ниже (A11yStringsTable.h) даёт её на остальных языках плагина. Фразы с
-// числами — шаблоны с {0}, {1}…: в разных языках другой порядок слов, склеивать из кусочков нельзя.
-// Нет перевода — звучит английский (как у подписей экрана, см. strings::getFrom).
+// The key is the English phrase; the table (A11yStringsTable.h) gives it in the other plugin languages. Phrases
+// with numbers are templates with {0}, {1}...: word order differs between languages, so no gluing of fragments.
+// No translation means English is spoken (like the on-screen labels, see strings::getFrom).
 //
-// Язык речи — тот же, что у экрана (строка Language). Его выставляет редактор перед каждым обращением
-// к строкам (setLanguage): у двух окон плагина могут быть разные языки, а функции перевода общие.
-// Только поток сообщений.
+// Speech uses the screen language (the Language row). The editor sets it before every use of the strings
+// (setLanguage): two plugin windows may use different languages while the translation functions are shared.
+// Message thread only.
 // ========================================================================================================
 namespace telescope::a11ytext
 {
-// Порядок колонок таблицы.
+// Column order of the table.
 enum Lang { en = 0, es, pt, fr, de, it, ru, kNumLangs };
 
 struct Row
@@ -45,7 +45,7 @@ inline void setLanguage (const juce::String& code)
 
 inline Lang language() noexcept { return (Lang) currentLanguage(); }
 
-// Перевод фразы. Строки таблицы — UTF-8.
+// Translates a phrase. Table strings are UTF-8.
 inline juce::String T (const char* english)
 {
     static const std::unordered_map<std::string, const Row*> index = []
@@ -62,7 +62,7 @@ inline juce::String T (const char* english)
     return juce::String::fromUTF8 (t != nullptr && *t != '\0' ? t : english);
 }
 
-// Перевод шаблона с подстановкой {0}, {1}… по порядку.
+// Translates a template, substituting {0}, {1}... in order.
 inline juce::String TF (const char* englishTemplate, std::initializer_list<juce::String> args)
 {
     auto s = T (englishTemplate);

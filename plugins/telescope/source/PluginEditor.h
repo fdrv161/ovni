@@ -100,23 +100,23 @@ private:
     std::atomic<bool> appliedOnMessageThread { true };
     std::atomic<int>  applyCount { 0 };
 
-    // ================== ДОСТУПНОСТЬ (скринридер и клавиатура) ==================
-    // Невидимые элементы поверх нарисованного интерфейса. Порядок Tab: список линз, показания линзы,
-    // панель плагина (шапка, язык, тема). Объявлены последними: удаляются первыми, пока линза и источники
-    // ещё живы.
-    struct LensListSource;    // строки списка линз
-    struct LensPanelSource;   // строки показаний текущей линзы
-    struct PluginRowsSource;  // bypass, пресеты, A/B, размер, язык, тема
+    // ================== ACCESSIBILITY (screen reader and keyboard) ==================
+    // Invisible controls over the painted UI. Tab order: lens list, lens readings, plugin panel
+    // (header, language, theme). Declared last, so they are destroyed first, while the lens and the sources
+    // are still alive.
+    struct LensListSource;    // rows of the lens list
+    struct LensPanelSource;   // readings of the current lens
+    struct PluginRowsSource;  // bypass, presets, A/B, size, language, theme
     std::unique_ptr<LensListSource>   lensListSource;
     std::unique_ptr<LensPanelSource>  lensPanelSource;
     std::unique_ptr<PluginRowsSource> pluginRowsSource;
     a11yui::A11yGrid a11yLensList { juce::AccessibilityRole::list };
     a11yui::A11yGrid a11yPanel    { juce::AccessibilityRole::list };
     a11yui::A11yGrid a11yPlugin   { juce::AccessibilityRole::list };
-    std::array<std::pair<int, int>, kNumLenses> panelCursor {};   // где стоял курсор показаний в каждой линзе
+    std::array<std::pair<int, int>, kNumLenses> panelCursor {};   // where the readings cursor was in each lens
 
-    // Опрос линзы несколько раз в секунду: сообщения, которые надо сказать без нажатия (анализ файла готов).
-    // Отдельный объект, а не наследование Timer: так у редактора не появляется второй timerCallback.
+    // Polls the lens a few times a second for messages to speak without a key press (file analysis finished).
+    // A separate object rather than inheriting Timer, so the editor does not get a second timerCallback.
     struct A11yPoll : juce::Timer
     {
         std::function<void()> fn;

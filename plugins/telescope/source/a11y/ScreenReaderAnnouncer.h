@@ -1,25 +1,25 @@
 #pragma once
 #include <juce_gui_basics/juce_gui_basics.h>
 
-// Озвучка сообщений для NVDA, JAWS, Экранного диктора (Windows, через UI Automation)
-// и VoiceOver (macOS). Подробности и правила — references/announcements-and-focus.md.
+// Speaks messages for NVDA, JAWS, Narrator (Windows, via UI Automation)
+// and VoiceOver (macOS). Details and rules: references/announcements-and-focus.md.
 namespace a11y
 {
-// Как вести себя с очередью речи скринридера.
+// How to treat the screen reader's speech queue.
 enum class SpeechQueue
 {
-    replacePrevious, // новое сообщение прерывает прежнее: значения, навигация
-    keepAll          // сообщение нельзя потерять: итог операции, ошибка
+    replacePrevious, // a new message interrupts the previous one: values, navigation
+    keepAll          // the message must not be lost: result of an operation, an error
 };
 
-// Произнести текст. source — видимый компонент окна плагина, который есть в дереве
-// доступности: элемент в фокусе или постоянная метка статуса. Только поток сообщений.
-// Функция НЕ меняет title/description источника: временный текст не «прилипает».
+// Speaks text. source is a visible component of the plugin window that is in the accessibility
+// tree: the focused control or a permanent status label. Message thread only.
+// Does NOT change the source's title/description, so temporary text does not stick.
 void announce (juce::Component& source, const juce::String& text,
                SpeechQueue queue = SpeechQueue::replacePrevious);
 
-// Для телеметрии и статусов: не повторяет текст, который только что был сказан.
-// Не используй для ответов на нажатия — пользователь вправе услышать фразу ещё раз.
+// For telemetry and status: does not repeat text that was just spoken.
+// Do not use it for responses to key presses: the user may want to hear the phrase again.
 class DedupAnnouncer
 {
 public:

@@ -288,8 +288,8 @@ bool SpectrumLens::advanceFrame()
         for (int s = 0; s < SpectrumFrame::kMaxSpectra; ++s) holdBefore[s] = colHold[s];
         rebuildColumns (f);
 
-        // Доступность: копия сырых бинов для текстовых показаний (зонд и пики). Столбцы картинки зависят
-        // от ширины окна в пикселях, а скринридеру нужны цифры, не зависящие от масштаба.
+        // Accessibility: a copy of the raw bins for the text readings (probe and peaks). The picture's columns depend
+        // on the window width in pixels, while the screen reader needs numbers that do not depend on scale.
         a11ySpectra  = spectrumNumSpectra (f.channelMode);
         a11yBins     = juce::jlimit (0, SpectrumFrame::kMaxBins, f.numBins);
         a11yBinHz    = f.binHz();
@@ -905,14 +905,14 @@ void SpectrumLens::mouseExit (const juce::MouseEvent&)
     if (hovered != -1 || cursorX != -1) { hovered = -1; cursorX = -1; repaint(); }
 }
 
-//======================================================================================== доступность
-// Текстовые показания для скринридера. Цифры те же, что видит зрячий: уровни FFT — с наклоном (slope),
-// как кривая на графике; третьоктавные полосы — без наклона, как столбики (у розового шума и то и другое
-// ровное, поэтому смысл одинаковый).
+//======================================================================================== accessibility
+// Text readings for the screen reader. The numbers match what a sighted user sees: FFT levels with the slope,
+// like the curve on the plot; third-octave bands without the slope, like the bars (for pink noise both are
+// flat, so they mean the same).
 namespace
 {
-constexpr int kProbeMinMidi = 16;    // 20.6 Гц — нижний край графика
-constexpr int kProbeMaxMidi = 135;   // 19.9 кГц — верхний край
+constexpr int kProbeMinMidi = 16;    // 20.6 Hz, the bottom edge of the plot
+constexpr int kProbeMaxMidi = 135;   // 19.9 kHz, the top edge
 
 double midiHz (int midi) { return 440.0 * std::pow (2.0, (double) (midi - 69) / 12.0); }
 }
@@ -978,13 +978,13 @@ bool SpectrumLens::a11yAdjust (int group, int row, int step)
     if (group == 2) return stepControl (row, step);
     if (group != 0 || row != 0) return false;
 
-    // Зонд ходит по нотам: шаг — полтона, крупный шаг — октава.
+    // The probe moves by notes: step is a semitone, coarse step an octave.
     const int size  = std::abs (step) >= a11yui::kExtreme ? 1000 : (std::abs (step) >= a11yui::kCoarse ? 12 : 1);
     const int next  = juce::jlimit (kProbeMinMidi, kProbeMaxMidi, probeMidi + (step > 0 ? size : -size));
     if (next == probeMidi) return false;
     probeMidi = next;
 
-    // Перекрестие на графике следует за зондом: зрячему помощнику видно, куда «смотрит» зонд.
+    // The crosshair on the plot follows the probe, so a sighted helper sees where the probe is looking.
     cursorX = juce::roundToInt (xForFreq (midiHz (probeMidi)));
     repaint();
     return true;
@@ -996,8 +996,8 @@ float SpectrumLens::a11yLevelAt (int slot, double hz, bool hold) const
     const auto& v = hold ? a11yHold[slot] : a11yMag[slot];
     if ((int) v.size() < a11yBins) return SpectrumFrame::kFloorDb;
 
-    // Окно в полтона вокруг частоты (±1/24 октавы), берём максимум — так же столбец картинки берёт
-    // максимум своих бинов. Если бины шире окна (низ спектра, малый FFT) — интерполяция между соседями.
+    // A semitone window around the frequency (+-1/24 octave), take the maximum, just as a picture column takes
+    // the maximum of its bins. If bins are wider than the window (low end, small FFT), interpolate between neighbours.
     const double lo = hz * std::pow (2.0, -1.0 / 24.0), hi = hz * std::pow (2.0, 1.0 / 24.0);
     const int k0 = juce::jmax (0, (int) std::ceil (lo / a11yBinHz));
     const int k1 = juce::jmin (a11yBins - 1, (int) std::floor (hi / a11yBinHz));
@@ -1040,9 +1040,9 @@ juce::String SpectrumLens::a11yBandValue (int band) const
     return spoken::db (bandDb[0][band], floorDb);
 }
 
-// Самые громкие пики: локальные максимумы бинов (громче из двух каналов, с наклоном, как на графике),
-// не ближе 1/6 октавы друг к другу, выше пола графика. Частота уточняется параболой по трём бинам —
-// иначе на малом FFT пик «прыгал» бы по сетке бинов.
+// The loudest peaks: local maxima of the bins (louder of the two channels, with the slope, as on the plot),
+// at least 1/6 octave apart, above the plot floor. The frequency is refined with a parabola over three bins,
+// otherwise on a small FFT the peak would jump along the bin grid.
 const std::vector<SpectrumLens::Peak>& SpectrumLens::a11yPeaks() const
 {
     if (peaksFrame == a11yFrameSerial) return peaks;
@@ -1127,13 +1127,13 @@ juce::String SpectrumLens::a11yControlValue (int control) const
     }
 }
 
-// Шаг настройки вперёд или назад. В отличие от клика мышью (cycleControl), по кругу не ходит: на краю
-// значение не меняется и редактор молчит.
+// Steps a setting forward or back. Unlike the mouse click (cycleControl) it does not wrap: at the edge
+// the value stays and the editor is silent.
 bool SpectrumLens::stepControl (int control, int step)
 {
     auto s = processor.spectrumSettings();
 
-    // Порядок вариантов пикового удержания тот же, что у мыши: выкл, 12 дБ/с, 30 дБ/с, бесконечно.
+    // Peak hold options in the same order as the mouse: off, 12 dB/s, 30 dB/s, infinite.
     const auto holdIndex = [] (const Spectrum::Settings& x)
     {
         if (! x.peakHold) return 0;
@@ -1177,7 +1177,7 @@ bool SpectrumLens::stepControl (int control, int step)
             break;
         case range:     s.rangeDbIndex = next; break;
         case smooth:
-            // Сглаживание — только для рисования, в настройки движка не входит (как в cycleControl).
+            // Smoothing is for drawing only and is not part of the engine settings (as in cycleControl).
             processor.setSpectrumSmoothIndex (next);
             repaint();
             return true;

@@ -1066,9 +1066,9 @@ void ScopeLens::mouseExit (const juce::MouseEvent&)
     if (hovered != -1) { hovered = -1; repaint(); }
 }
 
-//======================================================================================== доступность
-// Цифры стерео — те же, что справа от гониометра; цвет стрелки корреляции сказан словом. Сама картинка
-// (фигура Лиссажу, полусфера) текстом не пересказывается: её смысл как раз в этих числах.
+//======================================================================================== accessibility
+// The stereo numbers are the ones right of the goniometer; the colour of the correlation needle is said as a word.
+// The picture itself (Lissajous figure, hemisphere) is not told as text: its meaning is exactly these numbers.
 namespace
 {
 enum ScopeRow { srCorr = 0, srWidth, srBalance, srMonoLoss, srOutOfPhase, srWindow, kScopeRows };

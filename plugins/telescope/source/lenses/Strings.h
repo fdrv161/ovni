@@ -426,9 +426,9 @@ inline const Table& tableIt()
     return t;
 }
 
-// РУССКИЙ. Правило то же, что у автора для остальных языков: переводится то, что переводят в студии;
-// единицы (dB, Hz, LUFS) и отраслевые термины (SHORT-TERM, MOMENTARY, TRUE PEAK, PEAK HOLD, LOUDNESS, SCOPE)
-// остаются как есть. Без проверки вторым носителем. Названия нот — буквами, как в русских технических текстах.
+// RUSSIAN. Same rule the author uses for the other languages: translate what studios translate;
+// units (dB, Hz, LUFS) and industry terms (SHORT-TERM, MOMENTARY, TRUE PEAK, PEAK HOLD, LOUDNESS, SCOPE)
+// stay as they are. Not reviewed by a second native speaker. Note names as letters, as in Russian technical texts.
 inline const Table& tableRu()
 {
     static const Table t { "ru", "Русский", NoteNaming::letters, {

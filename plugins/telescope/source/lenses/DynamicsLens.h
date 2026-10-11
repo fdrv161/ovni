@@ -46,8 +46,8 @@ public:
     void mouseMove (const juce::MouseEvent&) override;
     void mouseExit (const juce::MouseEvent&) override;
 
-    // ================== ДОСТУПНОСТЬ (см. Lens.h) ==================
-    // Группы: показания (PLR, PSR, гистограмма, клипы) и действия (порог клипа, пауза, сброс).
+    // ================== ACCESSIBILITY (see Lens.h) ==================
+    // Groups: readings (PLR, PSR, histogram, clips) and actions (clip threshold, pause, reset).
     int          a11yGroupCount() const override { return 2; }
     juce::String a11yGroupName (int group) const override;
     int          a11yRowCount (int group) const override;

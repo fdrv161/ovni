@@ -76,9 +76,9 @@ public:
     enum Control { ctrlReset = 0, ctrlMode, ctrlLoad, kNumControls };
     void pressControl (int control);
 
-    // ================== ДОСТУПНОСТЬ (см. Lens.h) ==================
-    // Группы: итог, три раздела выводов (как звучит, как переведётся на устройства, чего не хватает),
-    // что в норме, действия. Строки собираются прямо из отчёта, без зависимости от размера окна.
+    // ================== ACCESSIBILITY (see Lens.h) ==================
+    // Groups: summary, the three finding sections (how it feels, where it translates, what is missing),
+    // what is within range, actions. Rows are built straight from the report, independent of the window size.
     int          a11yGroupCount() const override { return 6; }
     juce::String a11yGroupName (int group) const override;
     int          a11yRowCount (int group) const override;
@@ -194,9 +194,9 @@ private:
     // derecho. UNA sola cuenta, usada por el que mide y por el que dibuja (era el origen del desborde).
     void buildLines();
 
-    // Доступность: выводы раздела группы 1..3 (или сильные стороны для группы 4) по порядку.
+    // Accessibility: findings of the section for groups 1..3 (or strengths for group 4), in order.
     std::vector<const VerdictFinding*> a11yFindings (int group) const;
-    juce::uint32 a11yLastRevision = 0;   // с какой ревизии анализа файла линза начала следить
+    juce::uint32 a11yLastRevision = 0;   // revision of the file analysis the lens started tracking from
     bool         a11yWasBusy = false;
     // El texto envuelto al ancho dado, con la tipografía del panel. Lo comparten medir y dibujar.
 

@@ -440,9 +440,9 @@ void DynamicsLens::mouseExit (const juce::MouseEvent&)
     if (hovered != -1) { hovered = -1; repaint(); }
 }
 
-//======================================================================================== доступность
-// PLR и PSR — главные числа линзы; гистограмма пересказана одной строкой (самый частый уровень), полоса
-// клипов — числом за последние 10 минут и давностью последнего. Цвет-предупреждение у PSR сказан словом.
+//======================================================================================== accessibility
+// PLR and PSR are the lens's main numbers; the histogram is told in one line (the most frequent level), the clip
+// strip as a count over the last 10 minutes plus how long ago the last one was. The PSR warning colour is said as a word.
 namespace
 {
 enum DynRow { drPlr = 0, drPsr, drShortTerm, drMostFrequent, drClips, drRecentClips, kDynRows };
@@ -510,7 +510,7 @@ juce::String DynamicsLens::a11yRowValue (int group, int row) const
             for (int i = 0; i < (int) timelineBuf.size(); ++i)
                 if (timelineBuf[(size_t) i] > 0) { n += timelineBuf[(size_t) i]; lastIdx = i; }
             if (n == 0) return a11ytext::T ("none");
-            const int ago = (int) timelineBuf.size() - 1 - lastIdx;   // одна ячейка — секунда анализа, последняя — самая свежая
+            const int ago = (int) timelineBuf.size() - 1 - lastIdx;   // one cell is one second of analysis, the last one is the newest
             return juce::String ((juce::int64) n) + a11ytext::T (", the latest ") + juce::String (ago) + a11ytext::T (" seconds back in the analysis");
         }
         default: return {};
@@ -522,8 +522,8 @@ bool DynamicsLens::a11yIsAdjustable (int group, int row) const
     return group == 1 && row == daThreshold;
 }
 
-// Порог клипа: шаг 0.1 dB, крупный шаг 0.5 dB. Ручку на картинке двигаем вслед, без её уведомления:
-// оно асинхронное, и строка прочиталась бы со старым значением.
+// Clip threshold: step 0.1 dB, coarse step 0.5 dB. The knob in the picture follows without its notification:
+// that one is asynchronous, and the row would be read with the old value.
 bool DynamicsLens::a11yAdjust (int group, int row, int step)
 {
     if (! a11yIsAdjustable (group, row)) return false;

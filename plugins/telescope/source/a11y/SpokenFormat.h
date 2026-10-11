@@ -6,16 +6,16 @@
 #include "lenses/NoteName.h"
 
 // ========================================================================================================
-// Числа для речи: коротко, без лишних нулей, единицы словами, которые синтезатор читает одинаково.
-// Только ASCII в шаблонах английского: символы вроде «·», «¢», «∞» синтезаторы читают по-разному.
-// Слова и порядок слов — из каталога переводов (A11yStrings.h), на языке, выбранном в плагине.
+// Numbers for speech: short, no trailing zeros, units as words that synthesizers read the same way.
+// ASCII only in the English templates: symbols such as the middle dot, cent or infinity sign are read differently by synthesizers.
+// Words and word order come from the translation catalog (A11yStrings.h), in the language chosen in the plugin.
 // ========================================================================================================
 namespace telescope::spoken
 {
 using a11ytext::T;
 using a11ytext::TF;
 
-// Число без хвостовых нулей: 1.50 -> "1.5", 2.00 -> "2".
+// Number without trailing zeros: 1.50 -> "1.5", 2.00 -> "2".
 inline juce::String trimmed (double v, int decimals)
 {
     auto s = juce::String (v, decimals);
@@ -27,7 +27,7 @@ inline juce::String trimmed (double v, int decimals)
     return s == "-0" ? juce::String ("0") : s;
 }
 
-// Частота: "61.5 Hz", "440 Hz", "1.25 kHz", "12.5 kHz".
+// Frequency: "61.5 Hz", "440 Hz", "1.25 kHz", "12.5 kHz".
 inline juce::String hz (double f)
 {
     if (f >= 1000.0) return TF ("{0} kHz", { trimmed (f / 1000.0, f >= 10000.0 ? 1 : 2) });
@@ -35,11 +35,11 @@ inline juce::String hz (double f)
     return TF ("{0} Hz", { trimmed (f, 1) });
 }
 
-// Секунды как настройка: "0.5 seconds".
+// Seconds as a setting: "0.5 seconds".
 inline juce::String seconds (double s) { return TF ("{0} seconds", { trimmed (s, 1) }); }
 
-// Время: "45 seconds", "1 minute 5.5 seconds", "2 minutes". Вместо «1:05»: двоеточие синтезаторы читают
-// по-разному.
+// Time: "45 seconds", "1 minute 5.5 seconds", "2 minutes". Instead of "1:05": synthesizers read the colon
+// differently.
 inline juce::String duration (double secs)
 {
     secs = juce::jmax (0.0, std::round (secs * 10.0) / 10.0);
@@ -55,18 +55,18 @@ inline juce::String duration (double secs)
     return parts.joinIntoString (" ");
 }
 
-// Децибелы: "-18.3 dB".
+// Decibels: "-18.3 dB".
 inline juce::String dB (const juce::String& number) { return TF ("{0} dB", { number }); }
 inline juce::String dB (double v, int decimals = 1) { return dB (trimmed (v, decimals)); }
 
-// Уровень: "-18.3 dB". Ниже пола графика — "below -90 dB": зрячий там тоже ничего не видит.
+// Level: "-18.3 dB". Below the plot floor: "below -90 dB" (a sighted user sees nothing there either).
 inline juce::String db (float v, int floorDb)
 {
     if (! std::isfinite (v) || v < (float) -floorDb) return TF ("below {0} dB", { "-" + juce::String (floorDb) });
     return dB (v);
 }
 
-// Величина со знаком: "+3.2 dB", "-1 dB", "0 dB".
+// Signed value: "+3.2 dB", "-1 dB", "0 dB".
 inline juce::String signedDb (float v)
 {
     const auto t = trimmed (v, 1);
@@ -75,29 +75,29 @@ inline juce::String signedDb (float v)
 
 inline juce::String percent (int v) { return TF ("{0} percent", { juce::String (v) }); }
 
-// Текст с экрана -> текст для речи. Разделитель «·» становится запятой, тире и знак минус «−» — дефисом,
-// перевод строки — точкой. Иначе NVDA говорит «точка по центру» или пропускает знак минус у числа.
+// On-screen text -> speech text. The middle dot separator becomes a comma, dashes and the minus sign become a hyphen,
+// a line break becomes a period. Otherwise NVDA says "middle dot" or drops the minus sign of a number.
 inline juce::String clean (juce::String t)
 {
     t = t.replace (juce::String::fromUTF8 ("\xc2\xb7"), ",")          // ·
          .replace (juce::String::fromUTF8 ("\xe2\x80\x94"), " - ")    // —
          .replace (juce::String::fromUTF8 ("\xe2\x80\x93"), " - ")    // –
          .replace (juce::String::fromUTF8 ("\xe2\x88\x92"), "-")      // −
-         .replace (juce::String::fromUTF8 ("\xc2\xa0"), " ")          // неразрывный пробел
+         .replace (juce::String::fromUTF8 ("\xc2\xa0"), " ")          // non-breaking space
          .replace (juce::String::fromUTF8 ("\xe2\x88\x9e"), T ("infinite"))
          .replace ("\n", ". ");
     while (t.contains ("  ")) t = t.replace ("  ", " ");
     return t.replace (" ,", ",").replace (",,", ",").trim();
 }
 
-// Баланс каналов (плюс — правый громче): "centred", "1.2 dB louder on the right".
+// Channel balance (positive: right is louder): "centred", "1.2 dB louder on the right".
 inline juce::String balance (float db)
 {
     if (std::abs (db) < 0.05f) return T ("centred");
     return TF (db > 0.0f ? "{0} dB louder on the right" : "{0} dB louder on the left", { trimmed (std::abs (db), 1) });
 }
 
-// Панорама от -1 (лево) до +1 (право): "centre", "40 percent left".
+// Pan from -1 (left) to +1 (right): "centre", "40 percent left".
 inline juce::String pan (float p)
 {
     const int pct = juce::roundToInt (std::abs (p) * 100.0f);
@@ -105,7 +105,7 @@ inline juce::String pan (float p)
     return TF (p < 0.0f ? "{0} percent left" : "{0} percent right", { juce::String (pct) });
 }
 
-// Корреляция: число и смысл словами (на экране это цвет и положение стрелки).
+// Correlation: the number and its meaning in words (on screen it is a colour and the needle position).
 inline juce::String correlation (float c)
 {
     const auto n = trimmed (c, 2);
@@ -114,15 +114,15 @@ inline juce::String correlation (float c)
     return n;
 }
 
-// Название палитры обычным регистром (имена собственные, не переводятся).
+// Palette name in normal case (proper names, not translated).
 inline juce::String palette (int index)
 {
     static const char* const names[] = { "Ovni", "Inferno", "Viridis", "Spectrum" };
     return names[juce::jlimit (0, 3, index)];
 }
 
-// Класс ноты (0 = C) — так, как его называют музыканты этого языка: буквы, до-ре-ми или немецкие
-// буквы с H и B. Диез словом: знак # синтезаторы читают как «решётка» или «номер».
+// Pitch class (0 = C) as musicians of this language call it: letters, do-re-mi or German
+// letters with H and B. Sharp as a word: synthesizers read # as "hash" or "number".
 inline juce::String pitchClass (int pc)
 {
     static const char* const names[a11ytext::kNumLangs][12] = {
@@ -145,7 +145,7 @@ inline juce::String key (int tonic, int mode)
     return TF (mode == 1 ? "{0} minor" : "{0} major", { pitchClass (tonic) });
 }
 
-// Тональность с уверенностью: "A minor, confidence 0.82, best 64 percent of the time".
+// Key with confidence: "A minor, confidence 0.82, best 64 percent of the time".
 inline juce::String keyReading (int tonic, int mode, float confidence, float timeFraction)
 {
     const auto k = key (tonic, mode);
@@ -154,7 +154,7 @@ inline juce::String keyReading (int tonic, int mode, float confidence, float tim
                { k, trimmed (confidence, 2), juce::String (juce::roundToInt (timeFraction * 100.0f)) });
 }
 
-// Три самых сильных класса нот хроматограммы (12 значений, 0 = C): "A, E, C sharp".
+// The three strongest pitch classes of the chromagram (12 values, 0 = C): "A, E, C sharp".
 inline juce::String strongestClasses (const float* chroma12)
 {
     int order[12];
@@ -167,7 +167,7 @@ inline juce::String strongestClasses (const float* chroma12)
     return names.joinIntoString (", ");
 }
 
-// Нота с октавой: "C sharp 3", "A 4" (научная нумерация, C4 — до первой октавы).
+// Note with octave: "C sharp 3", "A 4" (scientific numbering, C4 is middle C).
 inline juce::String note (const NoteReadout& n)
 {
     const int pc  = ((n.midi % 12) + 12) % 12;
@@ -175,7 +175,7 @@ inline juce::String note (const NoteReadout& n)
     return pitchClass (pc) + " " + juce::String (oct);
 }
 
-// Нота с отклонением: "A 4 plus 3 cents". Ноль центов не произносим.
+// Note with deviation: "A 4 plus 3 cents". Zero cents are not spoken.
 inline juce::String noteWithCents (const NoteReadout& n)
 {
     if (n.cents == 0) return note (n);

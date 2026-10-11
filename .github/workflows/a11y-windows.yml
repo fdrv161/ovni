@@ -1,6 +1,6 @@
-# Сборка доступной версии TELESCOPE (VST3, Windows x64) для проверки с NVDA.
-# Запускается на каждый push в ветку accessible и вручную (Actions -> Run workflow).
-# Результат: артефакт TELESCOPE-accessible-windows-vst3 (папка TELESCOPE.vst3 внутри ZIP).
+# Builds the accessible TELESCOPE (VST3, Windows x64) for testing with NVDA.
+# Runs on every push to the accessible branch and manually (Actions -> Run workflow).
+# Output: the TELESCOPE-accessible-windows-vst3 artifact (the TELESCOPE.vst3 folder inside a ZIP).
 name: A11y Windows build
 
 on:
@@ -18,7 +18,7 @@ permissions:
 jobs:
   build:
     name: TELESCOPE VST3 (Windows x64)
-    # windows-2022, а не latest: нужен генератор Visual Studio 17 2022 (так же в основном ci.yml).
+    # windows-2022, not latest: the Visual Studio 17 2022 generator is needed (same as the main ci.yml).
     runs-on: windows-2022
     timeout-minutes: 60
     defaults:
@@ -37,7 +37,7 @@ jobs:
           restore-keys: |
             deps-windows-
 
-      # Тесты и libmysofa выключены, как в основном ci.yml: TELESCOPE они не нужны для сборки плагина.
+      # Tests and libmysofa are off, as in the main ci.yml: TELESCOPE does not need them to build the plugin.
       - name: Configure
         run: >
           cmake -B build -G "Visual Studio 17 2022" -A x64
@@ -55,11 +55,11 @@ jobs:
           bundle=$(find build -type d -path '*telescope_artefacts/Release/VST3/*.vst3' | head -1)
           [ -n "$bundle" ] || { echo "VST3 bundle not found"; exit 1; }
           echo "VST3_BUNDLE=$bundle" >> "$GITHUB_ENV"
-          # Папка, в которой лежит TELESCOPE.vst3: её и выгружаем, чтобы в ZIP была папка плагина целиком.
+          # The folder that holds TELESCOPE.vst3: upload it so the ZIP contains the whole plugin folder.
           echo "VST3_DIR=$(dirname "$bundle")" >> "$GITHUB_ENV"
           echo "bundle: $bundle"
 
-      # Артефакт выгружаем до pluginval: даже если валидатор найдёт что-то, сборку можно проверить руками.
+      # Upload the artifact before pluginval: even if the validator finds something, the build can still be tested by hand.
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:

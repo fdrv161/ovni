@@ -80,8 +80,8 @@ public:
     enum Control { ctrlReset = 0, ctrlLoad, ctrlClear, kNumControls };
     void pressControl (int control);
 
-    // ================== ДОСТУПНОСТЬ (см. Lens.h) ==================
-    // Группы: итог (состояние, референс, тракт, самые большие расхождения), третьоктавные полосы, действия.
+    // ================== ACCESSIBILITY (see Lens.h) ==================
+    // Groups: summary (state, reference, path, largest differences), third-octave bands, actions.
     int          a11yGroupCount() const override { return 3; }
     juce::String a11yGroupName (int group) const override;
     int          a11yRowCount (int group) const override;
@@ -179,21 +179,21 @@ private:
     void paintReadout (juce::Graphics&) const;
     void paintButton (juce::Graphics&, juce::Rectangle<int>, const juce::String& label, bool hovered) const;
 
-    // Доступность
-    static constexpr int kA11yDiffs = 5;          // сколько самых больших расхождений называть
+    // Accessibility
+    static constexpr int kA11yDiffs = 5;          // how many of the largest differences to name
     juce::String a11yBandValue (int band) const;
-    std::vector<int> a11yLargestDiffs() const;    // полосы, отсортированные по модулю расхождения
+    std::vector<int> a11yLargestDiffs() const;    // bands sorted by absolute difference
 
-    // Участок референса с клавиатуры. Пока пользователь шагает стрелками, новые границы только запоминаются
-    // и озвучиваются; анализ запускается один раз, когда он остановился (kSectionApplyDelayMs) — иначе каждое
-    // нажатие перезапускало бы анализ файла.
+    // Reference section from the keyboard. While the user steps with the arrows, new bounds are only stored
+    // and spoken; the analysis runs once after they stop (kSectionApplyDelayMs), otherwise every
+    // key press would restart the file analysis.
     static constexpr juce::uint32 kSectionApplyDelayMs = 800;
     double       pendingFrom = -1.0, pendingTo = -1.0;
     juce::uint32 pendingApplyAt = 0;
-    void         a11ySection (double& from, double& to) const;   // текущие границы (с учётом ожидающих)
+    void         a11ySection (double& from, double& to) const;   // current bounds (including pending ones)
     void         a11yApplyPendingSection();
 
-    // Сообщение о конце фонового анализа: с какой ревизии и в каком состоянии линза начала следить.
+    // Message at the end of the background analysis: the revision and state the lens started tracking from.
     juce::uint32 a11yLastRevision = 0;
     bool         a11yWasBusy = false;
 

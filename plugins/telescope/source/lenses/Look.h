@@ -515,8 +515,8 @@ inline juce::juce_wchar upperChar (juce::juce_wchar c) noexcept
     if (c >= 0xE0 && c <= 0xFE && c != 0xF7)    return c - 0x20;   // à..þ → À..Þ
     if (c == 0xFF)                              return 0x178;      // ÿ → Ÿ
     if (c == 0x153)                             return 0x152;      // œ → Œ
-    if (c >= 0x430 && c <= 0x44F)               return c - 0x20;   // а..я → А..Я (русский)
-    if (c >= 0x450 && c <= 0x45F)               return c - 0x50;   // ё и другие → Ё
+    if (c >= 0x430 && c <= 0x44F)               return c - 0x20;   // Cyrillic a..ya -> A..YA (Russian)
+    if (c >= 0x450 && c <= 0x45F)               return c - 0x50;   // Cyrillic yo and others -> capital
     return c;
 }
 
@@ -526,8 +526,8 @@ inline juce::juce_wchar lowerChar (juce::juce_wchar c) noexcept
     if (c >= 0xC0 && c <= 0xDE && c != 0xD7)    return c + 0x20;   // À..Þ → à..þ
     if (c == 0x178)                             return 0xFF;       // Ÿ → ÿ
     if (c == 0x152)                             return 0x153;      // Œ → œ
-    if (c >= 0x410 && c <= 0x42F)               return c + 0x20;   // А..Я → а..я (русский)
-    if (c >= 0x400 && c <= 0x40F)               return c + 0x50;   // Ё и другие → ё
+    if (c >= 0x410 && c <= 0x42F)               return c + 0x20;   // Cyrillic A..YA -> a..ya (Russian)
+    if (c >= 0x400 && c <= 0x40F)               return c + 0x50;   // Cyrillic capital YO and others -> small
     return c;
 }
 

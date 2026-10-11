@@ -519,8 +519,8 @@ void SpiralLens::mouseExit (const juce::MouseEvent&)
     if (hovered != -1 || cursor.x != -1) { hovered = -1; cursor = { -1, -1 }; repaint(); }
 }
 
-//======================================================================================== доступность
-// Спираль — тот же CQT, свёрнутый по октавам. Текстом: тональность и самые сильные классы нот.
+//======================================================================================== accessibility
+// The spiral is the same CQT folded by octaves. As text: the key and the strongest pitch classes.
 juce::String SpiralLens::a11yGroupName (int group) const
 {
     return group == 0 ? a11ytext::T ("Readings") : a11ytext::T ("Settings");

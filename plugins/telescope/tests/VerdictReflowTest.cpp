@@ -242,7 +242,7 @@ TEST_CASE ("telescope: el boton MODO de VERDICT dice el modo entero y entra, en 
         { "fr", "EN DIRECT", "FICHIER" },
         { "de", "LIVE",      "DATEI"   },
         { "it", "DAL VIVO",  "FILE"    },
-        { "ru", "LIVE",      "ФАЙЛ"    },   // форк с доступностью
+        { "ru", "LIVE",      "ФАЙЛ"    },   // accessibility fork
     };
     const auto expectedFor = [&] (const juce::String& lang, int mode) -> juce::String
     {

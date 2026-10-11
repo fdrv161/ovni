@@ -643,8 +643,8 @@ void WaterfallLens::mouseExit (const juce::MouseEvent&)
     if (hovered != -1 || cursor.x != -1) { hovered = -1; cursor = { -1, -1 }; repaint(); }
 }
 
-//======================================================================================== доступность
-// Водопад — объёмная картинка спектра во времени. Пояснение и настройки; числа — в линзе SPECTRUM.
+//======================================================================================== accessibility
+// The waterfall is a 3D picture of the spectrum over time. An explanation and the settings; numbers are in the SPECTRUM lens.
 juce::String WaterfallLens::a11yGroupName (int group) const
 {
     return group == 0 ? a11ytext::T ("About") : a11ytext::T ("Settings");

@@ -1314,10 +1314,10 @@ void FieldLens::mouseExit (const juce::MouseEvent&)
     if (hovered != -1 || cursor.x != -1) { hovered = -1; cursor = { -1, -1 }; repaint(); }
 }
 
-//======================================================================================== доступность
-// FIELD — это рельеф «панорама × частота». Текстом он пересказан по октавам: где по панораме центр
-// энергии, от и до какой панорамы она растянута (10-й и 90-й процентили) и насколько октава тише самой
-// громкой. Считается по той же сетке, что нарисована (shownGrid).
+//======================================================================================== accessibility
+// FIELD is a "pan x frequency" relief. As text it is told per octave: where the energy centre is on the pan axis,
+// which pan range it spreads over (10th and 90th percentiles), and how much quieter the octave is than the
+// loudest. Computed on the same grid that is painted (shownGrid).
 namespace
 {
 constexpr int    kOctaves = 10;
@@ -1349,7 +1349,7 @@ OctaveStats octaveStats (const std::vector<float>& grid, int octave)
     if (s.energy <= kSilentEnergy) return s;
     s.centre = (float) (weighted / (double) s.energy);
 
-    // Процентили по накопленной энергии: где начинается и где кончается основная часть звука.
+    // Percentiles of the accumulated energy: where the main part of the sound starts and ends.
     float acc = 0.0f;
     bool haveFrom = false;
     for (int c = 0; c < FieldFrame::kDir; ++c)

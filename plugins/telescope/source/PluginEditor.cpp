@@ -23,15 +23,15 @@ namespace
 {
 constexpr int kStripWidth = 150;   // coords de DISEÑO; el zoom S/M/L lo escala solo
 
-// Имена линз для речи. Обычный регистр, а не КАПС с экрана: короткие слова капсом некоторые синтезаторы
-// читают по буквам.
+// Lens names for speech. Normal case, not the on-screen CAPS: some synthesizers spell short all-caps words
+// letter by letter.
 constexpr const char* kSpokenLensNames[kNumLenses] = {
     "Loudness", "Dynamics", "Spectrum", "Spectrogram", "Waterfall", "CQT", "Spiral",
     "Scope", "Band correlation", "Stereo spectrogram", "Field", "Tonal balance", "Verdict"
 };
 }
 
-// ================== ДОСТУПНОСТЬ: источники строк для невидимых элементов ==================
+// ================== ACCESSIBILITY: row sources for the invisible controls ==================
 struct TelescopeEditor::LensListSource final : a11yui::GridSource
 {
     int          groupCount() const override           { return 1; }
@@ -41,8 +41,8 @@ struct TelescopeEditor::LensListSource final : a11yui::GridSource
     juce::String rowValue (int, int) const override     { return {}; }
 };
 
-// Показания текущей линзы. Линза меняется при каждом выборе, поэтому источник спрашивает её заново
-// при каждом запросе, а не хранит указатель.
+// Readings of the current lens. The lens changes on every selection, so the source asks for it again
+// on every request instead of keeping a pointer.
 struct TelescopeEditor::LensPanelSource final : a11yui::GridSource
 {
     explicit LensPanelSource (TelescopeEditor& e) : ed (e) {}
@@ -55,7 +55,7 @@ struct TelescopeEditor::LensPanelSource final : a11yui::GridSource
     int          rowCount (int g) const override    { return hasReadings() ? lens()->a11yRowCount (g) : 1; }
     juce::String rowName (int g, int r) const override
     {
-        // Честно: у этой линзы ещё нет текстовых показаний (делаются по очереди).
+        // Say it plainly: this lens has no text readings yet.
         return hasReadings() ? lens()->a11yRowName (g, r) : a11ytext::T ("No text readings for this lens yet");
     }
     juce::String rowValue (int g, int r) const override     { return hasReadings() ? lens()->a11yRowValue (g, r) : juce::String(); }
@@ -67,7 +67,7 @@ struct TelescopeEditor::LensPanelSource final : a11yui::GridSource
     TelescopeEditor& ed;
 };
 
-// ================== ПАНЕЛЬ «PLUGIN»: шапка, язык, тема ==================
+// ================== THE "PLUGIN" PANEL: header, language, theme ==================
 struct TelescopeEditor::PluginRowsSource final : a11yui::GridSource
 {
     enum Row { rowBypass = 0, rowPreset, rowSave, rowAb, rowAbCopy, rowSize, rowLanguage, rowTheme, kRows };
@@ -131,7 +131,7 @@ struct TelescopeEditor::PluginRowsSource final : a11yui::GridSource
         return r == rowBypass || r == rowPreset || r == rowAb || r == rowSize || r == rowLanguage || r == rowTheme;
     }
 
-    // Размер окна меняется только шагами (Enter на нём — режим правки), остальное Enter нажимает.
+    // Window size only changes in steps (Enter on it starts edit mode); Enter presses everything else.
     bool isActivatable (int, int r) const override { return r != rowSize; }
 
     bool adjust (int, int r, int step) override
@@ -149,7 +149,7 @@ struct TelescopeEditor::PluginRowsSource final : a11yui::GridSource
                 ed.repaint();
                 return true;
             case rowAb:
-                if ((p.ab().activeSlot() == 'B') == up) return false;   // плюс — B, минус — A
+                if ((p.ab().activeSlot() == 'B') == up) return false;   // plus is B, minus is A
                 p.ab().toggle();
                 ed.repaint();
                 return true;
@@ -171,7 +171,7 @@ struct TelescopeEditor::PluginRowsSource final : a11yui::GridSource
                 return true;
             }
             case rowTheme:
-                if ((look::theme() == look::Theme::light) == up) return false;   // плюс — светлая
+                if ((look::theme() == look::Theme::light) == up) return false;   // plus is light
                 ed.toggleTheme();
                 return true;
             default: return false;
@@ -261,7 +261,7 @@ TelescopeEditor::TelescopeEditor (TelescopeProcessor& p)
     {
         if (auto* param = proc.apvts.getParameter ("lens"))
         {
-            // Жест begin/end: хост (REAPER, запись автоматизации) видит одно касание параметра, а не «рывок».
+            // Begin/end gesture: the host (REAPER, automation recording) sees one touch of the parameter, not a jump.
             param->beginChangeGesture();
             param->setValueNotifyingHost (param->convertTo0to1 ((float) i));
             param->endChangeGesture();
@@ -359,7 +359,7 @@ void TelescopeEditor::applyLanguage()
     appliedOnMessageThread.store (juce::MessageManager::existsAndIsCurrentThread());
     applyCount.fetch_add (1);
     strip.setLanguage (strings::languageOf (proc.apvts.state));
-    a11ytext::setLanguage (strings::languageOf (proc.apvts.state));   // речь — на том же языке
+    a11ytext::setLanguage (strings::languageOf (proc.apvts.state));   // speech uses the same language
     if (lens != nullptr) lens->repaint();
    #if TELESCOPE_HAS_EYEPIECE_INTRO
     if (intro != nullptr) { intro->setLanguage (strings::languageOf (proc.apvts.state)); placeIntro(); }
@@ -378,10 +378,10 @@ void TelescopeEditor::showLens (int index)
     lens->setPixelAnchor (this);   // T2: el editor es el que el host pone en un píxel entero (ver Lens.h)
     lens->setBounds (lensArea);
 
-    // Доступность: картинка линзы — только для глаз, её цифры читает панель показаний поверх неё.
-    // Список и панель следуют за линзой, откуда бы ни пришла смена (клик, автоматизация, пресет), молча.
+    // Accessibility: the lens picture is for the eyes only; the readings panel on top of it reads its numbers.
+    // The list and the panel follow the lens silently, wherever the change came from (click, automation, preset).
     lens->setAccessible (false);
-    lens->setMouseClickGrabsKeyboardFocus (false);   // см. setupAccessibility: клик мышью не забирает клавиатуру
+    lens->setMouseClickGrabsKeyboardFocus (false);   // see setupAccessibility: a mouse click does not take the keyboard
     a11yLensList.setCursor (0, index, false);
     a11yPanel.setCursor (panelCursor[(size_t) index].first, panelCursor[(size_t) index].second, false);
     a11yPanel.toFront (false);
@@ -466,17 +466,17 @@ void TelescopeEditor::layoutBody (juce::Rectangle<int> body)
     layoutAccessibility();
 }
 
-// ================== ДОСТУПНОСТЬ ==================
+// ================== ACCESSIBILITY ==================
 void TelescopeEditor::setupAccessibility()
 {
     setTitle ("TELESCOPE");
-    // Нарисованная полоса линз — только для глаз: всё, что в ней есть, дают элементы ниже.
+    // The painted lens strip is for the eyes only: the controls below provide everything in it.
     strip.setAccessible (false);
 
-    // Для зрячих всё как было: щелчок мышью по нарисованному НЕ переводит клавиатурный фокус на невидимые
-    // элементы. Иначе JUCE поднимался бы от места щелчка к холсту и отдавал фокус списку линз, и стрелки,
-    // буквы, Delete после клика уходили бы в плагин, а не в REAPER. Холст — единственный прямой ребёнок
-    // редактора (см. PluginEditorBase).
+    // Sighted users get the old behaviour: a mouse click on the painted UI does NOT move keyboard focus to the
+    // invisible controls. Otherwise JUCE would walk up from the click to the canvas and give focus to the lens list,
+    // and arrows, letters and Delete after a click would go to the plugin instead of REAPER. The canvas is the only
+    // direct child of the editor (see PluginEditorBase).
     strip.setMouseClickGrabsKeyboardFocus (false);
     for (auto* child : getChildren())
         child->setMouseClickGrabsKeyboardFocus (false);
@@ -488,7 +488,7 @@ void TelescopeEditor::setupAccessibility()
     a11yLensList.helpText = "Lens list. Up and Down arrows choose a lens, a letter jumps to a lens by name. "
                             "Enter: go to the readings of the lens. Tab: next control. "
                             "Space starts and stops the host transport.";
-    // Стрелка в списке сразу включает линзу: так же, как клик по строке полосы.
+    // An arrow in the list switches the lens at once, like a click on a row of the strip.
     a11yLensList.onCursorChanged = [this] (int, int row) { if (strip.onSelect) strip.onSelect (row); };
     a11yLensList.onEnter = [this] { focusA11y (a11yPanel); };
 
@@ -520,7 +520,7 @@ void TelescopeEditor::setupAccessibility()
     a11yPoll.fn = [this] { pollLensEvents(); };
     a11yPoll.startTimerHz (4);
 
-    // Порядок Tab задан явно: JUCE иначе сортирует элементы по положению на экране.
+    // Explicit Tab order: otherwise JUCE sorts the controls by their position on screen.
     int order = 1;
     for (auto* c : { &a11yLensList, &a11yPanel, &a11yPlugin })
     {
@@ -531,18 +531,18 @@ void TelescopeEditor::setupAccessibility()
     }
 }
 
-// Невидимые элементы лежат ровно поверх нарисованного: рамка фокуса совпадает с тем, что видит зрячий.
+// The invisible controls sit exactly over the painted UI, so the focus frame matches what a sighted user sees.
 void TelescopeEditor::layoutAccessibility()
 {
     const auto s = strip.getBounds();
     a11yLensList.setBounds (s.withHeight (juce::jmin (s.getHeight(), strip.listHeight())));
     a11yPanel.setBounds (lensArea);
-    // Шапка — всё, что выше полосы линз.
+    // The header is everything above the lens strip.
     a11yPlugin.setBounds (0, 0, lensArea.getRight(), juce::jmax (1, s.getY()));
 }
 
-// Меню пресетов для клавиатуры: то же, что по клику на имя пресета, но открывается у панели и после
-// закрытия возвращает фокус туда же (иначе фокус остаётся «нигде» и NVDA молчит).
+// Preset menu for the keyboard: the same as clicking the preset name, but it opens at the panel and gives focus
+// back there when it closes (otherwise focus stays nowhere and NVDA is silent).
 void TelescopeEditor::showPresetMenuA11y()
 {
     namespace pr = ovni::presets;
@@ -576,7 +576,7 @@ void TelescopeEditor::showPresetMenuA11y()
                 if (idx >= 0 && idx < users.size()) pm.applyUserFile (users[idx]);
             }
             safe->repaint();
-            // Возврат фокуса сам прочитает строку «Preset, <имя>»: отдельный анонс наложился бы на неё.
+            // Returning focus reads the "Preset, <name>" row by itself: a separate announcement would overlap it.
             safe->focusA11yLater (safe->a11yPlugin);
         });
 }
@@ -602,8 +602,8 @@ void TelescopeEditor::showSaveDialogA11y()
         }), true);   // deleteWhenDismissed
 }
 
-// Сообщение линзы говорим от того невидимого элемента, где сейчас фокус (звучит естественнее), иначе от панели
-// показаний: источник события должен быть видимым элементом окна, иначе NVDA его не свяжет с окном.
+// A lens message is spoken from the invisible control that has focus (sounds more natural), otherwise from the
+// readings panel: the event source must be a visible control of the window, or NVDA cannot tie it to the window.
 void TelescopeEditor::pollLensEvents()
 {
     if (lens == nullptr || ! isShowing()) return;
@@ -617,7 +617,7 @@ void TelescopeEditor::pollLensEvents()
     a11y::announce (*source, message, a11y::SpeechQueue::keepAll);
 }
 
-// Фокус после закрытия меню или диалога: с задержкой, чтобы JUCE и хост закончили свою смену фокуса.
+// Focus after a menu or dialog closes: delayed, so JUCE and the host finish their own focus change first.
 void TelescopeEditor::focusA11yLater (juce::Component& target)
 {
     juce::Timer::callAfterDelay (60, [safe = juce::Component::SafePointer<juce::Component> (&target), ed = juce::Component::SafePointer<TelescopeEditor> (this)]
@@ -626,8 +626,8 @@ void TelescopeEditor::focusA11yLater (juce::Component& target)
     });
 }
 
-// Перенос фокуса по рецепту, проверенному в REAPER: клавиатурный фокус JUCE и отдельно фокус UIA,
-// чтобы NVDA точно узнал о смене, даже если JUCE считает, что фокус не менялся.
+// Focus move recipe tested in REAPER: JUCE keyboard focus and, separately, UIA focus, so that NVDA
+// learns about the change even when JUCE thinks focus did not change.
 void TelescopeEditor::focusA11y (juce::Component& target)
 {
     if (! target.isShowing()) return;
@@ -635,7 +635,7 @@ void TelescopeEditor::focusA11y (juce::Component& target)
     if (auto* h = target.getAccessibilityHandler()) h->grabFocus();
 }
 
-// Tab и Shift+Tab ходят по кругу между тремя панелями (по кругу — как принято для Tab).
+// Tab and Shift+Tab cycle through the three panels (wrapping around, as usual for Tab).
 void TelescopeEditor::cycleA11yFocus (juce::Component& from, bool forward)
 {
     const std::array<juce::Component*, 3> order { &a11yLensList, &a11yPanel, &a11yPlugin };
@@ -646,7 +646,7 @@ void TelescopeEditor::cycleA11yFocus (juce::Component& from, bool forward)
     focusA11y (*order[(size_t) i]);
 }
 
-// Если хост отдал фокус самому окну, а не элементу, NVDA молчал бы: переводим фокус на список линз.
+// If the host gives focus to the window itself rather than a control, NVDA would be silent: move it to the lens list.
 void TelescopeEditor::focusGained (FocusChangeType)
 {
     juce::MessageManager::callAsync ([safe = juce::Component::SafePointer<TelescopeEditor> (this)]

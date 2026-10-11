@@ -5,20 +5,20 @@
 #include "a11y/ScreenReaderAnnouncer.h"
 
 // ========================================================================================================
-// Доступные элементы TELESCOPE для скринридера и клавиатуры.
+// TELESCOPE's accessible controls for the screen reader and the keyboard.
 //
-// Весь интерфейс плагина нарисован картинкой, поэтому NVDA там не видит ни одного элемента. Эти компоненты
-// лежат ПОВЕРХ нарисованного (мышь проходит сквозь них к старому интерфейсу) и дают скринридеру настоящие
-// элементы с фокусом, именами и клавишами. Рисуют они только рамку фокуса.
+// The whole plugin UI is painted, so NVDA sees no controls in it. These components lie ON TOP of the
+// painted UI (the mouse goes through them to the old interface) and give the screen reader real controls
+// with focus, names and keys. They only paint the focus frame.
 // ========================================================================================================
 namespace telescope::a11yui
 {
-// Шаги изменения значения: обычный, крупный и «до предела» (Alt+Home/End).
+// Value change steps: normal, coarse and "to the limit" (Alt+Home/End).
 inline constexpr int kStep    = 1;
 inline constexpr int kCoarse  = 10;
 inline constexpr int kExtreme = 1000;
 
-// Откуда сетка берёт строки. Группы — это «страницы» (показания, полосы, настройки), строки — «Имя, значение».
+// Where the grid gets its rows. Groups are "pages" (readings, bands, settings), rows are "Name, value".
 struct GridSource
 {
     virtual ~GridSource() = default;
@@ -28,23 +28,23 @@ struct GridSource
     virtual juce::String rowName (int group, int row) const = 0;
     virtual juce::String rowValue (int group, int row) const = 0;
     virtual bool         isAdjustable (int, int) const { return false; }
-    // step: ±kStep, ±kCoarse или ±kExtreme. true — значение изменилось (на краю диапазона — false, тишина).
+    // step: +-kStep, +-kCoarse or +-kExtreme. true if the value changed (false at the edge of the range: silence).
     virtual bool         adjust (int, int, int) { return false; }
-    // Строка-кнопка (Reset, Load…): Enter выполняет действие. Возвращает фразу о результате (может быть пустой,
-    // например когда открывается диалог — его озвучит сам скринридер).
+    // Button row (Reset, Load...): Enter runs the action. Returns a phrase about the result (may be empty,
+    // e.g. when a dialog opens: the screen reader announces it by itself).
     virtual bool         isActivatable (int, int) const { return false; }
     virtual juce::String activate (int, int) { return {}; }
 };
 
-// Общая часть: живое имя для скринридера, рамка фокуса, Tab и F1.
+// Shared part: live name for the screen reader, focus frame, Tab and F1.
 class FocusOverlay : public juce::Component
 {
 public:
     std::function<void (bool forward)> onTab;
     std::function<void()>              onEscape;
-    juce::String                       helpText;   // F1; английский ключ каталога переводов
-    // Выставить язык речи этого окна плагина (см. A11yStrings.h): вызывается перед каждой клавишей и
-    // каждым запросом имени от скринридера.
+    juce::String                       helpText;   // F1; English key of the translation catalog
+    // Sets the speech language of this plugin window (see A11yStrings.h): called before every key and
+    // every name request from the screen reader.
     std::function<void()>              syncLanguage;
 
     void sync() const { if (syncLanguage) syncLanguage(); }
@@ -52,14 +52,14 @@ public:
     FocusOverlay()
     {
         setWantsKeyboardFocus (true);
-        // Мышь идёт сквозь элемент к нарисованному интерфейсу: зрячий пользователь работает как раньше.
+        // The mouse goes through the control to the painted UI: sighted users work as before.
         setInterceptsMouseClicks (false, false);
     }
 
-    // Текст, который скринридер читает как имя элемента (NVDA+Стрелка вверх). Вычисляется при каждом
-    // запросе, поэтому всегда свежий и не требует событий.
+    // Text the screen reader reads as the control name (NVDA+Up arrow). Computed on every request,
+    // so it is always fresh and needs no events.
     virtual juce::String liveTitle() const = 0;
-    // Описание читается после имени и роли при входе фокуса: место для контекста («Spectrum, Readings»).
+    // The description is read after the name and role when focus arrives: room for context ("Spectrum, Readings").
     virtual juce::String liveDescription() const { return {}; }
 
     void say (const juce::String& text, a11y::SpeechQueue q = a11y::SpeechQueue::replacePrevious)
@@ -78,7 +78,7 @@ public:
     void focusLost (FocusChangeType) override   { repaint(); }
 
 protected:
-    // Общие клавиши. true — клавиша обработана здесь.
+    // Common keys. true if the key was handled here.
     bool handleCommonKey (const juce::KeyPress& key)
     {
         const auto mods = key.getModifiers();
@@ -95,10 +95,10 @@ protected:
         return false;
     }
 
-    // Что делать с клавишей, которую элемент не знает. Комбинации с Ctrl/Alt и F-клавиши отдаём DAW
-    // (Ctrl+S сохраняет проект, Alt+F4 закрывает окно). Пробел — тоже DAW: старт и стоп транспорта нужен,
-    // пока слушаешь анализ. Остальные «голые» клавиши поглощаем: иначе стрелки, Delete или буквы
-    // запустили бы действия REAPER.
+    // What to do with a key the control does not know. Ctrl/Alt combinations and F keys go to the DAW
+    // (Ctrl+S saves the project, Alt+F4 closes the window). Space goes to the DAW too: transport start and stop is
+    // needed while listening to the analysis. Other bare keys are swallowed: otherwise arrows, Delete or letters
+    // would trigger REAPER actions.
     static bool swallowUnknown (const juce::KeyPress& key)
     {
         const auto mods = key.getModifiers();
@@ -127,22 +127,22 @@ protected:
 };
 
 // ========================================================================================================
-// Сетка «группы × строки» в ОДНОМ фокусируемом элементе (модель из LSampler-24):
-//   Стрелки вверх/вниз — строки группы; влево/вправо — соседняя группа; Home/End — край группы;
-//   Ctrl+Home/End — начало/конец всей сетки; Page Up/Down — на 10 строк;
-//   Alt+Стрелка вверх/вниз — изменить значение на шаг; Alt+Page Up/Down — крупный шаг;
-//   Alt+Home/End — минимум/максимум; плюс и минус — шаг значения; Enter на изменяемой строке — режим
-//   правки (обычные стрелки меняют значение, Enter или Esc — выход), на строке-кнопке — нажать,
-//   на остальных — перечитать; F5 — перечитать строку со свежим значением;
-//   буква или цифра — следующая строка на этот знак (Shift — назад); F1 — справка; Esc — назад.
-// Края тихие, без перехода по кругу.
+// A "groups x rows" grid in ONE focusable control (the LSampler-24 model):
+//   Up/Down arrows: rows of the group; Left/Right: neighbouring group; Home/End: edge of the group;
+//   Ctrl+Home/End: start/end of the whole grid; Page Up/Down: 10 rows;
+//   Alt+Up/Down arrow: change the value by a step; Alt+Page Up/Down: coarse step;
+//   Alt+Home/End: minimum/maximum; plus and minus: a value step; Enter on an adjustable row: edit
+//   mode (plain arrows change the value, Enter or Esc leave it), on a button row: press it,
+//   on other rows: read again; F5: read the row again with a fresh value;
+//   a letter or digit: next row starting with it (Shift: backwards); F1: help; Esc: back.
+// Edges are silent, no wrapping around.
 // ========================================================================================================
 class A11yGrid : public FocusOverlay
 {
 public:
-    std::function<void (int group, int row)> onCursorChanged;   // курсор сдвинул пользователь
-    std::function<void()>                    onEnter;           // если не задан — Enter перечитывает строку
-    juce::String emptyText;   // пусто — «Empty» на языке плагина
+    std::function<void (int group, int row)> onCursorChanged;   // the user moved the cursor
+    std::function<void()>                    onEnter;           // if not set, Enter reads the row again
+    juce::String emptyText;   // empty means "Empty" in the plugin language
 
     explicit A11yGrid (juce::AccessibilityRole r = juce::AccessibilityRole::list) : role (r) {}
 
@@ -167,7 +167,7 @@ public:
 
     juce::String liveTitle() const override { return currentText(); }
 
-    std::function<juce::String()> contextName;   // например, имя линзы: «Spectrum»
+    std::function<juce::String()> contextName;   // e.g. the lens name: "Spectrum"
 
     juce::String liveDescription() const override
     {
@@ -180,7 +180,7 @@ public:
         return parts.joinIntoString (", ");
     }
 
-    // Программная установка курсора (без речи, если speak = false).
+    // Sets the cursor from code (silently if speak = false).
     void setCursor (int g, int r, bool speak, bool withGroup = false)
     {
         editing = false;
@@ -190,7 +190,7 @@ public:
         if (speak) speakCurrent (withGroup);
     }
 
-    // Источник поменялся (другая линза): удержать курсор в границах, ничего не говорить.
+    // The source changed (another lens): keep the cursor in range and say nothing.
     void refresh() { clampCursor(); repaint(); }
 
     void speakCurrent (bool withGroup)
@@ -215,8 +215,8 @@ public:
         const int  rows  = source->rowCount (grp);
         const int  groups = source->groupCount();
 
-        // Плюс и минус (основная клавиатура и цифровой блок) меняют значение на шаг. Символ берём из
-        // getTextCharacter: на основной клавиатуре «+» — это Shift+«=», поэтому «=» тоже считаем плюсом.
+        // Plus and minus (main keyboard and numpad) change the value by a step. The character comes from
+        // getTextCharacter: on the main keyboard "+" is Shift+"=", so "=" counts as plus too.
         if (! mods.isCtrlDown() && ! mods.isAltDown() && ! mods.isCommandDown())
         {
             const auto ch = key.getTextCharacter();
@@ -243,7 +243,7 @@ public:
                 }
                 else if (rows > 0 && source->isAdjustable (grp, rw))
                 {
-                    // Режим правки: дальше обычные стрелки меняют значение, Enter или Esc — выход.
+                    // Edit mode: plain arrows now change the value, Enter or Esc leave it.
                     editing = true;
                     say (a11ytext::T ("Edit"));
                 }
@@ -274,13 +274,13 @@ public:
             if (step != 0) { applyStep (step); return true; }
         }
 
-        // Поиск по первому знаку имени. getTextCharacter, а не код клавиши: иначе стрелки и Page Up
-        // попадут в «печатный» диапазон кодов (известная ловушка JUCE).
+        // Search by the first character of the name. getTextCharacter, not the key code: otherwise arrows and Page Up
+        // fall into the "printable" code range (a known JUCE trap).
         if (! mods.isCtrlDown() && ! mods.isAltDown() && ! mods.isCommandDown())
         {
             auto typed = key.getTextCharacter();
             if (mods.isShiftDown() && ((code >= 'A' && code <= 'Z') || (code >= '0' && code <= '9')))
-                typed = (juce::juce_wchar) code;   // Shift+цифра даёт «!» — берём саму цифру
+                typed = (juce::juce_wchar) code;   // Shift+digit gives "!": take the digit itself
             if (typed >= 33 && typed != 127)
             {
                 searchByInitial (typed, mods.isShiftDown() ? -1 : 1);
@@ -299,7 +299,7 @@ public:
     void focusLost (FocusChangeType t) override { editing = false; FocusOverlay::focusLost (t); }
 
 private:
-    // Изменить значение текущей строки. Изменилось — говорим только новое значение, на краю — тишина.
+    // Changes the value of the current row. If it changed, speak only the new value; at the edge, silence.
     void applyStep (int step)
     {
         if (source == nullptr || source->rowCount (grp) <= 0) return;
@@ -307,7 +307,7 @@ private:
         if (source->adjust (grp, rw, step)) say (source->rowValue (grp, rw));
     }
 
-    // Клавиши режима правки. false — клавиша идёт дальше по обычным правилам (Tab, F1, плюс и минус).
+    // Edit mode keys. false means the key goes on by the normal rules (Tab, F1, plus and minus).
     bool handleEditKey (const juce::KeyPress& key)
     {
         const auto mods  = key.getModifiers();
@@ -328,7 +328,7 @@ private:
         if (code == juce::KeyPress::endKey)      { applyStep (kExtreme);  return true; }
         if (code == juce::KeyPress::homeKey)     { applyStep (-kExtreme); return true; }
         if (code == juce::KeyPress::F5Key)       { say (source->rowValue (grp, rw)); return true; }
-        if (code == juce::KeyPress::leftKey || code == juce::KeyPress::rightKey) return true;   // не уходим из строки
+        if (code == juce::KeyPress::leftKey || code == juce::KeyPress::rightKey) return true;   // stay on the row
         return false;
     }
 
@@ -348,7 +348,7 @@ private:
         const int oldG = grp, oldR = rw;
         grp = g; rw = r;
         clampCursor();
-        if (grp == oldG && rw == oldR) return;   // край — тишина
+        if (grp == oldG && rw == oldR) return;   // edge: silence
         repaint();
         if (onCursorChanged) onCursorChanged (grp, rw);
         speakCurrent (withGroup && grp != oldG);
@@ -370,19 +370,19 @@ private:
                 return;
             }
         }
-        // Нет совпадений — тишина, как на краях.
+        // No match: silence, as at the edges.
     }
 
     juce::AccessibilityRole role;
     GridSource* source = nullptr;
     int grp = 0, rw = 0;
-    bool editing = false;   // режим правки (Enter на изменяемой строке)
+    bool editing = false;   // edit mode (Enter on an adjustable row)
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (A11yGrid)
 };
 
 // ========================================================================================================
-// Кнопка поверх нарисованной строки. Enter или пробел — нажать. Имя живое: «Language, English».
+// A button over a painted row. Enter or Space presses it. Live name: "Language, English".
 // ========================================================================================================
 class A11yButton : public FocusOverlay
 {
@@ -410,7 +410,7 @@ public:
 
     std::unique_ptr<juce::AccessibilityHandler> createAccessibilityHandler() override
     {
-        // Действие press: NVDA умеет нажимать кнопку и своей командой, без клавиш плагина.
+        // Press action: NVDA can press the button with its own command, without plugin keys.
         return makeHandler (juce::AccessibilityRole::button,
                             juce::AccessibilityActions().addAction (juce::AccessibilityActionType::press,
                                                                     [this] { press(); }));

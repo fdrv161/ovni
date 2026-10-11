@@ -75,8 +75,8 @@ public:
                    smooth, kNumControls };
     void cycleControl (int control);
 
-    // ================== ДОСТУПНОСТЬ (см. Lens.h) ==================
-    // Группы: показания (зонд по частоте и самые громкие пики), третьоктавные полосы, настройки.
+    // ================== ACCESSIBILITY (see Lens.h) ==================
+    // Groups: readings (frequency probe and the loudest peaks), third-octave bands, settings.
     int          a11yGroupCount() const override { return 3; }
     juce::String a11yGroupName (int group) const override;
     int          a11yRowCount (int group) const override;
@@ -85,7 +85,7 @@ public:
     bool         a11yIsAdjustable (int group, int row) const override;
     bool         a11yAdjust (int group, int row, int step) override;
 
-    // Настройка с клавиатуры: шаг вперёд/назад без перехода по кругу (мышь по-прежнему ходит по кругу).
+    // Setting from the keyboard: step forward/back without wrapping (the mouse still wraps).
     bool stepControl (int control, int step);
 
 protected:
@@ -157,19 +157,19 @@ private:
     int   cursorX = -1;      // columna bajo el cursor dentro del plot, -1 = afuera
     int   lastRangeDb = 0;   // para rehornear la rejilla cuando cambia la escala
 
-    // ---- доступность: сырые бины последнего кадра (картинка хранит только столбцы по пикселям) ----
+    // ---- accessibility: raw bins of the latest frame (the picture keeps only per-pixel columns) ----
     struct Peak { double hz = 0.0; float db = 0.0f; };
     static constexpr int kA11yPeaks = 5;
     std::vector<float> a11yMag[SpectrumFrame::kMaxSpectra], a11yHold[SpectrumFrame::kMaxSpectra];
     int    a11yBins = 0, a11ySpectra = 0;
     double a11yBinHz = 0.0;
     bool   a11yHasFrame = false;
-    juce::uint32 a11yFrameSerial = 0;          // растёт с каждым новым кадром (кэш пиков)
-    int    probeMidi = 69;                     // зонд стоит на нотах: 69 = A 4, 440 Гц
+    juce::uint32 a11yFrameSerial = 0;          // grows with every new frame (peak cache)
+    int    probeMidi = 69;                     // the probe sits on notes: 69 = A 4, 440 Hz
     mutable juce::uint32 peaksFrame = 0xffffffffu;
-    mutable std::vector<Peak> peaks;           // пики считаются по запросу, не чаще раза на кадр
+    mutable std::vector<Peak> peaks;           // peaks are computed on request, at most once per frame
 
-    float  a11yLevelAt (int slot, double hz, bool hold) const;   // уровень у частоты, как на графике
+    float  a11yLevelAt (int slot, double hz, bool hold) const;   // level at a frequency, as on the plot
     const std::vector<Peak>& a11yPeaks() const;
     juce::String a11yLevels (double hz, bool withHold) const;    // "L -18 dB, R -20 dB"
     juce::String a11yBandValue (int band) const;

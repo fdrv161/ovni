@@ -738,10 +738,10 @@ inline constexpr Phrase kPhrasesIt[] = {
     { "dc.ok",             "Nessuna componente continua: {valor} su L, {valor2} su R (limite {t0})" },
 };
 
-// РУССКИЙ (форк с доступностью). Правило то же, что у остальных таблиц: число до первой точки, термин сведения
-// в скобках, в конце — куда смотреть («Проверьте …»), а не что делать. Единицы (dB, Hz, LUFS, LU, dBTP) латиницей.
-// Чтобы не путаться в падежах после чисел, количество стоит после двоеточия («находок: 3»). Без проверки
-// вторым носителем.
+// RUSSIAN (accessibility fork). Same rule as the other tables: the number before the first period, the mixing term
+// in parentheses, and at the end where to look ("Check ..."), never what to do. Units (dB, Hz, LUFS, LU, dBTP) stay in Latin.
+// To avoid Russian plural forms after numbers, counts go after a colon ("findings: 3"). Not reviewed
+// by a second native speaker.
 inline constexpr Phrase kPhrasesRu[] = {
     { "ui.reset",            "СБРОС" },
     { "ui.reset.value",      "с нуля" },

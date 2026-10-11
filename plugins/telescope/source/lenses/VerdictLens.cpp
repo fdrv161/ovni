@@ -68,8 +68,8 @@ VerdictLens::VerdictLens (TelescopeProcessor& p) : Lens (12), processor (p)
     // dibujo es el mismo; sólo deja de repetirse.
     setSettleHold (2);
 
-    // Доступность: следим за анализом файла с текущего состояния, чтобы при открытии линзы не сказать
-    // «готово» о старом результате.
+    // Accessibility: track the file analysis from the current state, so opening the lens does not say
+    // "done" about an old result.
     a11yLastRevision = processor.verdictFileRevision();
     a11yWasBusy      = processor.verdictFileBusy();
 }
@@ -804,9 +804,9 @@ void VerdictLens::paintLive (juce::Graphics& g)
                         juce::Justification::centredRight);
 }
 
-//======================================================================================== доступность
-// Выводы VERDICT — уже готовые фразы с числами. Для скринридера они читаются как есть, только знаки вроде «·»
-// заменяются на запятые, а значки ● ⚠ ○ ✓ ✗ — словами.
+//======================================================================================== accessibility
+// VERDICT findings are ready-made phrases with numbers. The screen reader reads them as they are; only marks such as
+// the middle dot become commas, and the severity and check symbols become words.
 namespace
 {
 enum A11yGroup { gSummary = 0, gFeel, gTranslate, gMissing, gWithin, gActions };
@@ -854,7 +854,7 @@ int VerdictLens::a11yRowCount (int group) const
 {
     if (group == gSummary) return 2;
     if (group == gActions) return kNumControls;
-    // Пустой раздел — одна строка, которая это говорит.
+    // An empty section is one row that says so.
     return juce::jmax (1, (int) a11yFindings (group).size());
 }
 
@@ -926,7 +926,7 @@ bool VerdictLens::a11yAdjust (int group, int row, int step)
     if (! a11yIsAdjustable (group, row)) return false;
     const bool wantFile = step > 0;
     const bool isFile = processor.verdictMode() == TelescopeProcessor::verdictFile;
-    if (wantFile == isFile) return false;   // край: режимов всего два
+    if (wantFile == isFile) return false;   // edge: there are only two modes
     pressControl (ctrlMode);
     return true;
 }
@@ -942,11 +942,11 @@ juce::String VerdictLens::a11yActivate (int group, int row)
     pressControl (row);
     if (row == ctrlReset) return a11ytext::T ("Analysis reset");
     if (row == ctrlMode)  return a11yRowValue (gActions, ctrlMode);
-    return {};   // ctrlLoad: открылся диалог выбора файла, его озвучит сам скринридер
+    return {};   // ctrlLoad: a file chooser opened; the screen reader announces it by itself
 }
 
-// Конец фонового анализа файла — сказать результат и итоговую строку. Ждём, пока линза пересоберёт отчёт
-// по новой ревизии (lastFileRev), иначе прочитали бы старый итог.
+// End of the background file analysis: speak the result and the headline. Wait until the lens rebuilds the report
+// for the new revision (lastFileRev), otherwise the old headline would be read.
 juce::String VerdictLens::a11yPollEvent()
 {
     const bool busy = processor.verdictFileBusy();

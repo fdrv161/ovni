@@ -181,7 +181,7 @@ public:
     enum Control { ctrlLines = 0, ctrlTilt, ctrlHistory, ctrlRange, ctrlPalette, kNumControls };
     void cycleControl (int control);
 
-    // ================== ДОСТУПНОСТЬ (см. Lens.h) ==================
+    // ================== ACCESSIBILITY (see Lens.h) ==================
     int          a11yGroupCount() const override { return 2; }
     juce::String a11yGroupName (int group) const override;
     int          a11yRowCount (int group) const override;

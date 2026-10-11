@@ -422,9 +422,9 @@ void SpectrogramLens::mouseExit (const juce::MouseEvent&)
     if (hovered != -1 || cursor.x != -1) { hovered = -1; cursor = { -1, -1 }; repaint(); }
 }
 
-//======================================================================================== доступность
-// Спектрограмма — картинка «спектр во времени», текстом её не пересказать. Честно говорим это одной строкой
-// и даём все настройки: они общие со SPECTRUM (история, диапазон, канал), так что настраивать можно и здесь.
+//======================================================================================== accessibility
+// A spectrogram is a "spectrum over time" picture that cannot be told as text. Say so in one line
+// and offer all the settings: they are shared with SPECTRUM (history, range, channel), so they can be set here too.
 namespace
 {
 juce::String spokenChannel (int c)

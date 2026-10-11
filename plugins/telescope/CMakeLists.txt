@@ -84,7 +84,7 @@ juce_add_plugin(telescope
     PRODUCT_NAME             "TELESCOPE"
     IS_SYNTH                 FALSE
     NEEDS_MIDI_INPUT         TRUE             # interceptar Program Change (preset por MIDI) -> NO quitar
-    EDITOR_WANTS_KEYBOARD_FOCUS TRUE          # доступность: без этого окно плагина на Windows не получает клавиши
+    EDITOR_WANTS_KEYBOARD_FOCUS TRUE          # accessibility: without this the plugin window gets no keys on Windows
     AU_MAIN_TYPE             "kAudioUnitType_Effect"   # FX de AUDIO (aufx), como el resto del catálogo.
     VST3_CATEGORIES          Fx Analyzer      # TELESCOPE mide, no procesa: el host lo agrupa con los medidores.
     COPY_PLUGIN_AFTER_BUILD  ${OVNI_COPY_PLUGIN_AFTER_BUILD})   # ON sólo en macOS (raíz): pisa el TELESCOPE.vst3/.component de ~/Library (el firmado también)

@@ -520,8 +520,8 @@ void StereoSpectrogramLens::mouseExit (const juce::MouseEvent&)
     if (hovered != -1 || cursor.x != -1) { hovered = -1; cursor = { -1, -1 }; repaint(); }
 }
 
-//======================================================================================== доступность
-// Картинка «ширина стерео во времени». Числа по полосам — в BAND CORRELATION; здесь пояснение и настройки.
+//======================================================================================== accessibility
+// A "stereo width over time" picture. Numbers per band are in BAND CORRELATION; here an explanation and the settings.
 juce::String StereoSpectrogramLens::a11yGroupName (int group) const
 {
     return group == 0 ? a11ytext::T ("About") : a11ytext::T ("Settings");

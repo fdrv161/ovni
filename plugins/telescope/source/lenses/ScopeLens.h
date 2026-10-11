@@ -78,7 +78,7 @@ public:
     // no donde cree que se dibuja.
     juce::Rectangle<int> correlationArea() const noexcept { return zones.centre; }
 
-    // ================== ДОСТУПНОСТЬ (см. Lens.h) ==================
+    // ================== ACCESSIBILITY (see Lens.h) ==================
     int          a11yGroupCount() const override { return 2; }
     juce::String a11yGroupName (int group) const override;
     int          a11yRowCount (int group) const override;

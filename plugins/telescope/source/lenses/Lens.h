@@ -128,28 +128,28 @@ public:
     // «fenÊtre» y «BALANÇO», «balanÇo».
     juce::String trLower (strings::Key k) const { return look::lower (tr (k)); }
 
-    // ================== ДОСТУПНОСТЬ: ПОКАЗАНИЯ ТЕКСТОМ ДЛЯ СКРИНРИДЕРА ==================
-    // Линза рисует картинку, а незрячему нужны те же цифры текстом. Линза отдаёт их группами строк
-    // «Имя, значение» (показания, полосы, настройки); панель A11yGrid в редакторе читает их по стрелкам.
-    // Значение вычисляется в момент запроса из последних данных линзы, поэтому всегда свежее.
-    // По умолчанию у линзы показаний нет: редактор тогда честно говорит, что их пока нет.
+    // ================== ACCESSIBILITY: READINGS AS TEXT FOR THE SCREEN READER ==================
+    // A lens paints a picture, but a blind user needs the same numbers as text. The lens returns them as groups of
+    // "Name, value" rows (readings, bands, settings); the A11yGrid panel in the editor reads them with the arrows.
+    // The value is computed at request time from the lens's latest data, so it is always fresh.
+    // By default a lens has no readings: the editor then says plainly that there are none yet.
     virtual int          a11yGroupCount() const               { return 0; }
     virtual juce::String a11yGroupName (int) const             { return {}; }
     virtual int          a11yRowCount (int) const              { return 0; }
     virtual juce::String a11yRowName (int, int) const          { return {}; }
     virtual juce::String a11yRowValue (int, int) const         { return {}; }
     virtual bool         a11yIsAdjustable (int, int) const     { return false; }
-    // step — шаг из a11y/A11yWidgets.h (±1, ±10 крупный, ±1000 до предела). true — значение изменилось.
+    // step is a step from a11y/A11yWidgets.h (+-1, +-10 coarse, +-1000 to the limit). true if the value changed.
     virtual bool         a11yAdjust (int, int, int)            { return false; }
-    // Строка-кнопка: Enter выполняет действие, возвращает фразу о результате (или пустую).
+    // Button row: Enter runs the action and returns a phrase about the result (or an empty one).
     virtual bool         a11yIsActivatable (int, int) const    { return false; }
     virtual juce::String a11yActivate (int, int)               { return {}; }
-    // Редактор спрашивает несколько раз в секунду: не случилось ли что-то, о чём надо сказать само
-    // (фоновый анализ файла закончился). Вернуть фразу один раз, иначе пусто.
+    // The editor asks a few times a second whether something happened that should be spoken on its own
+    // (a background file analysis finished). Return the phrase once, otherwise empty.
     virtual juce::String a11yPollEvent()                        { return {}; }
 
-    // Шаг настройки, которая по клику мыши ходит по кругу. С клавиатуры по кругу не ходим: вызываем тот же
-    // «следующий вариант» нужное число раз, а на краях стоим (и редактор молчит).
+    // Step of a setting that cycles on mouse click. From the keyboard there is no wrapping: call the same
+    // "next option" the needed number of times, and stop at the edges (the editor stays silent).
     template <typename NextFn>
     static bool a11yStepCyclic (int current, int count, int step, NextFn&& next)
     {

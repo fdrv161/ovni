@@ -596,7 +596,7 @@ TEST_CASE ("telescope: la tonica de VERDICT usa la convencion de notas del idiom
     struct Lang { const char* code; const char* const* names; };
     const Lang langs[] = { { "en", letras }, { "es", solfeo }, { "pt", solfeo },
                            { "fr", solfeo }, { "de", aleman }, { "it", solfeo },
-                           { "ru", letras } };   // русский — буквами (форк с доступностью)
+                           { "ru", letras } };   // Russian uses letters (accessibility fork)
 
     // Se acumula por idioma y se juzga UNA vez por idioma: con un CHECK por tonalidad, seis lenguas rotas
     // llenan el log de 96 líneas iguales y no se ve cuál es cuál.
