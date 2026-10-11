@@ -451,7 +451,7 @@ enum DynAction { daThreshold = 0, daPause, daReset, kDynActions };
 
 juce::String DynamicsLens::a11yGroupName (int group) const
 {
-    return group == 0 ? "Readings" : "Actions";
+    return group == 0 ? a11ytext::T ("Readings") : a11ytext::T ("Actions");
 }
 
 int DynamicsLens::a11yRowCount (int group) const
@@ -464,30 +464,30 @@ juce::String DynamicsLens::a11yRowName (int group, int row) const
     if (group == 1)
     {
         static const char* const actions[kDynActions] = { "Clip threshold", "Pause", "Reset" };
-        return actions[juce::jlimit (0, (int) kDynActions - 1, row)];
+        return a11ytext::T (actions[juce::jlimit (0, (int) kDynActions - 1, row)]);
     }
     static const char* const names[kDynRows] = { "PLR", "PSR", "Short-term", "Most frequent short-term",
                                                  "Clip events", "Clips in the last 10 minutes" };
-    return names[juce::jlimit (0, (int) kDynRows - 1, row)];
+    return a11ytext::T (names[juce::jlimit (0, (int) kDynRows - 1, row)]);
 }
 
 juce::String DynamicsLens::a11yRowValue (int group, int row) const
 {
     if (group == 1)
     {
-        if (row == daThreshold) return spoken::trimmed (processor.clipThresholdDbtp(), 1) + " dBTP";
-        if (row == daPause)     return processor.isAnalysisPaused() ? "paused" : "running";
+        if (row == daThreshold) return spoken::trimmed (processor.clipThresholdDbtp(), 1) + a11ytext::T (" dBTP");
+        if (row == daPause)     return processor.isAnalysisPaused() ? a11ytext::T ("paused") : a11ytext::T ("running");
         return {};
     }
 
     switch (row)
     {
-        case drPlr: return plrValid ? spoken::trimmed (plr, 1) + " dB" : juce::String ("no reading yet");
+        case drPlr: return plrValid ? spoken::trimmed (plr, 1) + a11ytext::T (" dB") : juce::String (a11ytext::T ("no reading yet"));
         case drPsr:
-            if (! psrValid) return "no reading yet";
-            return spoken::trimmed (psr, 1) + " dB" + (psr < kPsrAlert ? ", low" : "");
+            if (! psrValid) return a11ytext::T ("no reading yet");
+            return spoken::trimmed (psr, 1) + a11ytext::T (" dB") + (psr < kPsrAlert ? a11ytext::T (", low") : "");
         case drShortTerm:
-            return latest.shortTerm > -100.0f ? spoken::trimmed (latest.shortTerm, 1) + " LUFS" : juce::String ("no reading");
+            return latest.shortTerm > -100.0f ? spoken::trimmed (latest.shortTerm, 1) + a11ytext::T (" LUFS") : juce::String (a11ytext::T ("no reading"));
         case drMostFrequent:
         {
             juce::uint64 total = 0;
@@ -497,21 +497,21 @@ juce::String DynamicsLens::a11yRowValue (int group, int row) const
                 total += histogram[i];
                 if (histogram[i] > 0 && (best < 0 || histogram[i] > histogram[best])) best = i;
             }
-            if (best < 0 || total == 0) return "no reading yet";
+            if (best < 0 || total == 0) return a11ytext::T ("no reading yet");
             const int pct = juce::roundToInt (100.0 * (double) histogram[best] / (double) total);
-            return juce::String (best + kBinsFloorLufs) + " LUFS, " + juce::String (pct) + " percent of the time";
+            return juce::String (best + kBinsFloorLufs) + a11ytext::T (" LUFS, ") + juce::String (pct) + a11ytext::T (" percent of the time");
         }
         case drClips:
-            return juce::String ((int) clipEvents) + " above " + spoken::trimmed (processor.clipThresholdDbtp(), 1) + " dBTP";
+            return juce::String ((int) clipEvents) + a11ytext::T (" above ") + spoken::trimmed (processor.clipThresholdDbtp(), 1) + a11ytext::T (" dBTP");
         case drRecentClips:
         {
             juce::uint64 n = 0;
             int lastIdx = -1;
             for (int i = 0; i < (int) timelineBuf.size(); ++i)
                 if (timelineBuf[(size_t) i] > 0) { n += timelineBuf[(size_t) i]; lastIdx = i; }
-            if (n == 0) return "none";
+            if (n == 0) return a11ytext::T ("none");
             const int ago = (int) timelineBuf.size() - 1 - lastIdx;   // одна ячейка — секунда анализа, последняя — самая свежая
-            return juce::String ((juce::int64) n) + ", the latest " + juce::String (ago) + " seconds back in the analysis";
+            return juce::String ((juce::int64) n) + a11ytext::T (", the latest ") + juce::String (ago) + a11ytext::T (" seconds back in the analysis");
         }
         default: return {};
     }
@@ -550,13 +550,13 @@ juce::String DynamicsLens::a11yActivate (int group, int row)
     {
         processor.setAnalysisPaused (! processor.isAnalysisPaused());
         repaint();
-        return processor.isAnalysisPaused() ? "Paused" : "Running";
+        return processor.isAnalysisPaused() ? a11ytext::T ("Paused") : a11ytext::T ("Running");
     }
     if (row == daReset)
     {
         processor.resetAnalysis();
         repaint();
-        return "Analysis reset";
+        return a11ytext::T ("Analysis reset");
     }
     return {};
 }

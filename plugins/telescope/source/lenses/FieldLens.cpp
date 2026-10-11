@@ -1364,7 +1364,7 @@ OctaveStats octaveStats (const std::vector<float>& grid, int octave)
 
 juce::String FieldLens::a11yGroupName (int group) const
 {
-    return group == 0 ? "Octaves" : "Settings";
+    return group == 0 ? a11ytext::T ("Octaves") : a11ytext::T ("Settings");
 }
 
 int FieldLens::a11yRowCount (int group) const
@@ -1377,9 +1377,9 @@ juce::String FieldLens::a11yRowName (int group, int row) const
     if (group == 1)
     {
         static const char* const sets[kNumControls] = { "Decay", "Window", "Palette" };
-        return sets[juce::jlimit (0, (int) kNumControls - 1, row)];
+        return a11ytext::T (sets[juce::jlimit (0, (int) kNumControls - 1, row)]);
     }
-    return spoken::hz (kOctaveHz[juce::jlimit (0, kOctaves - 1, row)]) + " octave";
+    return spoken::hz (kOctaveHz[juce::jlimit (0, kOctaves - 1, row)]) + a11ytext::T (" octave");
 }
 
 juce::String FieldLens::a11yRowValue (int group, int row) const
@@ -1388,27 +1388,27 @@ juce::String FieldLens::a11yRowValue (int group, int row) const
     {
         switch (row)
         {
-            case ctrlDecay:   return spoken::trimmed (processor.fieldDecaySec(), 1) + " seconds";
-            case ctrlWindow:  return spoken::trimmed (processor.bandsWindowSec(), 1) + " seconds";
+            case ctrlDecay:   return spoken::trimmed (processor.fieldDecaySec(), 1) + a11ytext::T (" seconds");
+            case ctrlWindow:  return spoken::trimmed (processor.bandsWindowSec(), 1) + a11ytext::T (" seconds");
             case ctrlPalette: return spoken::palette (processor.paletteIndex());
             default:          return {};
         }
     }
 
-    if (shownGrid.empty()) return "no data yet";
+    if (shownGrid.empty()) return a11ytext::T ("no data yet");
     float loudest = 0.0f;
     for (int o = 0; o < kOctaves; ++o) loudest = juce::jmax (loudest, octaveStats (shownGrid, o).energy);
 
     const auto s = octaveStats (shownGrid, juce::jlimit (0, kOctaves - 1, row));
-    if (s.energy <= kSilentEnergy || loudest <= kSilentEnergy) return "silent";
+    if (s.energy <= kSilentEnergy || loudest <= kSilentEnergy) return a11ytext::T ("silent");
 
     const float rel = 10.0f * std::log10 (s.energy / loudest);
-    juce::String t = (rel > -0.05f ? juce::String ("loudest octave") : spoken::trimmed (rel, 1) + " dB")
-                   + ", centre " + spoken::pan (s.centre);
+    juce::String t = (rel > -0.05f ? juce::String (a11ytext::T ("loudest octave")) : spoken::trimmed (rel, 1) + a11ytext::T (" dB"))
+                   + a11ytext::T (", centre ") + spoken::pan (s.centre);
     if (std::abs (s.to - s.from) >= 0.1f)
-        t << ", spread from " << spoken::pan (s.from) << " to " << spoken::pan (s.to);
+        t << a11ytext::T (", spread from ") << spoken::pan (s.from) << a11ytext::T (" to ") << spoken::pan (s.to);
     else
-        t << ", narrow";
+        t << a11ytext::T (", narrow");
     return t;
 }
 

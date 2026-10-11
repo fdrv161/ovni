@@ -592,19 +592,19 @@ enum LoudAction { laTarget = 0, laPause, laReset, kLoudActions };
 
 juce::String lufs (float v, bool partial = false)
 {
-    if (! hasReading (v)) return "no reading";
-    return spoken::trimmed (v, 1) + " LUFS" + (partial ? ", partial" : "");
+    if (! hasReading (v)) return a11ytext::T ("no reading");
+    return spoken::trimmed (v, 1) + a11ytext::T (" LUFS") + (partial ? a11ytext::T (", partial") : "");
 }
 
 juce::String dbtp (float v)
 {
-    return hasReading (v) ? spoken::trimmed (v, 1) + " dBTP" : juce::String ("no reading");
+    return hasReading (v) ? spoken::trimmed (v, 1) + a11ytext::T (" dBTP") : juce::String (a11ytext::T ("no reading"));
 }
 }
 
 juce::String LoudnessLens::a11yGroupName (int group) const
 {
-    return group == 0 ? "Readings" : "Actions";
+    return group == 0 ? a11ytext::T ("Readings") : a11ytext::T ("Actions");
 }
 
 int LoudnessLens::a11yRowCount (int group) const
@@ -617,11 +617,11 @@ juce::String LoudnessLens::a11yRowName (int group, int row) const
     if (group == 1)
     {
         static const char* const actions[kLoudActions] = { "Platform target", "Pause", "Reset" };
-        return actions[juce::jlimit (0, (int) kLoudActions - 1, row)];
+        return a11ytext::T (actions[juce::jlimit (0, (int) kLoudActions - 1, row)]);
     }
     static const char* const names[kLoudRows] = { "Integrated", "Short-term", "Momentary", "Loudness range",
                                                   "True peak max", "Max short-term", "Max momentary", "Target" };
-    return names[juce::jlimit (0, (int) kLoudRows - 1, row)];
+    return a11ytext::T (names[juce::jlimit (0, (int) kLoudRows - 1, row)]);
 }
 
 juce::String LoudnessLens::a11yRowValue (int group, int row) const
@@ -629,21 +629,21 @@ juce::String LoudnessLens::a11yRowValue (int group, int row) const
     if (group == 1)
     {
         if (row == laTarget) return streamingTarget (processor.targetIndex()).name;
-        if (row == laPause)  return processor.isAnalysisPaused() ? "paused" : "running";
+        if (row == laPause)  return processor.isAnalysisPaused() ? a11ytext::T ("paused") : a11ytext::T ("running");
         return {};
     }
 
     switch (row)
     {
-        case lrIntegrated:   return latest.integratedValid ? lufs (latest.integrated) : juce::String ("no reading yet");
+        case lrIntegrated:   return latest.integratedValid ? lufs (latest.integrated) : juce::String (a11ytext::T ("no reading yet"));
         case lrShortTerm:    return lufs (a11yShortTerm, shortTermIsPartial);
         case lrMomentary:    return lufs (a11yMomentary, momentaryIsPartial);
-        case lrRange:        return latest.integratedValid ? spoken::trimmed (latest.lra, 1) + " LU" : juce::String ("no reading yet");
+        case lrRange:        return latest.integratedValid ? spoken::trimmed (latest.lra, 1) + a11ytext::T (" LU") : juce::String (a11ytext::T ("no reading yet"));
         case lrTruePeak:
         {
             // Общий максимум и по каналам: какой канал дал пик, видно на картинке по двум полосам.
             auto t = dbtp (latest.truePeakMax);
-            if (hasReading (tpMaxL) || hasReading (tpMaxR)) t << ", L " << dbtp (tpMaxL) << ", R " << dbtp (tpMaxR);
+            if (hasReading (tpMaxL) || hasReading (tpMaxR)) t << a11ytext::T (", L ") << dbtp (tpMaxL) << a11ytext::T (", R ") << dbtp (tpMaxR);
             return t;
         }
         case lrMaxShort:     return lufs (latest.shortTermMax);
@@ -687,13 +687,13 @@ juce::String LoudnessLens::a11yActivate (int group, int row)
     {
         processor.setAnalysisPaused (! processor.isAnalysisPaused());
         repaint();
-        return processor.isAnalysisPaused() ? "Paused" : "Running";
+        return processor.isAnalysisPaused() ? a11ytext::T ("Paused") : a11ytext::T ("Running");
     }
     if (row == laReset)
     {
         processor.resetAnalysis();
         repaint();
-        return "Analysis reset";
+        return a11ytext::T ("Analysis reset");
     }
     return {};
 }

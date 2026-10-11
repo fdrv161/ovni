@@ -35,9 +35,9 @@ constexpr const char* kSpokenLensNames[kNumLenses] = {
 struct TelescopeEditor::LensListSource final : a11yui::GridSource
 {
     int          groupCount() const override           { return 1; }
-    juce::String groupName (int) const override         { return "Lenses"; }
+    juce::String groupName (int) const override         { return a11ytext::T ("Lenses"); }
     int          rowCount (int) const override          { return kNumLenses; }
-    juce::String rowName (int, int row) const override  { return kSpokenLensNames[juce::jlimit (0, kNumLenses - 1, row)]; }
+    juce::String rowName (int, int row) const override  { return a11ytext::T (kSpokenLensNames[juce::jlimit (0, kNumLenses - 1, row)]); }
     juce::String rowValue (int, int) const override     { return {}; }
 };
 
@@ -51,12 +51,12 @@ struct TelescopeEditor::LensPanelSource final : a11yui::GridSource
     bool  hasReadings() const { auto* l = lens(); return l != nullptr && l->a11yGroupCount() > 0; }
 
     int          groupCount() const override        { return hasReadings() ? lens()->a11yGroupCount() : 1; }
-    juce::String groupName (int g) const override   { return hasReadings() ? lens()->a11yGroupName (g) : juce::String ("Readings"); }
+    juce::String groupName (int g) const override   { return hasReadings() ? lens()->a11yGroupName (g) : a11ytext::T ("Readings"); }
     int          rowCount (int g) const override    { return hasReadings() ? lens()->a11yRowCount (g) : 1; }
     juce::String rowName (int g, int r) const override
     {
         // Честно: у этой линзы ещё нет текстовых показаний (делаются по очереди).
-        return hasReadings() ? lens()->a11yRowName (g, r) : juce::String ("No text readings for this lens yet");
+        return hasReadings() ? lens()->a11yRowName (g, r) : a11ytext::T ("No text readings for this lens yet");
     }
     juce::String rowValue (int g, int r) const override     { return hasReadings() ? lens()->a11yRowValue (g, r) : juce::String(); }
     bool isAdjustable (int g, int r) const override         { return hasReadings() && lens()->a11yIsAdjustable (g, r); }
@@ -92,14 +92,14 @@ struct TelescopeEditor::PluginRowsSource final : a11yui::GridSource
     static int zoomIndex (Zoom z) { return z == Zoom::small ? 0 : (z == Zoom::large ? 2 : 1); }
 
     int          groupCount() const override    { return 1; }
-    juce::String groupName (int) const override { return "Plugin"; }
+    juce::String groupName (int) const override { return a11ytext::T ("Plugin"); }
     int          rowCount (int) const override  { return kRows; }
 
     juce::String rowName (int, int r) const override
     {
         static const char* const names[kRows] = { "Bypass", "Preset", "Save preset", "A B slot",
                                                   "Copy this slot to the other", "Window size", "Language", "Theme" };
-        return names[juce::jlimit (0, kRows - 1, r)];
+        return a11ytext::T (names[juce::jlimit (0, kRows - 1, r)]);
     }
 
     juce::String rowValue (int, int r) const override
@@ -107,21 +107,21 @@ struct TelescopeEditor::PluginRowsSource final : a11yui::GridSource
         auto& p = ed.proc;
         switch (r)
         {
-            case rowBypass: return isBypassed() ? "On" : "Off";
+            case rowBypass: return a11ytext::T (isBypassed() ? "On" : "Off");
             case rowPreset:
             {
                 const auto c = p.presets().current();
                 const auto n = c.name.isEmpty() ? juce::String ("Init") : c.name;
-                return c.modified ? n + ", modified" : n;
+                return c.modified ? a11ytext::TF ("{0}, modified", { n }) : n;
             }
             case rowAb:       return juce::String::charToString ((juce::juce_wchar) p.ab().activeSlot());
             case rowSize:
             {
                 static const char* const sizes[] = { "Small", "Medium", "Large" };
-                return sizes[zoomIndex (ed.getZoom())];
+                return a11ytext::T (sizes[zoomIndex (ed.getZoom())]);
             }
             case rowLanguage: return strings::endonymOf (strings::languageOf (p.apvts.state));
-            case rowTheme:    return look::theme() == look::Theme::light ? "Light" : "Dark";
+            case rowTheme:    return a11ytext::T (look::theme() == look::Theme::light ? "Light" : "Dark");
             default:          return {};
         }
     }
@@ -183,16 +183,16 @@ struct TelescopeEditor::PluginRowsSource final : a11yui::GridSource
         auto& p = ed.proc;
         switch (r)
         {
-            case rowBypass:   setBypassed (! isBypassed()); return "Bypass " + rowValue (0, rowBypass);
+            case rowBypass:   setBypassed (! isBypassed()); return a11ytext::T (isBypassed() ? "Bypass on" : "Bypass off");
             case rowPreset:   ed.showPresetMenuA11y(); return {};
             case rowSave:     ed.showSaveDialogA11y(); return {};
-            case rowAb:       p.ab().toggle(); ed.repaint(); return "Slot " + rowValue (0, rowAb);
+            case rowAb:       p.ab().toggle(); ed.repaint(); return a11ytext::TF ("Slot {0}", { rowValue (0, rowAb) });
             case rowAbCopy:
             {
                 const auto from = rowValue (0, rowAb);
                 p.ab().copyActiveToOther();
                 ed.repaint();
-                return "Copied " + from + " to " + (from == "A" ? "B" : "A");
+                return a11ytext::TF ("Copied {0} to {1}", { from, from == "A" ? "B" : "A" });
             }
             case rowLanguage: ed.strip.cycleLanguage(); return rowValue (0, rowLanguage);
             case rowTheme:    ed.toggleTheme(); return rowValue (0, rowTheme);
@@ -359,6 +359,7 @@ void TelescopeEditor::applyLanguage()
     appliedOnMessageThread.store (juce::MessageManager::existsAndIsCurrentThread());
     applyCount.fetch_add (1);
     strip.setLanguage (strings::languageOf (proc.apvts.state));
+    a11ytext::setLanguage (strings::languageOf (proc.apvts.state));   // речь — на том же языке
     if (lens != nullptr) lens->repaint();
    #if TELESCOPE_HAS_EYEPIECE_INTRO
     if (intro != nullptr) { intro->setLanguage (strings::languageOf (proc.apvts.state)); placeIntro(); }
@@ -500,7 +501,7 @@ void TelescopeEditor::setupAccessibility()
                          "Escape: back to the lens list. Space starts and stops the host transport.";
     a11yPanel.contextName = [this]
     {
-        return currentLens >= 0 ? juce::String (kSpokenLensNames[currentLens]) : juce::String();
+        return currentLens >= 0 ? a11ytext::T (kSpokenLensNames[currentLens]) : juce::String();
     };
     a11yPanel.onEscape = [this] { focusA11y (a11yLensList); };
     a11yPanel.onCursorChanged = [this] (int g, int r)
@@ -510,7 +511,7 @@ void TelescopeEditor::setupAccessibility()
 
     pluginRowsSource = std::make_unique<PluginRowsSource> (*this);
     a11yPlugin.setSource (pluginRowsSource.get());
-    a11yPlugin.contextName = [] { return juce::String ("Plugin"); };
+    a11yPlugin.contextName = [] { return a11ytext::T ("Plugin"); };
     a11yPlugin.helpText = "Plugin controls: bypass, presets, A and B comparison, window size, language of the "
                           "on-screen labels and colour theme. Up and Down arrows: rows. Plus or minus: change. "
                           "Enter: switch, open the preset menu or the save dialog. Escape: back to the lens list.";
@@ -523,6 +524,7 @@ void TelescopeEditor::setupAccessibility()
     int order = 1;
     for (auto* c : { &a11yLensList, &a11yPanel, &a11yPlugin })
     {
+        c->syncLanguage = [this] { a11ytext::setLanguage (strings::languageOf (proc.apvts.state)); };
         c->setExplicitFocusOrder (order++);
         c->onTab = [this, c] (bool forward) { cycleA11yFocus (*c, forward); };
         addToCanvas (*c);
@@ -555,10 +557,10 @@ void TelescopeEditor::showPresetMenuA11y()
     for (auto& f : proc.presets().userPresets())
         user.addItem (uid++, f.getFileNameWithoutExtension());
 
-    root.addSubMenu ("Production", prod);
-    root.addSubMenu ("Sound design", sd);
+    root.addSubMenu (a11ytext::T ("Production"), prod);
+    root.addSubMenu (a11ytext::T ("Sound design"), sd);
     if (proc.presets().userPresets().size() > 0)
-        root.addSubMenu ("User", user);
+        root.addSubMenu (a11ytext::T ("User"), user);
 
     root.showMenuAsync (juce::PopupMenu::Options().withTargetComponent (&a11yPlugin),
         [safe = juce::Component::SafePointer<TelescopeEditor> (this)] (int r)
@@ -581,11 +583,11 @@ void TelescopeEditor::showPresetMenuA11y()
 
 void TelescopeEditor::showSaveDialogA11y()
 {
-    auto* w = new juce::AlertWindow ("Save preset", "Preset name:", juce::MessageBoxIconType::NoIcon, this);
-    w->addTextEditor ("name", "My Preset", "Preset name");
-    if (auto* te = w->getTextEditor ("name")) te->setTitle ("Preset name");
-    w->addButton ("Save",   1, juce::KeyPress (juce::KeyPress::returnKey));
-    w->addButton ("Cancel", 0, juce::KeyPress (juce::KeyPress::escapeKey));
+    auto* w = new juce::AlertWindow (a11ytext::T ("Save preset"), a11ytext::T ("Preset name:"), juce::MessageBoxIconType::NoIcon, this);
+    w->addTextEditor ("name", a11ytext::T ("My Preset"), a11ytext::T ("Preset name"));
+    if (auto* te = w->getTextEditor ("name")) te->setTitle (a11ytext::T ("Preset name"));
+    w->addButton (a11ytext::T ("Save"),   1, juce::KeyPress (juce::KeyPress::returnKey));
+    w->addButton (a11ytext::T ("Cancel"), 0, juce::KeyPress (juce::KeyPress::escapeKey));
     w->enterModalState (true, juce::ModalCallbackFunction::create (
         [safe = juce::Component::SafePointer<TelescopeEditor> (this), w] (int res)
         {
@@ -605,6 +607,7 @@ void TelescopeEditor::showSaveDialogA11y()
 void TelescopeEditor::pollLensEvents()
 {
     if (lens == nullptr || ! isShowing()) return;
+    a11ytext::setLanguage (strings::languageOf (proc.apvts.state));
     const auto message = lens->a11yPollEvent();
     if (message.isEmpty()) return;
 

@@ -426,11 +426,19 @@ inline const Table& tableIt()
     return t;
 }
 
+// РУССКИЙ. Пока только для речи скринридера (a11y/A11yStringsTable.h): подписи экрана пустые и поэтому берутся
+// из английской таблицы (см. getFrom). Названия нот на экране — буквами, как в русских технических текстах.
+inline const Table& tableRu()
+{
+    static const Table t { "ru", "Русский", NoteNaming::letters, {} };
+    return t;
+}
+
 // El catálogo. Agregar un idioma = agregar su tabla y meterla acá. Nada más.
 inline const std::vector<const Table*>& tables()
 {
     static const std::vector<const Table*> v { &tableEn(), &tableEs(), &tablePt(), &tableFr(),
-                                               &tableDe(), &tableIt() };
+                                               &tableDe(), &tableIt(), &tableRu() };
     return v;
 }
 

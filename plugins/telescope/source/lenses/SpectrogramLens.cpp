@@ -431,18 +431,18 @@ juce::String spokenChannel (int c)
 {
     switch (c)
     {
-        case Spectrum::left:  return "Left";
-        case Spectrum::right: return "Right";
-        case Spectrum::mid:   return "Mid";
-        case Spectrum::side:  return "Side";
-        default:              return "Left and right";
+        case Spectrum::left:  return a11ytext::T ("Left");
+        case Spectrum::right: return a11ytext::T ("Right");
+        case Spectrum::mid:   return a11ytext::T ("Mid");
+        case Spectrum::side:  return a11ytext::T ("Side");
+        default:              return a11ytext::T ("Left and right");
     }
 }
 }
 
 juce::String SpectrogramLens::a11yGroupName (int group) const
 {
-    return group == 0 ? "About" : "Settings";
+    return group == 0 ? a11ytext::T ("About") : a11ytext::T ("Settings");
 }
 
 int SpectrogramLens::a11yRowCount (int group) const
@@ -452,9 +452,9 @@ int SpectrogramLens::a11yRowCount (int group) const
 
 juce::String SpectrogramLens::a11yRowName (int group, int row) const
 {
-    if (group == 0) return "Spectrum over time, a picture only. For numbers use the Spectrum lens";
+    if (group == 0) return a11ytext::T ("Spectrum over time, a picture only. For numbers use the Spectrum lens");
     static const char* const sets[kNumControls] = { "History", "Range", "Channel", "Palette" };
-    return sets[juce::jlimit (0, (int) kNumControls - 1, row)];
+    return a11ytext::T (sets[juce::jlimit (0, (int) kNumControls - 1, row)]);
 }
 
 juce::String SpectrogramLens::a11yRowValue (int group, int row) const
@@ -463,8 +463,8 @@ juce::String SpectrogramLens::a11yRowValue (int group, int row) const
     const auto s = processor.spectrumSettings();
     switch (row)
     {
-        case history:     return juce::String (SpectrogramRing::kHistoryOptions[s.historySecIndex]) + " seconds";
-        case range:       return juce::String (s.rangeDb()) + " dB";
+        case history:     return juce::String (SpectrogramRing::kHistoryOptions[s.historySecIndex]) + a11ytext::T (" seconds");
+        case range:       return juce::String (s.rangeDb()) + a11ytext::T (" dB");
         case channel:     return spokenChannel (s.channel);
         case ctrlPalette: return spoken::palette (processor.paletteIndex());
         default:          return {};

@@ -647,7 +647,7 @@ void WaterfallLens::mouseExit (const juce::MouseEvent&)
 // Водопад — объёмная картинка спектра во времени. Пояснение и настройки; числа — в линзе SPECTRUM.
 juce::String WaterfallLens::a11yGroupName (int group) const
 {
-    return group == 0 ? "About" : "Settings";
+    return group == 0 ? a11ytext::T ("About") : a11ytext::T ("Settings");
 }
 
 int WaterfallLens::a11yRowCount (int group) const
@@ -657,9 +657,9 @@ int WaterfallLens::a11yRowCount (int group) const
 
 juce::String WaterfallLens::a11yRowName (int group, int row) const
 {
-    if (group == 0) return "Spectrum over time in 3D, a picture only. For numbers use the Spectrum lens";
+    if (group == 0) return a11ytext::T ("Spectrum over time in 3D, a picture only. For numbers use the Spectrum lens");
     static const char* const sets[kNumControls] = { "Lines", "Tilt", "History", "Range", "Palette" };
-    return sets[juce::jlimit (0, (int) kNumControls - 1, row)];
+    return a11ytext::T (sets[juce::jlimit (0, (int) kNumControls - 1, row)]);
 }
 
 juce::String WaterfallLens::a11yRowValue (int group, int row) const
@@ -672,10 +672,10 @@ juce::String WaterfallLens::a11yRowValue (int group, int row) const
         case ctrlTilt:
         {
             static const char* const tilts[kNumTilts] = { "Low", "Medium", "High" };
-            return tilts[juce::jlimit (0, kNumTilts - 1, processor.waterfallTiltIndex())];
+            return a11ytext::T (tilts[juce::jlimit (0, kNumTilts - 1, processor.waterfallTiltIndex())]);
         }
-        case ctrlHistory: return juce::String (SpectrogramRing::kHistoryOptions[s.historySecIndex]) + " seconds";
-        case ctrlRange:   return juce::String (s.rangeDb()) + " dB";
+        case ctrlHistory: return juce::String (SpectrogramRing::kHistoryOptions[s.historySecIndex]) + a11ytext::T (" seconds");
+        case ctrlRange:   return juce::String (s.rangeDb()) + a11ytext::T (" dB");
         case ctrlPalette: return spoken::palette (processor.paletteIndex());
         default:          return {};
     }

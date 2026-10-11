@@ -524,7 +524,7 @@ void StereoSpectrogramLens::mouseExit (const juce::MouseEvent&)
 // Картинка «ширина стерео во времени». Числа по полосам — в BAND CORRELATION; здесь пояснение и настройки.
 juce::String StereoSpectrogramLens::a11yGroupName (int group) const
 {
-    return group == 0 ? "About" : "Settings";
+    return group == 0 ? a11ytext::T ("About") : a11ytext::T ("Settings");
 }
 
 int StereoSpectrogramLens::a11yRowCount (int group) const
@@ -534,9 +534,9 @@ int StereoSpectrogramLens::a11yRowCount (int group) const
 
 juce::String StereoSpectrogramLens::a11yRowName (int group, int row) const
 {
-    if (group == 0) return "Stereo width over time, a picture only. For numbers per band use the Band correlation lens";
+    if (group == 0) return a11ytext::T ("Stereo width over time, a picture only. For numbers per band use the Band correlation lens");
     static const char* const sets[kNumControls] = { "History", "Range", "Window", "Palette" };
-    return sets[juce::jlimit (0, (int) kNumControls - 1, row)];
+    return a11ytext::T (sets[juce::jlimit (0, (int) kNumControls - 1, row)]);
 }
 
 juce::String StereoSpectrogramLens::a11yRowValue (int group, int row) const
@@ -545,9 +545,9 @@ juce::String StereoSpectrogramLens::a11yRowValue (int group, int row) const
     const auto s = processor.spectrumSettings();
     switch (row)
     {
-        case ctrlHistory: return juce::String (SpectrogramRing::kHistoryOptions[s.historySecIndex]) + " seconds";
-        case ctrlRange:   return juce::String (s.rangeDb()) + " dB";
-        case ctrlWindow:  return spoken::trimmed (processor.bandsWindowSec(), 1) + " seconds";
+        case ctrlHistory: return juce::String (SpectrogramRing::kHistoryOptions[s.historySecIndex]) + a11ytext::T (" seconds");
+        case ctrlRange:   return juce::String (s.rangeDb()) + a11ytext::T (" dB");
+        case ctrlWindow:  return spoken::trimmed (processor.bandsWindowSec(), 1) + a11ytext::T (" seconds");
         case ctrlPalette: return spoken::palette (processor.paletteIndex());
         default:          return {};
     }

@@ -588,13 +588,13 @@ constexpr int kA11yNotes = 5;
 
 juce::String cqtChannel (int c)
 {
-    return c == Cqt::left ? "Left" : (c == Cqt::right ? "Right" : "Mid");
+    return c == Cqt::left ? a11ytext::T ("Left") : (c == Cqt::right ? a11ytext::T ("Right") : a11ytext::T ("Mid"));
 }
 }
 
 juce::String CqtLens::a11yGroupName (int group) const
 {
-    return group == 0 ? "Readings" : "Settings";
+    return group == 0 ? a11ytext::T ("Readings") : a11ytext::T ("Settings");
 }
 
 int CqtLens::a11yRowCount (int group) const
@@ -604,10 +604,10 @@ int CqtLens::a11yRowCount (int group) const
 
 juce::String CqtLens::a11yRowName (int group, int row) const
 {
-    if (group == 1) return row == ctrlChannel ? "Channel" : "Chroma window";
-    if (row == 0) return "Key";
-    if (row == 1) return "Strongest pitch classes";
-    return "Note " + juce::String (row - 1);
+    if (group == 1) return row == ctrlChannel ? a11ytext::T ("Channel") : a11ytext::T ("Chroma window");
+    if (row == 0) return a11ytext::T ("Key");
+    if (row == 1) return a11ytext::T ("Strongest pitch classes");
+    return a11ytext::T ("Note ") + juce::String (row - 1);
 }
 
 juce::String CqtLens::a11yRowValue (int group, int row) const
@@ -616,7 +616,7 @@ juce::String CqtLens::a11yRowValue (int group, int row) const
     {
         const auto s = processor.cqtSettings();
         if (row == ctrlChannel) return cqtChannel (s.channel);
-        return spoken::trimmed (s.chromaSeconds(), 1) + " seconds";
+        return spoken::trimmed (s.chromaSeconds(), 1) + a11ytext::T (" seconds");
     }
     if (row == 0) return spoken::keyReading (keyTonic, keyMode, keyConfidence, keyTimeFraction);
     if (row == 1) return spoken::strongestClasses (chromaSm);
@@ -624,7 +624,7 @@ juce::String CqtLens::a11yRowValue (int group, int row) const
     // Пики спектра по нотам: локальные максимумы бинов (2 бина на полутон), не ближе полутона друг к другу,
     // не тише самого громкого больше чем на 40 dB.
     const int n = juce::jmin (binsSeen, (int) targetDb.size());
-    if (n < 3 || bpoSeen <= 0) return "no data yet";
+    if (n < 3 || bpoSeen <= 0) return a11ytext::T ("no data yet");
     struct P { int k; float db; };
     std::vector<P> cands;
     float top = CqtFrame::kFloorDb;
@@ -648,10 +648,10 @@ juce::String CqtLens::a11yRowValue (int group, int row) const
     }
 
     const int i = row - 2;
-    if (i >= (int) picked.size()) return "none";
+    if (i >= (int) picked.size()) return a11ytext::T ("none");
     const double hz = (double) fMinSeen * std::pow (2.0, (double) picked[(size_t) i].k / (double) bpoSeen);
     return spoken::noteWithCents (noteForFrequency (hz)) + ", " + spoken::hz (hz) + ", "
-         + spoken::trimmed (picked[(size_t) i].db, 1) + " dB";
+         + spoken::trimmed (picked[(size_t) i].db, 1) + a11ytext::T (" dB");
 }
 
 bool CqtLens::a11yIsAdjustable (int group, int) const

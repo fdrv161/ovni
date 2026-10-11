@@ -815,9 +815,9 @@ juce::String severityWord (rules::Severity s)
 {
     switch (s)
     {
-        case rules::Severity::bad:  return "problem";
-        case rules::Severity::warn: return "warning";
-        default:                    return "note";
+        case rules::Severity::bad:  return a11ytext::T ("problem");
+        case rules::Severity::warn: return a11ytext::T ("warning");
+        default:                    return a11ytext::T ("note");
     }
 }
 }
@@ -841,12 +841,12 @@ juce::String VerdictLens::a11yGroupName (int group) const
 {
     switch (group)
     {
-        case gSummary:   return "Summary";
+        case gSummary:   return a11ytext::T ("Summary");
         case gFeel:      return spoken::clean (ph ("section.feel"));
         case gTranslate: return spoken::clean (ph ("section.translate"));
         case gMissing:   return spoken::clean (ph ("section.missing"));
         case gWithin:    return spoken::clean (ph ("section.within"));
-        default:         return "Actions";
+        default:         return a11ytext::T ("Actions");
     }
 }
 
@@ -860,21 +860,21 @@ int VerdictLens::a11yRowCount (int group) const
 
 juce::String VerdictLens::a11yRowName (int group, int row) const
 {
-    if (group == gSummary) return row == 0 ? "State" : "Result";
+    if (group == gSummary) return row == 0 ? a11ytext::T ("State") : a11ytext::T ("Result");
     if (group == gActions)
     {
         switch (row)
         {
-            case ctrlReset: return "Reset analysis";
-            case ctrlMode:  return "Mode";
-            default:        return "Load a file to judge";
+            case ctrlReset: return a11ytext::T ("Reset analysis");
+            case ctrlMode:  return a11ytext::T ("Mode");
+            default:        return a11ytext::T ("Load a file to judge");
         }
     }
 
     const auto list = a11yFindings (group);
     if (list.empty())
     {
-        if (! rep.summary.heard) return "No audio analysed yet";
+        if (! rep.summary.heard) return a11ytext::T ("No audio analysed yet");
         return spoken::clean (juce::String::fromUTF8 (
             Verdict::translate ("none", processor.verdictLanguage().toRawUTF8()).c_str()));
     }
@@ -887,16 +887,16 @@ juce::String VerdictLens::a11yRowValue (int group, int row) const
     {
         if (row == 0) return spoken::clean (stateText());
         const auto h = headlineText();
-        return h.isEmpty() ? juce::String ("nothing analysed yet") : spoken::clean (h);
+        return h.isEmpty() ? juce::String (a11ytext::T ("nothing analysed yet")) : spoken::clean (h);
     }
     if (group == gActions)
     {
         if (row == ctrlMode)
-            return processor.verdictMode() == TelescopeProcessor::verdictFile ? "File" : "Live";
+            return processor.verdictMode() == TelescopeProcessor::verdictFile ? a11ytext::T ("File") : a11ytext::T ("Live");
         if (row == ctrlLoad)
         {
             const auto name = processor.verdictFileName();
-            return name.isEmpty() ? juce::String ("no file") : name;
+            return name.isEmpty() ? juce::String (a11ytext::T ("no file")) : name;
         }
         return {};
     }
@@ -905,12 +905,12 @@ juce::String VerdictLens::a11yRowValue (int group, int row) const
     if (list.empty()) return {};
     const auto& f = *list[(size_t) juce::jlimit (0, (int) list.size() - 1, row)];
 
-    juce::String word = group == gWithin ? juce::String ("within range") : severityWord (f.severity);
+    juce::String word = group == gWithin ? juce::String (a11ytext::T ("within range")) : severityWord (f.severity);
     if (group == gTranslate)
         for (const auto& d : rep.devices)
             if (d.id == f.ruleId)
-                word = d.verdict == devices::DeviceVerdict::ok   ? "OK"
-                     : (d.verdict == devices::DeviceVerdict::fail ? "fails" : "warning");
+                word = d.verdict == devices::DeviceVerdict::ok   ? a11ytext::T ("OK")
+                     : (d.verdict == devices::DeviceVerdict::fail ? a11ytext::T ("fails") : a11ytext::T ("warning"));
 
     const auto evidence = spoken::clean (juce::String::fromUTF8 (f.evidence.c_str()));
     return evidence.isEmpty() ? word : word + ", " + evidence;
@@ -940,7 +940,7 @@ juce::String VerdictLens::a11yActivate (int group, int row)
 {
     if (group != gActions) return {};
     pressControl (row);
-    if (row == ctrlReset) return "Analysis reset";
+    if (row == ctrlReset) return a11ytext::T ("Analysis reset");
     if (row == ctrlMode)  return a11yRowValue (gActions, ctrlMode);
     return {};   // ctrlLoad: открылся диалог выбора файла, его озвучит сам скринридер
 }
@@ -955,16 +955,16 @@ juce::String VerdictLens::a11yPollEvent()
 
     if (busy && ! a11yWasBusy)
     {
-        message = "Analysing " + processor.verdictFileName();
+        message = a11ytext::T ("Analysing ") + processor.verdictFileName();
     }
     else if (! busy && rev != a11yLastRevision && lastFileRev == rev)
     {
         const auto err = processor.verdictFileError();
         if (err.isNotEmpty())
-            message = "File could not be read: " + spoken::clean (err);
+            message = a11ytext::T ("File could not be read: ") + spoken::clean (err);
         else
         {
-            message = "File analysed, " + processor.verdictFileName();
+            message = a11ytext::T ("File analysed, ") + processor.verdictFileName();
             const auto h = headlineText();
             if (h.isNotEmpty()) message << ". " << spoken::clean (h);
         }

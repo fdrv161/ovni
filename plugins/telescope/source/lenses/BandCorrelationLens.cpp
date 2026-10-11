@@ -560,9 +560,9 @@ juce::String BandCorrelationLens::a11yGroupName (int group) const
 {
     switch (group)
     {
-        case bcSummary: return "Summary";
-        case bcBands:   return "Third-octave bands";
-        default:        return "Settings";
+        case bcSummary: return a11ytext::T ("Summary");
+        case bcBands:   return a11ytext::T ("Third-octave bands");
+        default:        return a11ytext::T ("Settings");
     }
 }
 
@@ -579,12 +579,12 @@ int BandCorrelationLens::a11yRowCount (int group) const
 juce::String BandCorrelationLens::a11yRowName (int group, int row) const
 {
     if (group == bcBands) return spoken::hz (kThirdOctaveHz[juce::jlimit (0, StereoBands::kNumBands - 1, row)]);
-    if (group == bcSettings) return row == ctrlWindow ? "Window" : "Lower graph";
+    if (group == bcSettings) return row == ctrlWindow ? a11ytext::T ("Window") : a11ytext::T ("Lower graph");
     switch (row)
     {
-        case bsLowestCorr:   return "Lowest correlation";
-        case bsMostMonoLoss: return "Most mono loss";
-        default:             return "Bands measured";
+        case bsLowestCorr:   return a11ytext::T ("Lowest correlation");
+        case bsMostMonoLoss: return a11ytext::T ("Most mono loss");
+        default:             return a11ytext::T ("Bands measured");
     }
 }
 
@@ -594,26 +594,26 @@ juce::String BandCorrelationLens::a11yRowValue (int group, int row) const
     {
         if (row == ctrlWindow)
             return spoken::trimmed (StereoBands::kWindowSecOptions[juce::jlimit (0, StereoBands::kNumWindowOptions - 1,
-                                                                                 processor.bandsWindowIndex())], 1) + " seconds";
-        return rowMode == rowWidth ? "Width" : (rowMode == rowBalance ? "Balance" : "Mono loss");
+                                                                                 processor.bandsWindowIndex())], 1) + a11ytext::T (" seconds");
+        return rowMode == rowWidth ? a11ytext::T ("Width") : (rowMode == rowBalance ? a11ytext::T ("Balance") : a11ytext::T ("Mono loss"));
     }
 
     if (group == bcBands)
     {
         const int b = juce::jlimit (0, StereoBands::kNumBands - 1, row);
-        if (bins[b] == 0) return "not measurable at this FFT size";
-        if (corr[b] == 0.0f && width[b] == 0.0f && monoLossDb[b] == 0.0f && balanceDb[b] == 0.0f) return "no signal";
-        return "correlation " + spoken::correlation (corr[b]) + "; width " + spoken::trimmed (width[b], 2)
-             + "; balance " + spoken::balance (balanceDb[b]) + "; mono loss " + spoken::trimmed (monoLossDb[b], 1) + " dB";
+        if (bins[b] == 0) return a11ytext::T ("not measurable at this FFT size");
+        if (corr[b] == 0.0f && width[b] == 0.0f && monoLossDb[b] == 0.0f && balanceDb[b] == 0.0f) return a11ytext::T ("no signal");
+        return a11ytext::T ("correlation ") + spoken::correlation (corr[b]) + a11ytext::T ("; width ") + spoken::trimmed (width[b], 2)
+             + a11ytext::T ("; balance ") + spoken::balance (balanceDb[b]) + a11ytext::T ("; mono loss ") + spoken::trimmed (monoLossDb[b], 1) + a11ytext::T (" dB");
     }
 
     const auto s = summary();
-    if (row == bsMeasured) return juce::String (s.measured) + " of " + juce::String (StereoBands::kNumBands);
-    if (! s.valid) return "no signal";
+    if (row == bsMeasured) return juce::String (s.measured) + a11ytext::T (" of ") + juce::String (StereoBands::kNumBands);
+    if (! s.valid) return a11ytext::T ("no signal");
     if (row == bsLowestCorr)
         return spoken::hz (kThirdOctaveHz[s.worstPhaseBand]) + ", " + spoken::correlation (s.worstCorr);
-    return spoken::hz (kThirdOctaveHz[s.worstMonoBand]) + ", " + spoken::trimmed (s.worstMonoDb, 1) + " dB"
-         + (s.worstMonoDb <= kMonoLossAlertDb ? ", high" : "");
+    return spoken::hz (kThirdOctaveHz[s.worstMonoBand]) + ", " + spoken::trimmed (s.worstMonoDb, 1) + a11ytext::T (" dB")
+         + (s.worstMonoDb <= kMonoLossAlertDb ? a11ytext::T (", high") : "");
 }
 
 bool BandCorrelationLens::a11yIsAdjustable (int group, int) const

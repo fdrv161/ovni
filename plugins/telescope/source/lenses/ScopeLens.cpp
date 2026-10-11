@@ -1084,7 +1084,7 @@ int windowIndexFor (int ms)
 
 juce::String ScopeLens::a11yGroupName (int group) const
 {
-    return group == 0 ? "Readings" : "Settings";
+    return group == 0 ? a11ytext::T ("Readings") : a11ytext::T ("Settings");
 }
 
 int ScopeLens::a11yRowCount (int group) const
@@ -1098,11 +1098,11 @@ juce::String ScopeLens::a11yRowName (int group, int row) const
     {
         static const char* const sets[kScopeSets] = { "Mode", "Oscilloscope trigger", "Window",
                                                       "Hemisphere decay", "Hemisphere scale" };
-        return sets[juce::jlimit (0, (int) kScopeSets - 1, row)];
+        return a11ytext::T (sets[juce::jlimit (0, (int) kScopeSets - 1, row)]);
     }
     static const char* const names[kScopeRows] = { "Correlation", "Width", "Balance", "Mono loss",
                                                    "Out of phase energy", "Measured over" };
-    return names[juce::jlimit (0, (int) kScopeRows - 1, row)];
+    return a11ytext::T (names[juce::jlimit (0, (int) kScopeRows - 1, row)]);
 }
 
 juce::String ScopeLens::a11yRowValue (int group, int row) const
@@ -1112,11 +1112,11 @@ juce::String ScopeLens::a11yRowValue (int group, int row) const
         switch (row)
         {
             case ssMode:
-                return scopeMode() == Mode::polar ? "Polar" : (scopeMode() == Mode::hemisphere ? "Hemisphere" : "Lissajous");
-            case ssTrigger:   return processor.scopeTrigger() ? "On" : "Off";
-            case ssWindow:    return juce::String (processor.stereoWindowMs()) + " ms";
-            case ssHemiDecay: return spoken::trimmed (hemiDecayDbPerSec(), 0) + " dB per second";
-            case ssHemiScale: return hemiScale() == HemiScale::decibel ? "Decibels" : "Relative";
+                return scopeMode() == Mode::polar ? a11ytext::T ("Polar") : (scopeMode() == Mode::hemisphere ? a11ytext::T ("Hemisphere") : a11ytext::T ("Lissajous"));
+            case ssTrigger:   return processor.scopeTrigger() ? a11ytext::T ("On") : a11ytext::T ("Off");
+            case ssWindow:    return juce::String (processor.stereoWindowMs()) + a11ytext::T (" ms");
+            case ssHemiDecay: return spoken::trimmed (hemiDecayDbPerSec(), 0) + a11ytext::T (" dB per second");
+            case ssHemiScale: return hemiScale() == HemiScale::decibel ? a11ytext::T ("Decibels") : a11ytext::T ("Relative");
             default:          return {};
         }
     }
@@ -1126,9 +1126,9 @@ juce::String ScopeLens::a11yRowValue (int group, int row) const
         case srCorr:       return spoken::correlation (corr);
         case srWidth:      return spoken::trimmed (width, 2);
         case srBalance:    return spoken::balance (balanceDb);
-        case srMonoLoss:   return spoken::trimmed (monoLossDb, 1) + " dB";
-        case srOutOfPhase: return juce::String (juce::roundToInt (outOfPhasePercent())) + " percent";
-        case srWindow:     return juce::String (juce::roundToInt (windowSec * 1000.0f)) + " ms";
+        case srMonoLoss:   return spoken::trimmed (monoLossDb, 1) + a11ytext::T (" dB");
+        case srOutOfPhase: return juce::String (juce::roundToInt (outOfPhasePercent())) + a11ytext::T (" percent");
+        case srWindow:     return juce::String (juce::roundToInt (windowSec * 1000.0f)) + a11ytext::T (" ms");
         default:           return {};
     }
 }

@@ -1,6 +1,7 @@
 #pragma once
 #include <functional>
 #include <juce_gui_basics/juce_gui_basics.h>
+#include "a11y/A11yStrings.h"
 #include "a11y/ScreenReaderAnnouncer.h"
 
 // ========================================================================================================
@@ -41,7 +42,12 @@ class FocusOverlay : public juce::Component
 public:
     std::function<void (bool forward)> onTab;
     std::function<void()>              onEscape;
-    juce::String                       helpText;   // F1
+    juce::String                       helpText;   // F1; английский ключ каталога переводов
+    // Выставить язык речи этого окна плагина (см. A11yStrings.h): вызывается перед каждой клавишей и
+    // каждым запросом имени от скринридера.
+    std::function<void()>              syncLanguage;
+
+    void sync() const { if (syncLanguage) syncLanguage(); }
 
     FocusOverlay()
     {
@@ -82,7 +88,7 @@ protected:
         if (code == juce::KeyPress::tabKey && noCtrlAlt && onTab) { onTab (! mods.isShiftDown()); return true; }
         if (code == juce::KeyPress::F1Key && ! mods.isAnyModifierKeyDown() && helpText.isNotEmpty())
         {
-            say (helpText, a11y::SpeechQueue::keepAll);
+            say (a11ytext::T (helpText.toRawUTF8()), a11y::SpeechQueue::keepAll);
             return true;
         }
         if (code == juce::KeyPress::escapeKey && ! mods.isAnyModifierKeyDown() && onEscape) { onEscape(); return true; }
@@ -111,8 +117,8 @@ protected:
         public:
             LiveTitleHandler (FocusOverlay& o, juce::AccessibilityRole r, juce::AccessibilityActions a)
                 : juce::AccessibilityHandler (o, r, std::move (a)), owner (o) {}
-            juce::String getTitle() const override       { return owner.liveTitle(); }
-            juce::String getDescription() const override { return owner.liveDescription(); }
+            juce::String getTitle() const override       { owner.sync(); return owner.liveTitle(); }
+            juce::String getDescription() const override { owner.sync(); return owner.liveDescription(); }
         private:
             FocusOverlay& owner;
         };
@@ -136,7 +142,7 @@ class A11yGrid : public FocusOverlay
 public:
     std::function<void (int group, int row)> onCursorChanged;   // курсор сдвинул пользователь
     std::function<void()>                    onEnter;           // если не задан — Enter перечитывает строку
-    juce::String emptyText { "Empty" };
+    juce::String emptyText;   // пусто — «Empty» на языке плагина
 
     explicit A11yGrid (juce::AccessibilityRole r = juce::AccessibilityRole::list) : role (r) {}
 
@@ -147,7 +153,7 @@ public:
 
     juce::String rowText (int g, int r) const
     {
-        if (source == nullptr) return emptyText;
+        if (source == nullptr) return empty();
         const auto name  = source->rowName (g, r);
         const auto value = source->rowValue (g, r);
         return value.isEmpty() ? name : name + ", " + value;
@@ -155,7 +161,7 @@ public:
 
     juce::String currentText() const
     {
-        if (source == nullptr || source->groupCount() <= 0 || source->rowCount (grp) <= 0) return emptyText;
+        if (source == nullptr || source->groupCount() <= 0 || source->rowCount (grp) <= 0) return empty();
         return rowText (grp, rw);
     }
 
@@ -169,7 +175,7 @@ public:
         if (contextName) parts.add (contextName());
         if (source != nullptr && source->groupCount() > 1) parts.add (source->groupName (grp));
         if (source != nullptr && source->rowCount (grp) > 0 && source->isAdjustable (grp, rw))
-            parts.add ("plus or minus to change");
+            parts.add (a11ytext::T ("plus or minus to change"));
         parts.removeEmptyStrings();
         return parts.joinIntoString (", ");
     }
@@ -196,6 +202,7 @@ public:
 
     bool keyPressed (const juce::KeyPress& key) override
     {
+        sync();
         if (editing && source != nullptr && handleEditKey (key)) return true;
         if (handleCommonKey (key)) return true;
         if (source == nullptr) return swallowUnknown (key);
@@ -238,7 +245,7 @@ public:
                 {
                     // Режим правки: дальше обычные стрелки меняют значение, Enter или Esc — выход.
                     editing = true;
-                    say ("Edit");
+                    say (a11ytext::T ("Edit"));
                 }
                 else if (onEnter) onEnter();
                 else speakCurrent (false);
@@ -296,7 +303,7 @@ private:
     void applyStep (int step)
     {
         if (source == nullptr || source->rowCount (grp) <= 0) return;
-        if (! source->isAdjustable (grp, rw)) { say ("Read only"); return; }
+        if (! source->isAdjustable (grp, rw)) { say (a11ytext::T ("Read only")); return; }
         if (source->adjust (grp, rw, step)) say (source->rowValue (grp, rw));
     }
 
@@ -311,7 +318,7 @@ private:
         if (code == juce::KeyPress::returnKey || code == juce::KeyPress::escapeKey)
         {
             editing = false;
-            say ("Done");
+            say (a11ytext::T ("Done"));
             return true;
         }
         if (code == juce::KeyPress::upKey)       { applyStep (kStep);     return true; }
@@ -324,6 +331,8 @@ private:
         if (code == juce::KeyPress::leftKey || code == juce::KeyPress::rightKey) return true;   // не уходим из строки
         return false;
     }
+
+    juce::String empty() const { return emptyText.isNotEmpty() ? emptyText : a11ytext::T ("Empty"); }
 
     void clampCursor()
     {
@@ -387,6 +396,7 @@ public:
 
     bool keyPressed (const juce::KeyPress& key) override
     {
+        sync();
         if (handleCommonKey (key)) return true;
         const auto mods = key.getModifiers();
         const int  code = key.getKeyCode();

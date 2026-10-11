@@ -951,9 +951,9 @@ juce::String TonalBalanceLens::a11yGroupName (int group) const
 {
     switch (group)
     {
-        case tbSummary: return "Summary";
-        case tbBands:   return "Third-octave bands";
-        default:        return "Actions";
+        case tbSummary: return a11ytext::T ("Summary");
+        case tbBands:   return a11ytext::T ("Third-octave bands");
+        default:        return a11ytext::T ("Actions");
     }
 }
 
@@ -974,20 +974,20 @@ juce::String TonalBalanceLens::a11yRowName (int group, int row) const
     {
         switch (row)
         {
-            case actReset: return "Reset averaging";
-            case actLoad:  return "Load reference file";
-            case actClear: return "Remove reference";
-            case actSectionStart: return "Section start";
-            case actSectionEnd:   return "Section end";
-            default:       return "Use the whole reference file";
+            case actReset: return a11ytext::T ("Reset averaging");
+            case actLoad:  return a11ytext::T ("Load reference file");
+            case actClear: return a11ytext::T ("Remove reference");
+            case actSectionStart: return a11ytext::T ("Section start");
+            case actSectionEnd:   return a11ytext::T ("Section end");
+            default:       return a11ytext::T ("Use the whole reference file");
         }
     }
     switch (row)
     {
-        case rowState:     return "State";
-        case rowReference: return "Reference";
-        case rowSection:   return "Reference section";
-        default:           return "Largest difference " + juce::String (row - kSummaryFixedRows + 1);
+        case rowState:     return a11ytext::T ("State");
+        case rowReference: return a11ytext::T ("Reference");
+        case rowSection:   return a11ytext::T ("Reference section");
+        default:           return a11ytext::T ("Largest difference ") + juce::String (row - kSummaryFixedRows + 1);
     }
 }
 
@@ -996,7 +996,7 @@ juce::String TonalBalanceLens::a11yRowValue (int group, int row) const
     if (group == tbActions)
     {
         if (row != actSectionStart && row != actSectionEnd) return {};
-        if (! wantsStrip() || stripSeconds() <= 0.0) return "no reference loaded";
+        if (! wantsStrip() || stripSeconds() <= 0.0) return a11ytext::T ("no reference loaded");
         double from = 0.0, to = 0.0;
         a11ySection (from, to);
         return spoken::duration (row == actSectionStart ? from : to);
@@ -1009,44 +1009,44 @@ juce::String TonalBalanceLens::a11yRowValue (int group, int row) const
         case rowReference:
         {
             const auto name = processor.referenceName();
-            return name.isEmpty() ? juce::String ("none") : name;
+            return name.isEmpty() ? juce::String (a11ytext::T ("none")) : name;
         }
         case rowSection:
         {
-            if (processor.referencePath().isEmpty()) return "none";
+            if (processor.referencePath().isEmpty()) return a11ytext::T ("none");
             double from = 0.0, to = 0.0;
-            if (! processor.referenceRange (from, to)) return "whole file";
-            return mmss (from) + " to " + mmss (to);
+            if (! processor.referenceRange (from, to)) return a11ytext::T ("whole file");
+            return mmss (from) + a11ytext::T (" to ") + mmss (to);
         }
         default: break;
     }
 
-    if (! data.refValid) return "no reference loaded";
+    if (! data.refValid) return a11ytext::T ("no reference loaded");
     const auto diffs = a11yLargestDiffs();
     const int i = row - kSummaryFixedRows;
-    if (i >= (int) diffs.size()) return "none";
+    if (i >= (int) diffs.size()) return a11ytext::T ("none");
     const int b = diffs[(size_t) i];
     const float d = data.deltaDb[b];
-    return spoken::hz (kThirdOctaveHz[b]) + ", " + spoken::trimmed (std::abs (d), 1) + " dB "
-         + (d >= 0.0f ? "louder" : "quieter") + " than the reference";
+    return spoken::hz (kThirdOctaveHz[b]) + ", " + spoken::trimmed (std::abs (d), 1) + a11ytext::T (" dB ")
+         + (d >= 0.0f ? a11ytext::T ("louder") : a11ytext::T ("quieter")) + a11ytext::T (" than the reference");
 }
 
 juce::String TonalBalanceLens::a11yBandValue (int b) const
 {
     const auto r = readoutForBand (b);
     if (! r.valid) return {};
-    if (r.bins <= 0.0f) return "no FFT bins in this band";
+    if (r.bins <= 0.0f) return a11ytext::T ("no FFT bins in this band");
 
-    juce::String t = r.liveDrawable ? "programme " + spoken::signedDb (r.liveNorm)
-                                    : juce::String ("programme below range");
+    juce::String t = r.liveDrawable ? a11ytext::T ("programme ") + spoken::signedDb (r.liveNorm)
+                                    : juce::String (a11ytext::T ("programme below range"));
     if (! data.refValid) return t;
 
     if (r.comparable)
-        t << ", reference " << spoken::signedDb (r.refNorm) << ", difference " << spoken::signedDb (r.deltaDb);
+        t << a11ytext::T (", reference ") << spoken::signedDb (r.refNorm) << a11ytext::T (", difference ") << spoken::signedDb (r.deltaDb);
     else if (! r.refDrawable && data.refNorm[b] > SpectrumFrame::kFloorDb)
-        t << ", reference below range";
+        t << a11ytext::T (", reference below range");
     else
-        t << ", no reference in this band";
+        t << a11ytext::T (", no reference in this band");
     return t;
 }
 
@@ -1124,18 +1124,18 @@ juce::String TonalBalanceLens::a11yPollEvent()
     juce::String message;
 
     if (busy && ! a11yWasBusy)
-        message = "Analysing reference";
+        message = a11ytext::T ("Analysing reference");
     else if (! busy && rev != a11yLastRevision)
     {
         const auto err = processor.referenceError();
         if (err.isNotEmpty())
-            message = "Reference could not be read: " + spoken::clean (err);
+            message = a11ytext::T ("Reference could not be read: ") + spoken::clean (err);
         else
         {
-            message = "Reference analysed, " + processor.referenceName();
+            message = a11ytext::T ("Reference analysed, ") + processor.referenceName();
             double from = 0.0, to = 0.0;
             if (processor.referenceRange (from, to))
-                message << ", section " << spoken::duration (from) << " to " << spoken::duration (to);
+                message << a11ytext::T (", section ") << spoken::duration (from) << a11ytext::T (" to ") << spoken::duration (to);
         }
     }
 
@@ -1151,22 +1151,22 @@ juce::String TonalBalanceLens::a11yActivate (int group, int row)
     {
         case actReset:
             pressControl (ctrlReset);
-            return "Averaging reset";
+            return a11ytext::T ("Averaging reset");
         case actLoad:
             pressControl (ctrlLoad);
             return {};   // открылся диалог выбора файла, его озвучит сам скринридер
         case actClear:
-            if (processor.referencePath().isEmpty()) return "No reference loaded";
+            if (processor.referencePath().isEmpty()) return a11ytext::T ("No reference loaded");
             pendingFrom = pendingTo = -1.0;
             pressControl (ctrlClear);
-            return "Reference removed";
+            return a11ytext::T ("Reference removed");
         default:
-            if (processor.referencePath().isEmpty()) return "No reference loaded";
+            if (processor.referencePath().isEmpty()) return a11ytext::T ("No reference loaded");
             dragging = false;
             pendingFrom = pendingTo = -1.0;
             processor.clearReferenceRange();
             repaint();
-            return "Whole reference file used";
+            return a11ytext::T ("Whole reference file used");
     }
 }
 }

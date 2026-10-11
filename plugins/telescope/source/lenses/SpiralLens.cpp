@@ -523,7 +523,7 @@ void SpiralLens::mouseExit (const juce::MouseEvent&)
 // Спираль — тот же CQT, свёрнутый по октавам. Текстом: тональность и самые сильные классы нот.
 juce::String SpiralLens::a11yGroupName (int group) const
 {
-    return group == 0 ? "Readings" : "Settings";
+    return group == 0 ? a11ytext::T ("Readings") : a11ytext::T ("Settings");
 }
 
 int SpiralLens::a11yRowCount (int group) const
@@ -533,8 +533,8 @@ int SpiralLens::a11yRowCount (int group) const
 
 juce::String SpiralLens::a11yRowName (int group, int row) const
 {
-    if (group == 1) return row == ctrlChannel ? "Channel" : "Chroma window";
-    return row == 0 ? "Key" : "Strongest pitch classes";
+    if (group == 1) return row == ctrlChannel ? a11ytext::T ("Channel") : a11ytext::T ("Chroma window");
+    return row == 0 ? a11ytext::T ("Key") : a11ytext::T ("Strongest pitch classes");
 }
 
 juce::String SpiralLens::a11yRowValue (int group, int row) const
@@ -542,8 +542,8 @@ juce::String SpiralLens::a11yRowValue (int group, int row) const
     if (group == 1)
     {
         const auto s = processor.cqtSettings();
-        if (row == ctrlChannel) return s.channel == Cqt::left ? "Left" : (s.channel == Cqt::right ? "Right" : "Mid");
-        return spoken::trimmed (s.chromaSeconds(), 1) + " seconds";
+        if (row == ctrlChannel) return s.channel == Cqt::left ? a11ytext::T ("Left") : (s.channel == Cqt::right ? a11ytext::T ("Right") : a11ytext::T ("Mid"));
+        return spoken::trimmed (s.chromaSeconds(), 1) + a11ytext::T (" seconds");
     }
     if (row == 0) return spoken::keyReading (keyTonic, keyMode, keyConfidence, keyTimeFraction);
     return spoken::strongestClasses (chromaSm);

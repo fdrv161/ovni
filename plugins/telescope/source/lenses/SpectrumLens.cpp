@@ -921,9 +921,9 @@ juce::String SpectrumLens::a11yGroupName (int group) const
 {
     switch (group)
     {
-        case 0:  return "Readings";
-        case 1:  return "Third-octave bands";
-        default: return "Settings";
+        case 0:  return a11ytext::T ("Readings");
+        case 1:  return a11ytext::T ("Third-octave bands");
+        default: return a11ytext::T ("Settings");
     }
 }
 
@@ -940,18 +940,18 @@ int SpectrumLens::a11yRowCount (int group) const
 
 juce::String SpectrumLens::a11yRowName (int group, int row) const
 {
-    if (group == 0) return row == 0 ? juce::String ("Probe") : "Peak " + juce::String (row);
+    if (group == 0) return row == 0 ? juce::String (a11ytext::T ("Probe")) : a11ytext::T ("Peak ") + juce::String (row);
     if (group == 1) return spoken::hz (kThirdOctaveHz[juce::jlimit (0, SpectrumFrame::kNumThird - 1, row)]);
 
     static const char* const names[kNumControls] = { "FFT size", "Window", "Overlap", "Channel", "Display",
                                                      "Slope", "Average", "Peak hold", "Range", "Smoothing" };
-    return names[juce::jlimit (0, kNumControls - 1, row)];
+    return a11ytext::T (names[juce::jlimit (0, kNumControls - 1, row)]);
 }
 
 juce::String SpectrumLens::a11yRowValue (int group, int row) const
 {
     if (group == 2) return a11yControlValue (row);
-    if (! a11yHasFrame) return "no data yet";
+    if (! a11yHasFrame) return a11ytext::T ("no data yet");
     if (group == 1) return a11yBandValue (juce::jlimit (0, SpectrumFrame::kNumThird - 1, row));
 
     if (row == 0)
@@ -962,7 +962,7 @@ juce::String SpectrumLens::a11yRowValue (int group, int row) const
 
     const auto& list = a11yPeaks();
     if (row - 1 >= (int) list.size())
-        return "no peak above -" + juce::String (sets.rangeDb()) + " dB";
+        return a11ytext::T ("no peak above -") + juce::String (sets.rangeDb()) + a11ytext::T (" dB");
     const auto& p = list[(size_t) (row - 1)];
     return spoken::hz (p.hz) + ", " + spoken::noteWithCents (noteFor (p.hz)) + ", "
          + spoken::db (p.db, sets.rangeDb());
@@ -1025,10 +1025,10 @@ juce::String SpectrumLens::a11yLevels (double hz, bool withHold) const
     const auto one = [&] (int slot)
     {
         auto t = spoken::db (a11yLevelAt (slot, hz, false), floorDb);
-        if (hold) t << ", hold " << spoken::db (a11yLevelAt (slot, hz, true), floorDb);
+        if (hold) t << a11ytext::T (", hold ") << spoken::db (a11yLevelAt (slot, hz, true), floorDb);
         return t;
     };
-    if (a11ySpectra >= 2) return "L " + one (0) + "; R " + one (1);
+    if (a11ySpectra >= 2) return a11ytext::T ("L ") + one (0) + a11ytext::T ("; R ") + one (1);
     return one (0);
 }
 
@@ -1036,7 +1036,7 @@ juce::String SpectrumLens::a11yBandValue (int band) const
 {
     const int floorDb = sets.rangeDb();
     if (a11ySpectra >= 2)
-        return "L " + spoken::db (bandDb[0][band], floorDb) + ", R " + spoken::db (bandDb[1][band], floorDb);
+        return a11ytext::T ("L ") + spoken::db (bandDb[0][band], floorDb) + a11ytext::T (", R ") + spoken::db (bandDb[1][band], floorDb);
     return spoken::db (bandDb[0][band], floorDb);
 }
 
@@ -1090,38 +1090,38 @@ juce::String SpectrumLens::a11yControlValue (int control) const
     const auto s = processor.spectrumSettings();
     switch (control)
     {
-        case fftSize: return juce::String (s.fftSize()) + " points";
+        case fftSize: return juce::String (s.fftSize()) + a11ytext::T (" points");
         case window:
-            return s.window == Spectrum::hann ? "Hann"
-                 : (s.window == Spectrum::blackmanHarris4 ? "Blackman-Harris" : "Kaiser");
-        case overlap: return juce::String (juce::roundToInt (s.overlap() * 100.0f)) + " percent";
+            return s.window == Spectrum::hann ? a11ytext::T ("Hann")
+                 : (s.window == Spectrum::blackmanHarris4 ? a11ytext::T ("Blackman-Harris") : a11ytext::T ("Kaiser"));
+        case overlap: return juce::String (juce::roundToInt (s.overlap() * 100.0f)) + a11ytext::T (" percent");
         case channel:
             switch (s.channel)
             {
-                case Spectrum::left:  return "Left";
-                case Spectrum::right: return "Right";
-                case Spectrum::mid:   return "Mid";
-                case Spectrum::side:  return "Side";
-                default:              return "Left and right";
+                case Spectrum::left:  return a11ytext::T ("Left");
+                case Spectrum::right: return a11ytext::T ("Right");
+                case Spectrum::mid:   return a11ytext::T ("Mid");
+                case Spectrum::side:  return a11ytext::T ("Side");
+                default:              return a11ytext::T ("Left and right");
             }
         case bandsMode:
-            return s.bandsMode == Spectrum::bandsThird ? "Third-octave bars"
-                 : (s.bandsMode == Spectrum::bandsBark ? "Bark bars" : "FFT curve");
-        case slope:   return spoken::trimmed (s.slopeDbPerOct, 1) + " dB per octave";
+            return s.bandsMode == Spectrum::bandsThird ? a11ytext::T ("Third-octave bars")
+                 : (s.bandsMode == Spectrum::bandsBark ? a11ytext::T ("Bark bars") : a11ytext::T ("FFT curve"));
+        case slope:   return spoken::trimmed (s.slopeDbPerOct, 1) + a11ytext::T (" dB per octave");
         case average:
-            if (s.avgMode == Spectrum::avgNone)     return "Off";
-            if (s.avgMode == Spectrum::avgInfinite) return "Infinite";
-            return spoken::trimmed (s.avgSeconds, 1) + " seconds";
+            if (s.avgMode == Spectrum::avgNone)     return a11ytext::T ("Off");
+            if (s.avgMode == Spectrum::avgInfinite) return a11ytext::T ("Infinite");
+            return spoken::trimmed (s.avgSeconds, 1) + a11ytext::T (" seconds");
         case hold:
-            if (! s.peakHold)                return "Off";
-            if (s.holdDecayDbPerSec <= 0.0f) return "Infinite";
-            return spoken::trimmed (s.holdDecayDbPerSec, 0) + " dB per second";
-        case range: return juce::String (s.rangeDb()) + " dB";
+            if (! s.peakHold)                return a11ytext::T ("Off");
+            if (s.holdDecayDbPerSec <= 0.0f) return a11ytext::T ("Infinite");
+            return spoken::trimmed (s.holdDecayDbPerSec, 0) + a11ytext::T (" dB per second");
+        case range: return juce::String (s.rangeDb()) + a11ytext::T (" dB");
         case smooth:
         {
             const int denom = TelescopeProcessor::kSpectrumSmoothDenom[
                 juce::jlimit (0, TelescopeProcessor::kNumSpectrumSmoothOptions - 1, processor.spectrumSmoothIndex())];
-            return denom <= 0 ? juce::String ("Off") : "1/" + juce::String (denom) + " octave";
+            return denom <= 0 ? juce::String (a11ytext::T ("Off")) : "1/" + juce::String (denom) + a11ytext::T (" octave");
         }
         default: return {};
     }
