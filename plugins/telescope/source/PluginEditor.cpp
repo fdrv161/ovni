@@ -516,6 +516,9 @@ void TelescopeEditor::setupAccessibility()
                           "Enter: switch, open the preset menu or the save dialog. Escape: back to the lens list.";
     a11yPlugin.onEscape = [this] { focusA11y (a11yLensList); };
 
+    a11yPoll.fn = [this] { pollLensEvents(); };
+    a11yPoll.startTimerHz (4);
+
     // Порядок Tab задан явно: JUCE иначе сортирует элементы по положению на экране.
     int order = 1;
     for (auto* c : { &a11yLensList, &a11yPanel, &a11yPlugin })
@@ -595,6 +598,20 @@ void TelescopeEditor::showSaveDialogA11y()
             safe->repaint();
             safe->focusA11yLater (safe->a11yPlugin);
         }), true);   // deleteWhenDismissed
+}
+
+// Сообщение линзы говорим от того невидимого элемента, где сейчас фокус (звучит естественнее), иначе от панели
+// показаний: источник события должен быть видимым элементом окна, иначе NVDA его не свяжет с окном.
+void TelescopeEditor::pollLensEvents()
+{
+    if (lens == nullptr || ! isShowing()) return;
+    const auto message = lens->a11yPollEvent();
+    if (message.isEmpty()) return;
+
+    juce::Component* source = &a11yPanel;
+    for (auto* c : { &a11yLensList, &a11yPanel, &a11yPlugin })
+        if (c->hasKeyboardFocus (false)) source = c;
+    a11y::announce (*source, message, a11y::SpeechQueue::keepAll);
 }
 
 // Фокус после закрытия меню или диалога: с задержкой, чтобы JUCE и хост закончили свою смену фокуса.

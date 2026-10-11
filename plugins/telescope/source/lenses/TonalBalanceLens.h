@@ -89,6 +89,9 @@ public:
     juce::String a11yRowValue (int group, int row) const override;
     bool         a11yIsActivatable (int group, int row) const override;
     juce::String a11yActivate (int group, int row) override;
+    bool         a11yIsAdjustable (int group, int row) const override;
+    bool         a11yAdjust (int group, int row, int step) override;
+    juce::String a11yPollEvent() override;
 
     // El texto de estado, como DATO (la lente lo dibuja; el test lo lee).
     juce::String stateText() const;
@@ -180,6 +183,19 @@ private:
     static constexpr int kA11yDiffs = 5;          // сколько самых больших расхождений называть
     juce::String a11yBandValue (int band) const;
     std::vector<int> a11yLargestDiffs() const;    // полосы, отсортированные по модулю расхождения
+
+    // Участок референса с клавиатуры. Пока пользователь шагает стрелками, новые границы только запоминаются
+    // и озвучиваются; анализ запускается один раз, когда он остановился (kSectionApplyDelayMs) — иначе каждое
+    // нажатие перезапускало бы анализ файла.
+    static constexpr juce::uint32 kSectionApplyDelayMs = 800;
+    double       pendingFrom = -1.0, pendingTo = -1.0;
+    juce::uint32 pendingApplyAt = 0;
+    void         a11ySection (double& from, double& to) const;   // текущие границы (с учётом ожидающих)
+    void         a11yApplyPendingSection();
+
+    // Сообщение о конце фонового анализа: с какой ревизии и в каком состоянии линза начала следить.
+    juce::uint32 a11yLastRevision = 0;
+    bool         a11yWasBusy = false;
 
     TelescopeProcessor& processor;
 

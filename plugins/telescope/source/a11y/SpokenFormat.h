@@ -30,6 +30,23 @@ inline juce::String hz (double f)
     return trimmed (f, 1) + " Hz";
 }
 
+// Время: "45 seconds", "1 minute 5.5 seconds", "2 minutes". Вместо «1:05»: двоеточие синтезаторы читают
+// по-разному.
+inline juce::String duration (double seconds)
+{
+    seconds = juce::jmax (0.0, std::round (seconds * 10.0) / 10.0);
+    const int minutes = (int) (seconds / 60.0);
+    const double rest = seconds - 60.0 * minutes;
+    juce::String t;
+    if (minutes > 0) t << minutes << (minutes == 1 ? " minute" : " minutes");
+    if (rest >= 0.05 || minutes == 0)
+    {
+        const auto r = trimmed (rest, 1);
+        t << (t.isEmpty() ? "" : " ") << r << (r == "1" ? " second" : " seconds");
+    }
+    return t;
+}
+
 // Уровень: "-18.3 dB". Ниже пола графика — "below -90 dB": зрячий там тоже ничего не видит.
 inline juce::String db (float v, int floorDb)
 {

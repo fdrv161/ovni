@@ -238,6 +238,9 @@ public:
 
     bool         referenceBusy() const noexcept     { return fileAnalyzer != nullptr && fileAnalyzer->busy(); }
     float        referenceProgress() const noexcept { return fileAnalyzer != nullptr ? fileAnalyzer->progress() : 0.0f; }
+    // Доступность: растёт на каждом законченном анализе референса (и удачном, и с ошибкой) — по нему
+    // редактор понимает, что пора сказать «готово».
+    juce::uint32 referenceRevision() const noexcept { return fileAnalyzer != nullptr ? fileAnalyzer->revision() : 0; }
     juce::String referenceName() const;
     // El error del último análisis (formato no reconocido, archivo ilegible…). Vacío si salió bien.
     juce::String referenceError() const;

@@ -61,9 +61,14 @@ TonalBalanceLens::TonalBalanceLens (TelescopeProcessor& p) : Lens (30), processo
         dispLive[b] = dispRef[b] = kNormBottomDb;
         dispDelta[b] = 0.0f;
     }
+    // Доступность: следим за анализом с текущего состояния, чтобы при открытии линзы не сказать «готово»
+    // о старом результате.
+    a11yLastRevision = processor.referenceRevision();
+    a11yWasBusy      = processor.referenceBusy();
 }
 
-TonalBalanceLens::~TonalBalanceLens() = default;
+// Ожидающий участок (пользователь шагал стрелками и сразу ушёл с линзы) не теряем.
+TonalBalanceLens::~TonalBalanceLens() { a11yApplyPendingSection(); }
 
 //======================================================================================== geometría
 TonalBalanceLens::Zones TonalBalanceLens::zonesFor (int w, int h) const
@@ -939,7 +944,7 @@ namespace
 {
 enum TbGroup { tbSummary = 0, tbBands, tbActions };
 enum TbSummaryRow { rowState = 0, rowReference, rowSection, kSummaryFixedRows };
-enum TbActionRow { actReset = 0, actLoad, actClear, actWholeFile, kNumActions };
+enum TbActionRow { actReset = 0, actLoad, actClear, actSectionStart, actSectionEnd, actWholeFile, kNumActions };
 }
 
 juce::String TonalBalanceLens::a11yGroupName (int group) const
@@ -972,6 +977,8 @@ juce::String TonalBalanceLens::a11yRowName (int group, int row) const
             case actReset: return "Reset averaging";
             case actLoad:  return "Load reference file";
             case actClear: return "Remove reference";
+            case actSectionStart: return "Section start";
+            case actSectionEnd:   return "Section end";
             default:       return "Use the whole reference file";
         }
     }
@@ -986,7 +993,14 @@ juce::String TonalBalanceLens::a11yRowName (int group, int row) const
 
 juce::String TonalBalanceLens::a11yRowValue (int group, int row) const
 {
-    if (group == tbActions) return {};
+    if (group == tbActions)
+    {
+        if (row != actSectionStart && row != actSectionEnd) return {};
+        if (! wantsStrip() || stripSeconds() <= 0.0) return "no reference loaded";
+        double from = 0.0, to = 0.0;
+        a11ySection (from, to);
+        return spoken::duration (row == actSectionStart ? from : to);
+    }
     if (group == tbBands) return a11yBandValue (juce::jlimit (0, ReferenceFrame::kNumBands - 1, row));
 
     switch (row)
@@ -1047,9 +1061,87 @@ std::vector<int> TonalBalanceLens::a11yLargestDiffs() const
     return bands;
 }
 
-bool TonalBalanceLens::a11yIsActivatable (int group, int) const
+bool TonalBalanceLens::a11yIsActivatable (int group, int row) const
 {
-    return group == tbActions;
+    return group == tbActions && row != actSectionStart && row != actSectionEnd;
+}
+
+bool TonalBalanceLens::a11yIsAdjustable (int group, int row) const
+{
+    return group == tbActions && (row == actSectionStart || row == actSectionEnd) && wantsStrip() && stripSeconds() > 0.0;
+}
+
+void TonalBalanceLens::a11ySection (double& from, double& to) const
+{
+    const double total = stripSeconds();
+    if (pendingFrom >= 0.0 && pendingTo >= 0.0) { from = pendingFrom; to = pendingTo; return; }
+    if (processor.referenceRange (from, to)) { from = juce::jlimit (0.0, total, from); to = juce::jlimit (0.0, total, to); return; }
+    from = 0.0;
+    to = total;
+}
+
+// Шаг — секунда, крупный шаг — 10 секунд, Alt+Home/End — до края файла. Участок не короче минимума процессора.
+bool TonalBalanceLens::a11yAdjust (int group, int row, int step)
+{
+    if (! a11yIsAdjustable (group, row)) return false;
+    const double total = stripSeconds();
+    const double minSpan = TelescopeProcessor::kMinReferenceSpanS;
+    const double size = std::abs (step) >= a11yui::kExtreme ? total : (std::abs (step) >= a11yui::kCoarse ? 10.0 : 1.0);
+    const double delta = step > 0 ? size : -size;
+
+    double from = 0.0, to = 0.0;
+    a11ySection (from, to);
+    const double oldFrom = from, oldTo = to;
+    if (row == actSectionStart) from = juce::jlimit (0.0, juce::jmax (0.0, to - minSpan), from + delta);
+    else                        to   = juce::jlimit (juce::jmin (total, from + minSpan), total, to + delta);
+    if (std::abs (from - oldFrom) < 1.0e-6 && std::abs (to - oldTo) < 1.0e-6) return false;   // край
+
+    pendingFrom = from;
+    pendingTo   = to;
+    pendingApplyAt = juce::Time::getMillisecondCounter() + kSectionApplyDelayMs;
+    return true;
+}
+
+void TonalBalanceLens::a11yApplyPendingSection()
+{
+    if (pendingFrom < 0.0 || pendingTo < 0.0) return;
+    const double total = stripSeconds();
+    // Весь файл целиком — это «без участка», как двойной клик мышью.
+    if (pendingFrom <= 0.0 && pendingTo >= total - 1.0e-3) processor.clearReferenceRange();
+    else                                                   processor.setReferenceRange (pendingFrom, pendingTo);
+    pendingFrom = pendingTo = -1.0;
+    repaint();
+}
+
+// Конец фонового анализа референса (после загрузки файла или смены участка) — сказать результат.
+juce::String TonalBalanceLens::a11yPollEvent()
+{
+    if (pendingFrom >= 0.0 && (juce::int32) (juce::Time::getMillisecondCounter() - pendingApplyAt) >= 0)
+        a11yApplyPendingSection();
+
+    const bool busy = processor.referenceBusy();
+    const auto rev  = processor.referenceRevision();
+    juce::String message;
+
+    if (busy && ! a11yWasBusy)
+        message = "Analysing reference";
+    else if (! busy && rev != a11yLastRevision)
+    {
+        const auto err = processor.referenceError();
+        if (err.isNotEmpty())
+            message = "Reference could not be read: " + spoken::clean (err);
+        else
+        {
+            message = "Reference analysed, " + processor.referenceName();
+            double from = 0.0, to = 0.0;
+            if (processor.referenceRange (from, to))
+                message << ", section " << spoken::duration (from) << " to " << spoken::duration (to);
+        }
+    }
+
+    a11yWasBusy = busy;
+    if (! busy) a11yLastRevision = rev;
+    return message;
 }
 
 juce::String TonalBalanceLens::a11yActivate (int group, int row)
@@ -1065,11 +1157,13 @@ juce::String TonalBalanceLens::a11yActivate (int group, int row)
             return {};   // открылся диалог выбора файла, его озвучит сам скринридер
         case actClear:
             if (processor.referencePath().isEmpty()) return "No reference loaded";
+            pendingFrom = pendingTo = -1.0;
             pressControl (ctrlClear);
             return "Reference removed";
         default:
             if (processor.referencePath().isEmpty()) return "No reference loaded";
             dragging = false;
+            pendingFrom = pendingTo = -1.0;
             processor.clearReferenceRange();
             repaint();
             return "Whole reference file used";

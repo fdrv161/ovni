@@ -115,6 +115,15 @@ private:
     a11yui::A11yGrid a11yPlugin   { juce::AccessibilityRole::list };
     std::array<std::pair<int, int>, kNumLenses> panelCursor {};   // где стоял курсор показаний в каждой линзе
 
+    // Опрос линзы несколько раз в секунду: сообщения, которые надо сказать без нажатия (анализ файла готов).
+    // Отдельный объект, а не наследование Timer: так у редактора не появляется второй timerCallback.
+    struct A11yPoll : juce::Timer
+    {
+        std::function<void()> fn;
+        void timerCallback() override { if (fn) fn(); }
+    } a11yPoll;
+    void pollLensEvents();
+
     void setupAccessibility();
     void layoutAccessibility();
     void focusA11y (juce::Component& target);

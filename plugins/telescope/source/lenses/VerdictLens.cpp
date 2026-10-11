@@ -67,6 +67,11 @@ VerdictLens::VerdictLens (TelescopeProcessor& p) : Lens (12), processor (p)
     // 12 veces por segundo un informe idéntico, también en silencio (prompt 96). Como no hay animación, el
     // dibujo es el mismo; sólo deja de repetirse.
     setSettleHold (2);
+
+    // Доступность: следим за анализом файла с текущего состояния, чтобы при открытии линзы не сказать
+    // «готово» о старом результате.
+    a11yLastRevision = processor.verdictFileRevision();
+    a11yWasBusy      = processor.verdictFileBusy();
 }
 
 VerdictLens::~VerdictLens() = default;
@@ -938,5 +943,35 @@ juce::String VerdictLens::a11yActivate (int group, int row)
     if (row == ctrlReset) return "Analysis reset";
     if (row == ctrlMode)  return a11yRowValue (gActions, ctrlMode);
     return {};   // ctrlLoad: открылся диалог выбора файла, его озвучит сам скринридер
+}
+
+// Конец фонового анализа файла — сказать результат и итоговую строку. Ждём, пока линза пересоберёт отчёт
+// по новой ревизии (lastFileRev), иначе прочитали бы старый итог.
+juce::String VerdictLens::a11yPollEvent()
+{
+    const bool busy = processor.verdictFileBusy();
+    const auto rev  = processor.verdictFileRevision();
+    juce::String message;
+
+    if (busy && ! a11yWasBusy)
+    {
+        message = "Analysing " + processor.verdictFileName();
+    }
+    else if (! busy && rev != a11yLastRevision && lastFileRev == rev)
+    {
+        const auto err = processor.verdictFileError();
+        if (err.isNotEmpty())
+            message = "File could not be read: " + spoken::clean (err);
+        else
+        {
+            message = "File analysed, " + processor.verdictFileName();
+            const auto h = headlineText();
+            if (h.isNotEmpty()) message << ". " << spoken::clean (h);
+        }
+        a11yLastRevision = rev;
+    }
+
+    a11yWasBusy = busy;
+    return message;
 }
 }

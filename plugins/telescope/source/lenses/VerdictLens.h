@@ -88,6 +88,7 @@ public:
     bool         a11yAdjust (int group, int row, int step) override;
     bool         a11yIsActivatable (int group, int row) const override;
     juce::String a11yActivate (int group, int row) override;
+    juce::String a11yPollEvent() override;
 
     // El estado como DATO (la lente lo dibuja; el test lo lee).
     juce::String stateText() const;
@@ -195,6 +196,8 @@ private:
 
     // Доступность: выводы раздела группы 1..3 (или сильные стороны для группы 4) по порядку.
     std::vector<const VerdictFinding*> a11yFindings (int group) const;
+    juce::uint32 a11yLastRevision = 0;   // с какой ревизии анализа файла линза начала следить
+    bool         a11yWasBusy = false;
     // El texto envuelto al ancho dado, con la tipografía del panel. Lo comparten medir y dibujar.
 
 
