@@ -24,13 +24,14 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      # The repository name is in the key: cached deps store absolute paths, which change when the repo is renamed.
       - name: Cache FetchContent deps
         uses: actions/cache@v4
         with:
           path: build/_deps
-          key: deps-windows-${{ hashFiles('CMakeLists.txt') }}
+          key: deps-windows-${{ github.event.repository.name }}-${{ hashFiles('CMakeLists.txt') }}
           restore-keys: |
-            deps-windows-
+            deps-windows-${{ github.event.repository.name }}-
 
       - name: Configure
         run: >
@@ -93,13 +94,14 @@ jobs:
       - name: Install Ninja
         run: brew install ninja
 
+      # The repository name is in the key: cached deps store absolute paths, which change when the repo is renamed.
       - name: Cache FetchContent deps
         uses: actions/cache@v4
         with:
           path: build/_deps
-          key: deps-macos-${{ hashFiles('CMakeLists.txt') }}
+          key: deps-macos-${{ github.event.repository.name }}-${{ hashFiles('CMakeLists.txt') }}
           restore-keys: |
-            deps-macos-
+            deps-macos-${{ github.event.repository.name }}-
 
       - name: Configure
         run: >
