@@ -1,0 +1,82 @@
+# Experimental macOS build of TELESCOPE Accessible (VST3 + AU, universal arm64 + x86_64).
+# The accessibility layer is written for JUCE on both platforms but has only been tested with NVDA on Windows.
+# Runs on every push to the accessible branch and manually (Actions -> Run workflow).
+# Output: the TELESCOPE-accessible-macos artifact (TELESCOPE.vst3 and TELESCOPE.component inside a ZIP).
+name: A11y macOS build
+
+on:
+  push:
+    branches: [accessible]
+  workflow_dispatch: {}
+
+concurrency:
+  group: a11y-macos-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: TELESCOPE VST3 + AU (macOS universal)
+    runs-on: macos-latest
+    timeout-minutes: 60
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Ninja
+        run: brew install ninja
+
+      - name: Cache FetchContent deps
+        uses: actions/cache@v4
+        with:
+          path: build/_deps
+          key: deps-macos-${{ hashFiles('CMakeLists.txt') }}
+          restore-keys: |
+            deps-macos-
+
+      # Copying into ~/Library after the build is off: the runner only needs the bundles.
+      - name: Configure
+        run: >
+          cmake -B build -G Ninja
+          -DCMAKE_BUILD_TYPE=Release
+          -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64"
+          -DOVNI_BUILD_TESTS=OFF
+          -DOVNI_WITH_SOFA=OFF
+          -DOVNI_COPY_PLUGIN_AFTER_BUILD=OFF
+          .
+
+      - name: Build TELESCOPE VST3 and AU
+        run: cmake --build build --target telescope_VST3 telescope_AU
+
+      - name: Find bundles and sign ad hoc
+        run: |
+          set -euo pipefail
+          vst3=$(find build -type d -path '*telescope_artefacts/Release/VST3/*.vst3' | head -1)
+          au=$(find build -type d -path '*telescope_artefacts/Release/AU/*.component' | head -1)
+          [ -n "$vst3" ] && [ -n "$au" ] || { echo "bundles not found"; exit 1; }
+          # Ad hoc signature (no Apple account): Apple Silicon refuses to load unsigned code.
+          codesign --force --deep --sign - "$vst3"
+          codesign --force --deep --sign - "$au"
+          lipo -info "$vst3/Contents/MacOS/"*
+          mkdir -p dist
+          cp -R "$vst3" dist/TELESCOPE.vst3
+          cp -R "$au" dist/TELESCOPE.component
+          echo "VST3_BUNDLE=$vst3" >> "$GITHUB_ENV"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: TELESCOPE-accessible-macos
+          path: dist
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Pluginval VST3 (strictness 10)
+        run: |
+          set -euo pipefail
+          curl -fsSL -o pluginval.zip "https://github.com/Tracktion/pluginval/releases/download/v1.0.4/pluginval_macOS.zip"
+          unzip -oq pluginval.zip
+          ./pluginval.app/Contents/MacOS/pluginval --strictness-level 10 --validate "$VST3_BUNDLE"
