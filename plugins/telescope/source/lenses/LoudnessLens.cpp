@@ -587,7 +587,7 @@ void LoudnessLens::mouseExit (const juce::MouseEvent&)
 namespace
 {
 enum LoudRow { lrIntegrated = 0, lrShortTerm, lrMomentary, lrRange, lrTruePeak, lrMaxShort, lrMaxMomentary,
-               lrTarget, kLoudRows };
+               lrHistory, lrTarget, kLoudRows };
 enum LoudAction { laTarget = 0, laPause, laReset, kLoudActions };
 
 juce::String lufs (float v, bool partial = false)
@@ -620,7 +620,8 @@ juce::String LoudnessLens::a11yRowName (int group, int row) const
         return a11ytext::T (actions[juce::jlimit (0, (int) kLoudActions - 1, row)]);
     }
     static const char* const names[kLoudRows] = { "Integrated", "Short-term", "Momentary", "Loudness range",
-                                                  "True peak max", "Max short-term", "Max momentary", "Target" };
+                                                  "True peak max", "Max short-term", "Max momentary", "History",
+                                                  "Target" };
     return a11ytext::T (names[juce::jlimit (0, (int) kLoudRows - 1, row)]);
 }
 
@@ -648,9 +649,136 @@ juce::String LoudnessLens::a11yRowValue (int group, int row) const
         }
         case lrMaxShort:     return lufs (latest.shortTermMax);
         case lrMaxMomentary: return lufs (latest.momentaryMax);
+        case lrHistory:      return a11yHistoryValue();
         case lrTarget:       return spoken::clean (targetLine());
         default:             return {};
     }
+}
+
+// The short-term history on screen (3 minutes), told the way the eye reads the graph: stretches of steady loudness
+// with their length and level, oldest first, then the loudest and the quietest moment. The 100 ms points become
+// seconds: a section of a song lasts many seconds, and a 3 second window does not move faster anyway.
+juce::String LoudnessLens::a11yHistoryValue() const
+{
+    const int hz = LoudnessHistory::kHz;
+    const int n  = (int) historyBuf.size();
+    std::vector<float> sec;
+    for (int s0 = n % hz; s0 + hz <= n; s0 += hz)
+    {
+        double sum = 0.0;
+        int count = 0;
+        for (int i = s0; i < s0 + hz; ++i)
+            if (hasReading (historyBuf[(size_t) i].shortTerm)) { sum += historyBuf[(size_t) i].shortTerm; ++count; }
+        sec.push_back (count > 0 ? (float) (sum / count) : kNoReading);
+    }
+    // Before the first reading there is nothing to tell (the plugin was just opened or reset).
+    size_t first = 0;
+    while (first < sec.size() && ! hasReading (sec[first])) ++first;
+    sec.erase (sec.begin(), sec.begin() + (std::ptrdiff_t) first);
+    if (sec.size() < 5) return a11ytext::T ("no history yet");
+    // Silence inside the history counts as -70 LUFS, the absolute gate: quieter than that is not programme.
+    for (auto& v : sec)
+        if (! hasReading (v) || v < -70.0f) v = -70.0f;
+
+    const int m = (int) sec.size();
+    std::vector<float> smooth ((size_t) m);   // 5 seconds, to find the sections; their levels come from the seconds
+    for (int i = 0; i < m; ++i)
+    {
+        double sum = 0.0;
+        int count = 0;
+        for (int j = juce::jmax (0, i - 2); j <= juce::jmin (m - 1, i + 2); ++j) { sum += sec[(size_t) j]; ++count; }
+        smooth[(size_t) i] = (float) (sum / count);
+    }
+
+    struct Section { int lo, hi; float level; };
+    const auto levelOf = [&] (const Section& x)
+    {
+        double sum = 0.0;
+        for (int i = x.lo; i <= x.hi; ++i) sum += sec[(size_t) i];
+        return (float) (sum / (x.hi - x.lo + 1));
+    };
+    // A section ends where the level leaves it by the tolerance and stays away for 4 seconds; a section shorter
+    // than 8 seconds joins the neighbour closest in level.
+    const auto split = [&] (float tol)
+    {
+        std::vector<Section> out;
+        int lo = 0, count = 1;
+        double sum = smooth[0];
+        for (int i = 1; i < m; ++i)
+        {
+            const float mean = (float) (sum / count), d = smooth[(size_t) i] - mean;
+            bool leaves = std::abs (d) > tol;
+            for (int j = i; leaves && j < juce::jmin (m, i + 4); ++j)
+            {
+                const float dj = smooth[(size_t) j] - mean;
+                if (std::abs (dj) <= tol || dj * d < 0.0f) leaves = false;
+            }
+            if (leaves) { out.push_back ({ lo, i - 1, 0.0f }); lo = i; sum = 0.0; count = 0; }
+            sum += smooth[(size_t) i];
+            ++count;
+        }
+        out.push_back ({ lo, m - 1, 0.0f });
+        for (auto& x : out) x.level = levelOf (x);
+        for (;;)
+        {
+            int shortest = -1;
+            for (int k = 0; k < (int) out.size(); ++k)
+                if (out[(size_t) k].hi - out[(size_t) k].lo + 1 < 8
+                    && (shortest < 0 || out[(size_t) k].hi - out[(size_t) k].lo < out[(size_t) shortest].hi - out[(size_t) shortest].lo))
+                    shortest = k;
+            if (shortest < 0 || out.size() < 2) break;
+            const Section x = out[(size_t) shortest];
+            int other = shortest == 0 ? 1 : shortest - 1;
+            if (shortest > 0 && shortest + 1 < (int) out.size()
+                && std::abs (out[(size_t) shortest + 1].level - x.level) < std::abs (out[(size_t) shortest - 1].level - x.level))
+                other = shortest + 1;
+            auto& y = out[(size_t) other];
+            y.lo = juce::jmin (y.lo, x.lo);
+            y.hi = juce::jmax (y.hi, x.hi);
+            y.level = levelOf (y);
+            out.erase (out.begin() + shortest);
+        }
+        return out;
+    };
+    // At most 5 sections: a wider tolerance until they fit, as the eye sees fewer steps from further away.
+    float tol = 2.5f;
+    auto sections = split (tol);
+    while (sections.size() > 5 && tol < 12.0f) { tol += 1.5f; sections = split (tol); }
+
+    const auto level = [] (float v)
+    {
+        return v <= -69.5f ? a11ytext::T ("silence") : juce::String (juce::roundToInt (v)) + a11ytext::T (" LUFS");
+    };
+    const auto length = [] (int seconds) { return spoken::duration ((double) seconds); };
+
+    juce::StringArray parts;
+    parts.add (a11ytext::TF ("last {0}", { length (m) }));
+    if (sections.size() == 1)
+        parts.add (a11ytext::TF ("steady around {0}", { level (sections[0].level) }));
+    else
+        for (size_t k = 0; k < sections.size(); ++k)
+        {
+            const auto& x = sections[k];
+            const auto  len = length (x.hi - x.lo + 1);
+            if (k == 0)                         parts.add (a11ytext::TF ("{0} around {1}", { len, level (x.level) }));
+            else if (k + 1 == sections.size()) parts.add (a11ytext::TF ("then {0} around {1}, up to now", { len, level (x.level) }));
+            else                                parts.add (a11ytext::TF ("then {0} around {1}", { len, level (x.level) }));
+        }
+
+    // The loudest and the quietest second, and how long ago (silence is not a quietest moment worth telling).
+    int loud = 0, quiet = -1;
+    for (int i = 0; i < m; ++i)
+    {
+        if (sec[(size_t) i] > sec[(size_t) loud]) loud = i;
+        if (sec[(size_t) i] > -70.0f && (quiet < 0 || sec[(size_t) i] < sec[(size_t) quiet])) quiet = i;
+    }
+    const auto value = [&] (int i) { return spoken::trimmed (sec[(size_t) i], 1) + a11ytext::T (" LUFS"); };
+    parts.add (loud == m - 1 ? a11ytext::TF ("loudest {0}, now", { value (loud) })
+                             : a11ytext::TF ("loudest {0}, {1} ago", { value (loud), length (m - 1 - loud) }));
+    if (quiet >= 0 && quiet != loud)
+        parts.add (quiet == m - 1 ? a11ytext::TF ("quietest {0}, now", { value (quiet) })
+                                  : a11ytext::TF ("quietest {0}, {1} ago", { value (quiet), length (m - 1 - quiet) }));
+    return parts.joinIntoString (", ");
 }
 
 bool LoudnessLens::a11yIsAdjustable (int group, int row) const

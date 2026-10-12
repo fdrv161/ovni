@@ -48,6 +48,7 @@ public:
     bool         a11yAdjust (int group, int row, int step) override;
     bool         a11yIsActivatable (int group, int row) const override;
     juce::String a11yActivate (int group, int row) override;
+    juce::String a11yHistoryValue() const;   // the 3 minutes of short-term history, as sections
 
 protected:
     void renderStatic (juce::Graphics&, int width, int height) override;

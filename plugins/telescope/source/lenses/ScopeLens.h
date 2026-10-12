@@ -86,6 +86,7 @@ public:
     juce::String a11yRowValue (int group, int row) const override;
     bool         a11yIsAdjustable (int group, int row) const override;
     bool         a11yAdjust (int group, int row, int step) override;
+    juce::String a11yPictureValue() const;   // the goniometer and the needle over 10 seconds, in words
 
     // ===== 56 =====
     // Los TRES modos del panel izquierdo. El índice persiste en el ValueTree como `scopeMode`; si esa
@@ -290,6 +291,9 @@ private:
 
     ScopeFrame   scope {};        // último ScopeFrame leído (copia: la lente lo dibuja a su ritmo)
     float        corr = 0.0f, width = 0.0f, balanceDb = 0.0f, monoLossDb = 0.0f, windowSec = 0.0f;
+    static constexpr size_t kCorrHistory = 100;   // accessibility: 10 seconds at ten values a second
+    std::vector<float> corrHistory;
+    juce::uint32 corrLastMs = 0;
     float        dispCorr = 0.0f;   // el correlímetro se suaviza; los demás números son lectura directa
     // Auto-escala del Lissajous: el anillo exterior = el PICO del hop (suavizado, ataque rápido / caída
     // lenta como un medidor de picos). Sin esto una mezcla a -20 dBFS pico se dibuja como un punto en el

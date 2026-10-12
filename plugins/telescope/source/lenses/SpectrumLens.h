@@ -181,6 +181,7 @@ private:
         std::vector<float> top;                                    // louder channel, smoothed
         std::vector<int>   topBin;                                 // the loudest bin of each grid cell (or -1)
         std::vector<float> oct;                                    // octaves from 1 kHz, for the slope
+        std::vector<float> broad;                                  // louder channel over 1/3 octave, no slope
     };
     // A peak or a dip of the curve: where it stands out from its neighbourhood, and where its sides cross half
     // of that height (loHz, hiHz).
@@ -215,6 +216,14 @@ private:
     juce::String a11yTiltValue() const;
     juce::String a11yTiltVersusLine() const;                     // "brighter than the line by 0.5"
     juce::String a11yShapeValue() const;                         // "35 to 80 Hz +5 dB, 85 to 400 Hz -4 dB"
+    juce::String a11ySnapshotValue() const;                      // the difference from the remembered curve
+    juce::String stretchesText (const std::vector<Stretch>& stretches) const;
+    static std::vector<Stretch> findStretches (const std::vector<float>& dev, float threshold);
+
+    // The snapshot: the broad curve (no slope) remembered on request, to hear what changed since (an EQ move, the
+    // chorus against the verse), the way sighted users freeze a second curve over the live one.
+    std::vector<float> snapshotBroad;
+    juce::uint32 snapshotMs = 0;
     juce::String a11yFeatureValue (const Feature& f, bool dip) const;
     juce::String a11yBandValue (int band) const;
     juce::String a11yControlValue (int item) const;

@@ -225,7 +225,8 @@ Each lens below has two parts: what it measures and how to read it (from the aut
 
 ### With the keyboard
 
-- **Readings**: Integrated, Short-term, Momentary, Loudness range, True peak max (overall, then left and right), Max short-term, Max momentary, Target (the platform and how far you are from it). A value that is still filling is followed by "partial".
+- **Readings**: Integrated, Short-term, Momentary, Loudness range, True peak max (overall, then left and right), Max short-term, Max momentary, History, Target (the platform and how far you are from it). A value that is still filling is followed by "partial".
+- **History** tells the three minutes of short-term history on screen the way the eye reads the graph: steady stretches with their length and level, oldest first, then the loudest and the quietest moment. For example: "last 3 minutes, 40 seconds around -14 LUFS, then 1 minute 20 seconds around -9 LUFS, then 1 minute around -11 LUFS, up to now, loudest -8.7 LUFS, 1 minute 30 seconds ago". It shows where the chorus is louder than the verse, or where the loudness jumped. At most five stretches: when there are more steps, small ones are joined, as the eye sees fewer steps from further away.
 - **Actions**:
   - **Platform target**: plus and minus step through the streaming platforms, or "none".
   - **Pause**: Enter pauses or resumes measuring.
@@ -287,6 +288,7 @@ Slope and Smoothing exist to help the eye: Slope makes a balanced mix look flat,
 - **Readings**:
   - **Probe**: a frequency cursor that moves by notes. Plus and minus move it a semitone, a big step is an octave, and the range is about 20 Hz to 20 kHz. It reads the frequency, the note name, the level of the left and right channels (with peak hold if it is on) and how far it is from the line, for example "3 dB above the line". With smoothing on, the level is that of the smoothed curve, as drawn. The crosshair on screen follows the probe, so a sighted helper can see where you are.
   - **Signal tilt**: how fast the level falls from 50 Hz to 10 kHz, for example "falls 4.2 dB per octave", and how that compares with the line: "brighter than the line by 0.3", "darker than the line by 1.5" or "follows the line".
+  - **Difference from snapshot**: **Enter** remembers the curve as it is now; later the row says what changed since, the way sighted users lay a frozen curve over the live one. First the overall level ("overall +1.5 dB"), then the stretches that rose or fell compared with the rest, at matched loudness, for example "taken 40 seconds ago, overall +1 dB, 85 to 400 Hz -2 dB". Use it before and after an EQ move, or to compare a chorus with a verse. Two curves on one plot show smaller gaps than a bump on one curve, so here half the usual threshold counts (1.5 dB at a Range of 60 dB).
   - **Shape against the line**: the first glance at the picture. The stretches of the curve that stand out above or below the line (see below what counts as standing out), from low to high, with their average distance, for example "35 to 80 Hz +5 dB, 85 to 400 Hz -4 dB, 450 Hz to 2 kHz +3 dB, above 12 kHz -8 dB". A range that is not mentioned follows the line. It always looks at a broad 1/3 octave view, whatever the Smoothing, so the overview does not change while you zoom into details.
   - **Peaks and dips** (up to 10 of each): places where the curve stands out from the neighbouring frequencies, the most prominent first. How much a hump stands out is measured the way the eye sees it: above the higher of the two valleys beside it (for a hole, below the lower of the two crests). Smoothing sets their size:
     - With smoothing off, the peaks are narrow resonances and strong notes: frequency, note with cents, how many dB it stands out, and its level.
@@ -415,10 +417,12 @@ For individual notes with frequencies, use CQT.
 
 ### With the keyboard
 
-- **Readings**: Correlation (with a word for its meaning, such as "nearly mono" or "out of phase"), Width, Balance ("1.2 dB louder on the right", or "centred"), Mono loss, Out of phase energy (percent), Measured over (the window length).
+- **Readings**: Picture, Correlation (with a word for its meaning, such as "nearly mono" or "out of phase"), Width, Balance ("1.2 dB louder on the right", or "centred"), Mono loss, Out of phase energy (percent), Measured over (the window length).
 - **Settings**: Mode (Lissajous, Polar, Hemisphere), Oscilloscope trigger (on, off), Window, Hemisphere decay (12, 24 or 48 dB per second), Hemisphere scale (relative or decibels).
 
 The picture itself is not described in text: its meaning is these numbers.
+
+**Picture** says in words what the goniometer and the correlation needle show, as a sighted user reads them: "almost mono" (a vertical line), "normal stereo" (a round cloud), "very wide" (a flat cloud), "out of phase" or "like a flipped polarity" (a horizontal line, the mix cancels in mono). What matters is where the needle stays, not one moment: a short dip below zero from a wide reverb is harmless, staying below zero means parts of the mix vanish in mono. So the word comes from the last 10 seconds, followed by how much of that time the correlation was below zero and its lowest value. Bass and kick should stay close to mono; check them in the Band correlation lens.
 
 ---
 

@@ -931,8 +931,8 @@ constexpr int    kGridPerOct   = 96;
 constexpr double kGridLoHz     = 20.0;
 constexpr juce::uint32 kShapeHoldMs = 1000;   // while music plays, the peak list holds still this long
 
-// Readings rows: probe, signal tilt, shape, then the peaks and dips.
-enum ReadingRow { rrProbe = 0, rrTilt, rrShape, kFirstFeatureRow };
+// Readings rows: probe, signal tilt, shape, difference from the snapshot, then the peaks and dips.
+enum ReadingRow { rrProbe = 0, rrTilt, rrShape, rrSnapshot, kFirstFeatureRow };
 
 double midiHz (int midi)   { return 440.0 * std::pow (2.0, (double) (midi - 69) / 12.0); }
 int    gridSize()          { return (int) std::floor (kGridPerOct * std::log2 (20000.0 / kGridLoHz)) + 1; }
@@ -1048,6 +1048,7 @@ juce::String SpectrumLens::a11yRowName (int group, int row) const
         if (row == rrProbe) return a11ytext::T ("Probe");
         if (row == rrTilt)  return a11ytext::T ("Signal tilt");
         if (row == rrShape) return a11ytext::T ("Shape against the line");
+        if (row == rrSnapshot) return a11ytext::T ("Difference from snapshot");
         const auto& sh = a11yShape();
         const int k = row - kFirstFeatureRow, peaks = (int) sh.peaks.size(), dips = (int) sh.dips.size();
         if (k < peaks)        return a11ytext::TF ("Peak {0}", { juce::String (k + 1) });
@@ -1081,6 +1082,7 @@ juce::String SpectrumLens::a11yRowValue (int group, int row) const
     }
     if (row == rrTilt)  return a11yTiltValue();
     if (row == rrShape) return a11yShapeValue();
+    if (row == rrSnapshot) return a11ySnapshotValue();
 
     const auto& sh = a11yShape();
     const int k = row - kFirstFeatureRow, peaks = (int) sh.peaks.size(), dips = (int) sh.dips.size();
@@ -1143,6 +1145,7 @@ bool SpectrumLens::a11yIsActivatable (int group, int row) const
         const int item = a11ySettingItem (row);
         return item == siPause || item == siReset;
     }
+    if (group == 0 && row == rrSnapshot) return a11yHasFrame;
     if (group != 0 || row < kFirstFeatureRow || ! a11yHasFrame) return false;
     const auto& sh = a11yShape();
     return row - kFirstFeatureRow < (int) (sh.peaks.size() + sh.dips.size());
@@ -1169,6 +1172,13 @@ juce::String SpectrumLens::a11yActivate (int group, int row)
         return {};
     }
     if (! a11yIsActivatable (group, row)) return {};
+
+    if (row == rrSnapshot)
+    {
+        snapshotBroad = a11yCurve().broad;
+        snapshotMs = juce::Time::getMillisecondCounter();
+        return a11ytext::T ("Snapshot taken");
+    }
 
     // Enter on a peak or a dip puts the probe on it, so the user can walk around it by semitones and hear how
     // wide it is. The editor then moves the cursor to the probe row (a11yTakeCursorRequest).
@@ -1248,11 +1258,15 @@ juce::String SpectrumLens::a11yRowHelp (int group, int row) const
         // 16: shape
         "Shape against the line: the stretches of the curve that lie clearly above or below the line, from "
         "low to high, with their average distance. It uses a broad 1/3 octave view whatever the Smoothing, like a "
-        "first glance at the picture."
+        "first glance at the picture.",
+        // 17: snapshot
+        "Difference from snapshot: Enter remembers the curve as it is now. Later this row says what changed since: "
+        "first the overall level, then the stretches that rose or fell compared with the rest, as two curves laid "
+        "over each other at the same loudness. Use it before and after an EQ move, or to compare a chorus with a verse."
     };
 
     int index = -1;
-    if (group == 0) index = row == rrShape ? 16 : juce::jmin (row, 2);
+    if (group == 0) index = row == rrShape ? 16 : (row == rrSnapshot ? 17 : juce::jmin (row, 2));
     else if (group == 2)
     {
         switch (a11ySettingItem (row))
@@ -1364,6 +1378,19 @@ const SpectrumLens::A11yCurve& SpectrumLens::a11yCurve() const
         if (a11ySpectra >= 2) v = juce::jmax (v, curve.smoothDb[1][(size_t) i]);
         curve.top[(size_t) i] = v;
     }
+
+    // The broad view for the line, the shape and the snapshot: the louder channel smoothed over 1/3 octave, whatever
+    // the user's smoothing, so the overview holds still while the user zooms into details.
+    {
+        std::vector<float> louder ((size_t) n);
+        for (int i = 0; i < n; ++i)
+        {
+            float v = curve.rawDb[0][(size_t) i];
+            if (a11ySpectra >= 2) v = juce::jmax (v, curve.rawDb[1][(size_t) i]);
+            louder[(size_t) i] = v;
+        }
+        movingAverage (louder, curve.broad, kGridPerOct / 6);
+    }
     return curve;
 }
 
@@ -1445,20 +1472,56 @@ juce::String SpectrumLens::a11yTiltVersusLine() const
                          { spoken::trimmed (std::abs (onPlot), 1) });
 }
 
-// "35 to 80 Hz +5 dB, 85 to 400 Hz -4 dB": low to high, as the eye sweeps the picture. Stretches near the line
-// are left out, so silence about a range means it follows the line.
+// Stretches near the line are left out, so silence about a range means it follows the line.
 juce::String SpectrumLens::a11yShapeValue() const
 {
     const auto& sh = a11yShape();
     if (! sh.lineValid) return a11ytext::T ("not enough signal");
     if (sh.stretches.empty()) return a11ytext::TF ("all within {0} dB of the line", { spoken::trimmed (sh.threshold, 1) });
-    juce::StringArray parts;
-    for (const auto& s : sh.stretches)
+    return stretchesText (sh.stretches);
+}
+
+// The difference from the snapshot, level-matched first: a mix that only got louder keeps its shape, and sighted users
+// compare curves at matched levels. The overall change is said apart, then the stretches that moved compared with the
+// rest. Two curves on one plot show a smaller gap than a bump on one curve, so here half the threshold counts.
+juce::String SpectrumLens::a11ySnapshotValue() const
+{
+    if (snapshotBroad.empty()) return a11ytext::T ("none, Enter takes one");
+    const auto& c = a11yCurve();
+    if (! a11yHasFrame || snapshotBroad.size() != c.broad.size()) return a11ytext::T ("no data yet");
+
+    const int   n = (int) c.broad.size();
+    const float floorDb = -(float) sets.rangeDb();
+    const int   lo = juce::jlimit (0, n - 1, (int) std::lround (gridPos (40.0)));
+    const int   hi = juce::jlimit (lo, n - 1, (int) std::lround (gridPos (16000.0)));
+    std::vector<float> diff ((size_t) n, 0.0f), inRange;
+    std::vector<char>  seen ((size_t) n, 0);
+    for (int i = 0; i < n; ++i)
     {
-        const auto where = s.fromBottom ? a11ytext::TF ("up to {0}", { spoken::hz (roundHz (s.hiHz)) })
-                         : (s.toTop ? a11ytext::TF ("above {0}", { spoken::hz (roundHz (s.loHz)) }) : hzRange (s.loHz, s.hiHz));
-        parts.add (where + " " + spoken::signedDb ((float) juce::roundToInt (s.devDb)));
+        // As drawn: with the slope, held at the edges of the plot; where both curves are under it there is nothing to see.
+        const float tilt = sets.slopeDbPerOct * c.oct[(size_t) i];
+        const float now = c.broad[(size_t) i] + tilt, then = snapshotBroad[(size_t) i] + tilt;
+        if (juce::jmax (now, then) <= floorDb) continue;
+        seen[(size_t) i] = 1;
+        diff[(size_t) i] = juce::jlimit (floorDb, 0.0f, now) - juce::jlimit (floorDb, 0.0f, then);
+        if (i >= lo && i <= hi) inRange.push_back (diff[(size_t) i]);
     }
+    if ((int) inRange.size() < kGridPerOct) return a11ytext::T ("not enough signal");
+
+    std::vector<float> scratch;
+    const float overall = medianOf (inRange, 0, (int) inRange.size() - 1, scratch);
+    std::vector<float> dev ((size_t) n, 0.0f);
+    for (int i = 0; i < n; ++i)
+        if (seen[(size_t) i]) dev[(size_t) i] = diff[(size_t) i] - overall;
+    const float threshold = (float) sets.rangeDb() / 40.0f;
+    const auto stretches = findStretches (dev, threshold);
+
+    const double ago = (double) (juce::Time::getMillisecondCounter() - snapshotMs) / 1000.0;
+    juce::StringArray parts;
+    parts.add (a11ytext::TF ("taken {0} ago", { spoken::duration (std::round (ago)) }));
+    parts.add (a11ytext::TF ("overall {0}", { spoken::signedDb (std::round (overall * 2.0f) / 2.0f) }));
+    parts.add (stretches.empty() ? a11ytext::TF ("no other change of {0} dB or more", { spoken::trimmed (threshold, 1) })
+                                 : stretchesText (stretches));
     return parts.joinIntoString (", ");
 }
 
@@ -1471,6 +1534,75 @@ juce::String SpectrumLens::a11yFeatureValue (const Feature& f, bool dip) const
         return spoken::hz (f.hz) + ", " + spoken::noteWithCents (noteFor (f.hz)) + ", " + by + ", " + spoken::dB (f.db);
     // Smoothed, a hump or a hole has no exact pitch: where it starts and ends says more (an EQ band to set).
     return spoken::hz (f.hz) + ", " + hzRange (f.loHz, f.hiHz) + ", " + by;
+}
+
+// Stretches of a curve of distances (one per grid point) at least the threshold away from zero. A stretch shorter
+// than 1/3 octave is a detail, not shape (peaks and dips cover it); a gap shorter than 1/6 octave inside one stretch
+// does not split it. At most 6 stretches, the biggest (distance times width), then back in frequency order.
+std::vector<SpectrumLens::Stretch> SpectrumLens::findStretches (const std::vector<float>& dev, float threshold)
+{
+    const int n = (int) dev.size();
+    std::vector<int> side ((size_t) n);
+    for (int i = 0; i < n; ++i)
+        side[(size_t) i] = dev[(size_t) i] >= threshold ? 1 : (dev[(size_t) i] <= -threshold ? -1 : 0);
+
+    struct Run { int lo, hi, side; };
+    const auto runsOf = [&]
+    {
+        std::vector<Run> runs;
+        for (int i = 0; i < n; ++i)
+        {
+            if (runs.empty() || runs.back().side != side[(size_t) i]) runs.push_back ({ i, i, side[(size_t) i] });
+            else runs.back().hi = i;
+        }
+        return runs;
+    };
+    for (const auto& r : runsOf())
+        if (r.side != 0 && r.hi - r.lo + 1 < kGridPerOct / 3)
+            std::fill (side.begin() + r.lo, side.begin() + r.hi + 1, 0);
+    auto runs = runsOf();
+    for (size_t k = 1; k + 1 < runs.size(); ++k)
+        if (runs[k].side == 0 && runs[k - 1].side != 0 && runs[k - 1].side == runs[k + 1].side
+            && runs[k].hi - runs[k].lo + 1 < kGridPerOct / 6)
+            std::fill (side.begin() + runs[k].lo, side.begin() + runs[k].hi + 1, runs[k - 1].side);
+    runs = runsOf();
+
+    std::vector<std::pair<float, Stretch>> found;   // (size, stretch)
+    for (const auto& r : runs)
+    {
+        if (r.side == 0) continue;
+        double sum = 0.0;
+        for (int i = r.lo; i <= r.hi; ++i) sum += dev[(size_t) i];
+        Stretch st;
+        st.loHz = gridHz (r.lo);
+        st.hiHz = gridHz (r.hi);
+        st.devDb = (float) (sum / (double) (r.hi - r.lo + 1));
+        st.fromBottom = r.lo == 0;
+        st.toTop = r.hi == n - 1;
+        found.push_back ({ std::abs (st.devDb) * (float) (r.hi - r.lo + 1), st });
+    }
+    if (found.size() > 6)
+    {
+        std::sort (found.begin(), found.end(), [] (const auto& x, const auto& y) { return x.first > y.first; });
+        found.resize (6);
+        std::sort (found.begin(), found.end(), [] (const auto& x, const auto& y) { return x.second.loHz < y.second.loHz; });
+    }
+    std::vector<Stretch> out;
+    for (const auto& f : found) out.push_back (f.second);
+    return out;
+}
+
+// "35 to 80 Hz +5 dB, 85 to 400 Hz -4 dB": low to high, as the eye sweeps the picture.
+juce::String SpectrumLens::stretchesText (const std::vector<Stretch>& stretches) const
+{
+    juce::StringArray parts;
+    for (const auto& st : stretches)
+    {
+        const auto where = st.fromBottom ? a11ytext::TF ("up to {0}", { spoken::hz (roundHz (st.hiHz)) })
+                         : (st.toTop ? a11ytext::TF ("above {0}", { spoken::hz (roundHz (st.loHz)) }) : hzRange (st.loHz, st.hiHz));
+        parts.add (where + " " + spoken::signedDb ((float) juce::roundToInt (st.devDb)));
+    }
+    return parts.joinIntoString (", ");
 }
 
 // ---- the line, the tilt, the peaks and dips ----
@@ -1506,20 +1638,9 @@ const SpectrumLens::A11yShape& SpectrumLens::a11yShape() const
     std::vector<float> view ((size_t) n), scratch;
     for (int i = 0; i < n; ++i) view[(size_t) i] = onPlot (c.top[(size_t) i], i);
 
-    // The broad view for the line and the shape: the louder channel smoothed over 1/3 octave, whatever the user's
-    // smoothing, so the overview holds still while the user zooms into details.
+    // The broad view for the line and the shape (see a11yCurve), with the slope, held at the edges of the plot.
     std::vector<float> broad ((size_t) n);
-    {
-        std::vector<float> louder ((size_t) n);
-        for (int i = 0; i < n; ++i)
-        {
-            float v = c.rawDb[0][(size_t) i];
-            if (a11ySpectra >= 2) v = juce::jmax (v, c.rawDb[1][(size_t) i]);
-            louder[(size_t) i] = v;
-        }
-        movingAverage (louder, broad, kGridPerOct / 6);
-        for (int i = 0; i < n; ++i) broad[(size_t) i] = onPlot (broad[(size_t) i], i);
-    }
+    for (int i = 0; i < n; ++i) broad[(size_t) i] = onPlot (c.broad[(size_t) i], i);
 
     // THE LINE: flat on the plot, at the median height of the curve between 40 Hz and 16 kHz. The median, not the
     // mean: a few big humps (a kick, a bass note) must not lift the line the rest is compared with.
@@ -1530,59 +1651,12 @@ const SpectrumLens::A11yShape& SpectrumLens::a11yShape() const
         shape.lineValid = shape.lineDb > floorDb + 1.0f;
     }
 
-    // THE SHAPE: stretches of the broad curve above or below the line by the threshold. A stretch shorter than 1/3
-    // octave is a detail, not shape (peaks and dips cover it); a gap shorter than 1/6 octave inside one stretch
-    // does not split it. At most 6 stretches, the biggest (distance times width), then back in frequency order.
+    // THE SHAPE: stretches of the broad curve above or below the line by the threshold.
     if (shape.lineValid)
     {
-        std::vector<int> side ((size_t) n);
-        for (int i = 0; i < n; ++i)
-        {
-            const float d = broad[(size_t) i] - shape.lineDb;
-            side[(size_t) i] = d >= shape.threshold ? 1 : (d <= -shape.threshold ? -1 : 0);
-        }
-        struct Run { int lo, hi, side; };
-        const auto runsOf = [&]
-        {
-            std::vector<Run> runs;
-            for (int i = 0; i < n; ++i)
-            {
-                if (runs.empty() || runs.back().side != side[(size_t) i]) runs.push_back ({ i, i, side[(size_t) i] });
-                else runs.back().hi = i;
-            }
-            return runs;
-        };
-        for (const auto& r : runsOf())
-            if (r.side != 0 && r.hi - r.lo + 1 < kGridPerOct / 3)
-                std::fill (side.begin() + r.lo, side.begin() + r.hi + 1, 0);
-        auto runs = runsOf();
-        for (size_t k = 1; k + 1 < runs.size(); ++k)
-            if (runs[k].side == 0 && runs[k - 1].side != 0 && runs[k - 1].side == runs[k + 1].side
-                && runs[k].hi - runs[k].lo + 1 < kGridPerOct / 6)
-                std::fill (side.begin() + runs[k].lo, side.begin() + runs[k].hi + 1, runs[k - 1].side);
-        runs = runsOf();
-
-        std::vector<std::pair<float, Stretch>> found;   // (size, stretch)
-        for (const auto& r : runs)
-        {
-            if (r.side == 0) continue;
-            double sum = 0.0;
-            for (int i = r.lo; i <= r.hi; ++i) sum += broad[(size_t) i] - shape.lineDb;
-            Stretch s;
-            s.loHz = gridHz (r.lo);
-            s.hiHz = gridHz (r.hi);
-            s.devDb = (float) (sum / (double) (r.hi - r.lo + 1));
-            s.fromBottom = r.lo == 0;
-            s.toTop = r.hi == n - 1;
-            found.push_back ({ std::abs (s.devDb) * (float) (r.hi - r.lo + 1), s });
-        }
-        if (found.size() > 6)
-        {
-            std::sort (found.begin(), found.end(), [] (const auto& x, const auto& y) { return x.first > y.first; });
-            found.resize (6);
-            std::sort (found.begin(), found.end(), [] (const auto& x, const auto& y) { return x.second.loHz < y.second.loHz; });
-        }
-        for (const auto& f : found) shape.stretches.push_back (f.second);
+        std::vector<float> dev ((size_t) n);
+        for (int i = 0; i < n; ++i) dev[(size_t) i] = broad[(size_t) i] - shape.lineDb;
+        shape.stretches = findStretches (dev, shape.threshold);
     }
 
     // SIGNAL TILT: a straight-line fit of the third-octave band levels from 50 Hz to 10 kHz. Band power is flat for

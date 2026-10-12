@@ -975,6 +975,16 @@ bool ScopeLens::advanceFrame()
     monoLossDb = f.monoLossDb;
     windowSec  = f.stereoWindowSec;
 
+    // Accessibility: the correlation of the last 10 seconds, ten values a second. A sighted user does not read one
+    // needle position but where the needle stays; held still while the analysis is paused.
+    const auto nowMs = juce::Time::getMillisecondCounter();
+    if (! processor.isAnalysisPaused() && nowMs - corrLastMs >= 100)
+    {
+        corrLastMs = nowMs;
+        corrHistory.push_back (corr);
+        if (corrHistory.size() > kCorrHistory) corrHistory.erase (corrHistory.begin());
+    }
+
     const auto& s = processor.scope().read();
     const bool  fresh = s.timeSeconds != lastFrameTime;
     bool hopChanged = false;
@@ -1071,7 +1081,7 @@ void ScopeLens::mouseExit (const juce::MouseEvent&)
 // The picture itself (Lissajous figure, hemisphere) is not told as text: its meaning is exactly these numbers.
 namespace
 {
-enum ScopeRow { srCorr = 0, srWidth, srBalance, srMonoLoss, srOutOfPhase, srWindow, kScopeRows };
+enum ScopeRow { srPicture = 0, srCorr, srWidth, srBalance, srMonoLoss, srOutOfPhase, srWindow, kScopeRows };
 enum ScopeSet { ssMode = 0, ssTrigger, ssWindow, ssHemiDecay, ssHemiScale, kScopeSets };
 
 int windowIndexFor (int ms)
@@ -1100,7 +1110,7 @@ juce::String ScopeLens::a11yRowName (int group, int row) const
                                                       "Hemisphere decay", "Hemisphere scale" };
         return a11ytext::T (sets[juce::jlimit (0, (int) kScopeSets - 1, row)]);
     }
-    static const char* const names[kScopeRows] = { "Correlation", "Width", "Balance", "Mono loss",
+    static const char* const names[kScopeRows] = { "Picture", "Correlation", "Width", "Balance", "Mono loss",
                                                    "Out of phase energy", "Measured over" };
     return a11ytext::T (names[juce::jlimit (0, (int) kScopeRows - 1, row)]);
 }
@@ -1123,6 +1133,7 @@ juce::String ScopeLens::a11yRowValue (int group, int row) const
 
     switch (row)
     {
+        case srPicture:    return a11yPictureValue();
         case srCorr:       return spoken::correlation (corr);
         case srWidth:      return spoken::trimmed (width, 2);
         case srBalance:    return spoken::balance (balanceDb);
@@ -1131,6 +1142,32 @@ juce::String ScopeLens::a11yRowValue (int group, int row) const
         case srWindow:     return juce::String (juce::roundToInt (windowSec * 1000.0f)) + a11ytext::T (" ms");
         default:           return {};
     }
+}
+
+// The picture in words, as a sighted user reads the goniometer and the correlation needle: a vertical line is mono,
+// a round cloud is normal stereo, a flat cloud is very wide, a horizontal line is one channel with its polarity
+// flipped. What matters is where the needle stays: a moment below zero from a wide reverb is harmless, staying
+// below zero means parts of the mix cancel in mono. So the word comes from the median of the last 10 seconds, and
+// the time below zero and the lowest value follow.
+juce::String ScopeLens::a11yPictureValue() const
+{
+    std::vector<float> v (corrHistory.begin(), corrHistory.end());
+    if (v.empty()) v.push_back (corr);
+    std::vector<float> sorted (v);
+    std::sort (sorted.begin(), sorted.end());
+    const float median = sorted[sorted.size() / 2];
+
+    static const char* const names[] = { "like a flipped polarity, the mix cancels in mono",
+                                         "out of phase, wider than the speakers, thin in mono",
+                                         "very wide", "normal stereo", "almost mono" };
+    const char* word = names[median <= -0.5f ? 0 : (median < 0.0f ? 1 : (median < 0.3f ? 2 : (median < 0.9f ? 3 : 4)))];
+    int below = 0;
+    for (auto c : v) if (c < 0.0f) ++below;
+    const int pct = juce::roundToInt (100.0 * below / (double) v.size());
+    const auto secs = spoken::duration (std::round ((double) v.size() / 10.0));
+    return a11ytext::T (word) + ", "
+         + a11ytext::TF ("over {0}: below zero {1} percent of the time, lowest {2}",
+                         { secs, juce::String (pct), spoken::trimmed (sorted.front(), 2) });
 }
 
 bool ScopeLens::a11yIsAdjustable (int group, int) const
