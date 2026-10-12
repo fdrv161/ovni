@@ -1403,8 +1403,10 @@ juce::String FieldLens::a11yRowValue (int group, int row) const
     if (s.energy <= kSilentEnergy || loudest <= kSilentEnergy) return a11ytext::T ("silent");
 
     const float rel = 10.0f * std::log10 (s.energy / loudest);
+    // "centre centre" for a centred octave sounds like a stutter, so say "centred" then (same 5 % as spoken::pan).
+    const bool centred = juce::roundToInt (std::abs (s.centre) * 100.0f) < 5;
     juce::String t = (rel > -0.05f ? juce::String (a11ytext::T ("loudest octave")) : spoken::trimmed (rel, 1) + a11ytext::T (" dB"))
-                   + a11ytext::T (", centre ") + spoken::pan (s.centre);
+                   + (centred ? ", " + a11ytext::T ("centred") : a11ytext::T (", centre ") + spoken::pan (s.centre));
     if (std::abs (s.to - s.from) >= 0.1f)
         t << a11ytext::T (", spread from ") << spoken::pan (s.from) << a11ytext::T (" to ") << spoken::pan (s.to);
     else

@@ -629,7 +629,12 @@ juce::String LoudnessLens::a11yRowValue (int group, int row) const
 {
     if (group == 1)
     {
-        if (row == laTarget) return streamingTarget (processor.targetIndex()).name;
+        if (row == laTarget)
+        {
+            // The "none" entry is named in Spanish in the data table; speak the phrase the screen shows instead.
+            const auto& tgt = streamingTarget (processor.targetIndex());
+            return tgt.hasTarget ? juce::String (tgt.name) : tr (strings::Key::noTarget);
+        }
         if (row == laPause)  return processor.isAnalysisPaused() ? a11ytext::T ("paused") : a11ytext::T ("running");
         return {};
     }
