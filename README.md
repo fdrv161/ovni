@@ -20,6 +20,11 @@ Install on Windows: extract the ZIP and copy the `TELESCOPE Accessible.vst3` fol
 
 Also in [Russian (Русский)](MANUAL.ru.md) and [Spanish (Español)](MANUAL.es.md). The English manual is the main version; the translations are updated together with it.
 
+## What's new in 0.2.0-a11y.3
+
+- The plugin has its own name: "TELESCOPE Accessible (fdrv161)" in the DAW, `TELESCOPE Accessible.vst3` on disk. It can be installed next to the original TELESCOPE.
+- Updating: delete the old `TELESCOPE.vst3` folder unless it is the original plugin, and insert the plugin again in older projects. Saved user presets stay available.
+
 ## What's new in 0.2.0-a11y.2
 
 - **Spectrum** reads the picture the way the eye does: levels as on the plot, "the line", signal tilt, the shape against the line, and a list of peaks and dips. Enter on a peak moves the probe there.
