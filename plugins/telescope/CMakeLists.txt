@@ -76,12 +76,14 @@ endif ()
 
 juce_add_plugin(telescope
     VERSION                  ${TELESCOPE_VERSION}     # propia, NO la del project() raíz (D-51)
-    COMPANY_NAME             "OVNI"
-    BUNDLE_ID                "com.ovni.telescope"
-    PLUGIN_MANUFACTURER_CODE Ovni
-    PLUGIN_CODE              Tlsc                      # libre: Prob Halo Dust Auro Hrzn Spnv Plsr Nbla tomados
+    # Accessible fork: its own name, bundle and codes, so the DAW lists it apart from the original
+    # TELESCOPE and both can be installed side by side (the original is OVNI / Ovni / Tlsc / "TELESCOPE").
+    COMPANY_NAME             "fdrv161"
+    BUNDLE_ID                "com.fdrv161.telescope-accessible"
+    PLUGIN_MANUFACTURER_CODE Fdrv
+    PLUGIN_CODE              Tlsa
     FORMATS                  AU VST3 Standalone
-    PRODUCT_NAME             "TELESCOPE"
+    PRODUCT_NAME             "TELESCOPE Accessible"
     IS_SYNTH                 FALSE
     NEEDS_MIDI_INPUT         TRUE             # interceptar Program Change (preset por MIDI) -> NO quitar
     EDITOR_WANTS_KEYBOARD_FOCUS TRUE          # accessibility: without this the plugin window gets no keys on Windows

@@ -69,13 +69,15 @@ Tested with NVDA in REAPER on Windows. Other screen readers that use UI Automati
 A **VST3 plugin for Windows 10 or 11, 64-bit**. This is the tested build.
 
 1. Download [`TELESCOPE-accessible-windows-vst3.zip`](https://github.com/fdrv161/telescope-accessible/releases/latest/download/TELESCOPE-accessible-windows-vst3.zip) from the [latest release](https://github.com/fdrv161/telescope-accessible/releases/latest).
-2. Extract the ZIP. Inside is a folder named `TELESCOPE.vst3`. Copy that whole folder into your VST3 folder:
+2. Extract the ZIP. Inside is a folder named `TELESCOPE Accessible.vst3`. Copy that whole folder into your VST3 folder:
    - the standard one is `C:\Program Files\Common Files\VST3` (Windows asks for administrator permission to copy there);
    - or any folder you added to your DAW's VST3 paths. In REAPER: Options, Preferences, Plug-ins, VST, "VST plug-in paths".
 3. Restart your DAW or rescan plugins. In REAPER: Options, Preferences, Plug-ins, VST, "Re-scan".
-4. Insert **TELESCOPE** on a track or on the master.
+4. Insert **TELESCOPE Accessible** on a track or on the master. In the plugin list it is "TELESCOPE Accessible (fdrv161)".
 
-To update, close the DAW and replace the `TELESCOPE.vst3` folder with the new one.
+To update, close the DAW and replace the `TELESCOPE Accessible.vst3` folder with the new one.
+
+**Updating from 0.2.0-a11y.2 or older.** Those versions were named TELESCOPE by OVNI, like the original, and had the original's plugin ID. Now the fork is a separate plugin, so it can be installed next to the original TELESCOPE. Delete the old `TELESCOPE.vst3` folder unless it is the original plugin you also use. In projects that used an old version, insert TELESCOPE Accessible again: the old settings do not carry over. Saved user presets stay available.
 
 The build is not code-signed. That does not affect a VST3 loaded by a DAW.
 
@@ -84,11 +86,11 @@ The build is not code-signed. That does not affect a VST3 loaded by a DAW.
 VST3 and AU, universal (Apple Silicon and Intel), macOS 11 or newer. It builds and passes pluginval, but **the accessibility layer has only been tested with NVDA on Windows**. JUCE exposes the same controls to VoiceOver and the announcements use VoiceOver's own mechanism, so it may work well, partly, or not at all. If you try it, please [report how it goes](https://github.com/fdrv161/telescope-accessible/issues).
 
 1. Download [`TELESCOPE-accessible-macos.zip`](https://github.com/fdrv161/telescope-accessible/releases/latest/download/TELESCOPE-accessible-macos.zip) and open it.
-2. Copy `TELESCOPE.vst3` into `~/Library/Audio/Plug-Ins/VST3` and `TELESCOPE.component` into `~/Library/Audio/Plug-Ins/Components`.
+2. Copy `TELESCOPE Accessible.vst3` into `~/Library/Audio/Plug-Ins/VST3` and `TELESCOPE Accessible.component` into `~/Library/Audio/Plug-Ins/Components`.
 3. The build is signed ad hoc, not notarized by Apple, so macOS blocks it until you remove the quarantine flag. In Terminal:
 
    ```bash
-   xattr -dr com.apple.quarantine ~/Library/Audio/Plug-Ins/VST3/TELESCOPE.vst3 ~/Library/Audio/Plug-Ins/Components/TELESCOPE.component
+   xattr -dr com.apple.quarantine ~/Library/Audio/Plug-Ins/VST3/TELESCOPE\ Accessible.vst3 ~/Library/Audio/Plug-Ins/Components/TELESCOPE\ Accessible.component
    ```
 
 4. Rescan plugins in your DAW. Logic may need a restart to list the AU.
@@ -99,7 +101,7 @@ On macOS the keys are the same as below, with Option in place of Alt.
 
 ## First steps with a screen reader
 
-1. Insert TELESCOPE and open its window. In REAPER the FX window opens with the plugin; press Tab if focus is still on the FX list.
+1. Insert TELESCOPE Accessible and open its window. In REAPER the FX window opens with the plugin; press Tab if focus is still on the FX list.
 2. Focus lands on the **lens list**. NVDA says something like "Lenses, Loudness".
 3. Press **Up** and **Down** to choose a lens. The lens switches immediately, the same as clicking it.
 4. Press **Enter** to go to the **readings** of that lens. NVDA reads the current row, for example "Integrated, -14.2 LUFS".

@@ -12,7 +12,7 @@ This is an accessible build of [TELESCOPE by OVNI Audio](https://github.com/ovni
 
 Release notes and older versions: [Releases](https://github.com/fdrv161/telescope-accessible/releases).
 
-Install on Windows: extract the ZIP and copy the `TELESCOPE.vst3` folder into `C:\Program Files\Common Files\VST3` (or another folder your DAW scans), then rescan plugins. For macOS, see [Installing](MANUAL.md#installing) in the manual.
+Install on Windows: extract the ZIP and copy the `TELESCOPE Accessible.vst3` folder into `C:\Program Files\Common Files\VST3` (or another folder your DAW scans), then rescan plugins. In the DAW it is listed as "TELESCOPE Accessible (fdrv161)", so it can sit next to the original TELESCOPE. For macOS, see [Installing](MANUAL.md#installing) in the manual.
 
 ## Manual
 

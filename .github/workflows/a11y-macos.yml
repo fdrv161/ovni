@@ -1,7 +1,7 @@
 # Experimental macOS build of TELESCOPE Accessible (VST3 + AU, universal arm64 + x86_64).
 # The accessibility layer is written for JUCE on both platforms but has only been tested with NVDA on Windows.
 # Runs on every push to the accessible branch and manually (Actions -> Run workflow).
-# Output: the TELESCOPE-accessible-macos artifact (TELESCOPE.vst3 and TELESCOPE.component inside a ZIP).
+# Output: the TELESCOPE-accessible-macos artifact (TELESCOPE Accessible.vst3 and .component inside a ZIP).
 name: A11y macOS build
 
 on:
@@ -63,8 +63,8 @@ jobs:
           codesign --force --deep --sign - "$au"
           lipo -info "$vst3/Contents/MacOS/"*
           mkdir -p dist
-          cp -R "$vst3" dist/TELESCOPE.vst3
-          cp -R "$au" dist/TELESCOPE.component
+          cp -R "$vst3" "dist/TELESCOPE Accessible.vst3"
+          cp -R "$au" "dist/TELESCOPE Accessible.component"
           echo "VST3_BUNDLE=$vst3" >> "$GITHUB_ENV"
 
       - name: Upload artifact

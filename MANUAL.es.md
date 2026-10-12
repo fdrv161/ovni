@@ -69,13 +69,15 @@ Probado con NVDA en REAPER en Windows. Otros lectores de pantalla que usan UI Au
 Un **plugin VST3 para Windows 10 u 11, de 64 bits**. Es la versión probada.
 
 1. Descargá [`TELESCOPE-accessible-windows-vst3.zip`](https://github.com/fdrv161/telescope-accessible/releases/latest/download/TELESCOPE-accessible-windows-vst3.zip) desde la [última versión publicada](https://github.com/fdrv161/telescope-accessible/releases/latest).
-2. Descomprimí el ZIP. Adentro hay una carpeta llamada `TELESCOPE.vst3`. Copiá esa carpeta entera a tu carpeta de VST3:
+2. Descomprimí el ZIP. Adentro hay una carpeta llamada `TELESCOPE Accessible.vst3`. Copiá esa carpeta entera a tu carpeta de VST3:
    - la estándar es `C:\Program Files\Common Files\VST3` (Windows pide permiso de administrador para copiar ahí);
    - o cualquier carpeta que hayas agregado a las rutas VST3 de tu DAW. En REAPER: Options, Preferences, Plug-ins, VST, "VST plug-in paths".
 3. Reiniciá la DAW o volvé a escanear los plugins. En REAPER: Options, Preferences, Plug-ins, VST, "Re-scan".
-4. Insertá **TELESCOPE** en una pista o en el máster.
+4. Insertá **TELESCOPE Accessible** en una pista o en el máster. En la lista de plugins aparece como "TELESCOPE Accessible (fdrv161)".
 
-Para actualizar, cerrá la DAW y reemplazá la carpeta `TELESCOPE.vst3` por la nueva.
+Para actualizar, cerrá la DAW y reemplazá la carpeta `TELESCOPE Accessible.vst3` por la nueva.
+
+**Si venís de la 0.2.0-a11y.2 o anterior.** Esas versiones se llamaban TELESCOPE de OVNI, como el original, y tenían su código de plugin. Ahora el fork es un plugin aparte, así que se puede instalar junto al TELESCOPE original. Borrá la carpeta vieja `TELESCOPE.vst3`, salvo que sea el plugin original y también lo uses. En los proyectos que usaban una versión vieja, insertá TELESCOPE Accessible de nuevo: los ajustes viejos no se pasan. Los presets de usuario guardados siguen disponibles.
 
 La versión no tiene firma de código. Eso no afecta a un VST3 que carga una DAW.
 
@@ -84,11 +86,11 @@ La versión no tiene firma de código. Eso no afecta a un VST3 que carga una DAW
 VST3 y AU, universal (Apple Silicon e Intel), macOS 11 o posterior. Compila y pasa pluginval, pero **la capa de accesibilidad sólo se probó con NVDA en Windows**. JUCE expone los mismos controles a VoiceOver y los avisos usan el mecanismo propio de VoiceOver, así que puede funcionar bien, a medias o nada. Si lo probás, por favor [contá cómo te fue](https://github.com/fdrv161/telescope-accessible/issues).
 
 1. Descargá [`TELESCOPE-accessible-macos.zip`](https://github.com/fdrv161/telescope-accessible/releases/latest/download/TELESCOPE-accessible-macos.zip) y abrilo.
-2. Copiá `TELESCOPE.vst3` a `~/Library/Audio/Plug-Ins/VST3` y `TELESCOPE.component` a `~/Library/Audio/Plug-Ins/Components`.
+2. Copiá `TELESCOPE Accessible.vst3` a `~/Library/Audio/Plug-Ins/VST3` y `TELESCOPE Accessible.component` a `~/Library/Audio/Plug-Ins/Components`.
 3. La versión está firmada ad hoc, sin notarización de Apple, así que macOS la bloquea hasta que quites la marca de cuarentena. En Terminal:
 
    ```bash
-   xattr -dr com.apple.quarantine ~/Library/Audio/Plug-Ins/VST3/TELESCOPE.vst3 ~/Library/Audio/Plug-Ins/Components/TELESCOPE.component
+   xattr -dr com.apple.quarantine ~/Library/Audio/Plug-Ins/VST3/TELESCOPE\ Accessible.vst3 ~/Library/Audio/Plug-Ins/Components/TELESCOPE\ Accessible.component
    ```
 
 4. Volvé a escanear los plugins en tu DAW. Logic puede necesitar un reinicio para listar el AU.
@@ -99,7 +101,7 @@ En macOS las teclas son las mismas que abajo, con Opción en lugar de Alt.
 
 ## Primeros pasos con un lector de pantalla
 
-1. Insertá TELESCOPE y abrí su ventana. En REAPER la ventana de FX se abre con el plugin; presioná Tab si el foco sigue en la lista de FX.
+1. Insertá TELESCOPE Accessible y abrí su ventana. En REAPER la ventana de FX se abre con el plugin; presioná Tab si el foco sigue en la lista de FX.
 2. El foco cae en la **lista de lentes**. NVDA dice algo como "Lentes, Loudness".
 3. Presioná **flecha arriba** y **flecha abajo** para elegir una lente. La lente cambia enseguida, igual que con un clic.
 4. Presioná **Intro** para ir a las **lecturas** de esa lente. NVDA lee la fila actual, por ejemplo "Integrado, -14.2 LUFS".
