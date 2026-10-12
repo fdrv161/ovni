@@ -1081,7 +1081,8 @@ void ScopeLens::mouseExit (const juce::MouseEvent&)
 // The picture itself (Lissajous figure, hemisphere) is not told as text: its meaning is exactly these numbers.
 namespace
 {
-enum ScopeRow { srPicture = 0, srCorr, srWidth, srBalance, srMonoLoss, srOutOfPhase, srWindow, kScopeRows };
+// Directions is last: it exists only in Hemisphere mode, like the half circle it reads.
+enum ScopeRow { srPicture = 0, srCorr, srWidth, srBalance, srMonoLoss, srOutOfPhase, srWindow, srDirections, kScopeRows };
 enum ScopeSet { ssMode = 0, ssTrigger, ssWindow, ssHemiDecay, ssHemiScale, kScopeSets };
 
 int windowIndexFor (int ms)
@@ -1100,7 +1101,7 @@ juce::String ScopeLens::a11yGroupName (int group) const
 // The hemisphere decay and scale buttons are on screen only in Hemisphere mode, so are their rows (they are last).
 int ScopeLens::a11yRowCount (int group) const
 {
-    if (group == 0) return (int) kScopeRows;
+    if (group == 0) return scopeMode() == Mode::hemisphere ? (int) kScopeRows : (int) srDirections;
     return scopeMode() == Mode::hemisphere ? (int) kScopeSets : (int) ssHemiDecay;
 }
 
@@ -1113,7 +1114,7 @@ juce::String ScopeLens::a11yRowName (int group, int row) const
         return a11ytext::T (sets[juce::jlimit (0, (int) kScopeSets - 1, row)]);
     }
     static const char* const names[kScopeRows] = { "Picture", "Correlation", "Width", "Balance", "Mono loss",
-                                                   "Out of phase energy", "Measured over" };
+                                                   "Out of phase energy", "Measured over", "Directions" };
     return a11ytext::T (names[juce::jlimit (0, (int) kScopeRows - 1, row)]);
 }
 
@@ -1136,6 +1137,7 @@ juce::String ScopeLens::a11yRowValue (int group, int row) const
     switch (row)
     {
         case srPicture:    return a11yPictureValue();
+        case srDirections: return a11yDirectionsValue();
         case srCorr:       return spoken::correlation (corr);
         case srWidth:      return spoken::trimmed (width, 2);
         case srBalance:    return spoken::balance (balanceDb);
@@ -1170,6 +1172,45 @@ juce::String ScopeLens::a11yPictureValue() const
     return a11ytext::T (word) + ", "
          + a11ytext::TF ("over {0}: below zero {1} percent of the time, lowest {2}",
                          { secs, juce::String (pct), spoken::trimmed (sorted.front(), 2) });
+}
+
+// In Hemisphere mode the screen shows how much energy sits in each pan direction: the filled half circle, its
+// time-averaged layer. Told as the eye reads it: where the middle of the energy is, how wide it spreads (the
+// directions that hold the central 80 percent of it), and the strongest direction when it is not the middle.
+// In phase only: what is out of phase has its own row (Out of phase energy), as it has its own lower half on screen.
+juce::String ScopeLens::a11yDirectionsValue() const
+{
+    // 0 degrees is left only, 90 the centre, 180 right only; on screen the angle is linear in pan.
+    const auto panOf = [] (int deg) { return (float) (deg - 90) / 90.0f; };
+    double energy[kHemiRays] {}, total = 0.0;
+    int strongest = 90;
+    for (int d = 0; d < kHemiRays; ++d)
+    {
+        const float db = hemi.avg[d];
+        energy[d] = db > ScopeFrame::kHemiFloorDb ? std::pow (10.0, (double) db / 10.0) : 0.0;
+        total += energy[d];
+        if (energy[d] > energy[strongest]) strongest = d;
+    }
+    if (total <= 0.0) return a11ytext::T ("no signal");
+
+    double centre = 0.0, cum = 0.0;
+    int lo = -1, hi = -1;
+    for (int d = 0; d < kHemiRays; ++d)
+    {
+        centre += energy[d] * panOf (d);
+        cum += energy[d];
+        if (lo < 0 && cum >= 0.1 * total) lo = d;
+        if (hi < 0 && cum >= 0.9 * total) hi = d;
+    }
+    centre /= total;
+
+    auto t = std::abs (centre) < 0.05 ? a11ytext::T ("centred")
+                                      : a11ytext::TF ("centre: {0}", { spoken::pan ((float) centre) });
+    if (hi - lo < 10) t << ", " << a11ytext::T ("narrow");
+    else              t << ", " << a11ytext::TF ("spread from {0} to {1}", { spoken::pan (panOf (lo)), spoken::pan (panOf (hi)) });
+    if (std::abs (panOf (strongest) - (float) centre) > 0.15f)
+        t << ", " << a11ytext::TF ("strongest at {0}", { spoken::pan (panOf (strongest)) });
+    return t;
 }
 
 bool ScopeLens::a11yIsAdjustable (int group, int) const

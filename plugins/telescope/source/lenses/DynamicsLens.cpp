@@ -445,7 +445,7 @@ void DynamicsLens::mouseExit (const juce::MouseEvent&)
 // strip as a count over the last 10 minutes plus how long ago the last one was. The PSR warning colour is said as a word.
 namespace
 {
-enum DynRow { drPlr = 0, drPsr, drShortTerm, drMostFrequent, drClips, drRecentClips, kDynRows };
+enum DynRow { drPlr = 0, drPsr, drShortTerm, drMostFrequent, drMostOfTime, drClips, drRecentClips, kDynRows };
 enum DynAction { daThreshold = 0, daPause, daReset, kDynActions };
 }
 
@@ -467,7 +467,7 @@ juce::String DynamicsLens::a11yRowName (int group, int row) const
         return a11ytext::T (actions[juce::jlimit (0, (int) kDynActions - 1, row)]);
     }
     static const char* const names[kDynRows] = { "PLR", "PSR", "Short-term", "Most frequent short-term",
-                                                 "Clip events", "Clips in the last 10 minutes" };
+                                                 "Most of the time", "Clip events", "Clips in the last 10 minutes" };
     return a11ytext::T (names[juce::jlimit (0, (int) kDynRows - 1, row)]);
 }
 
@@ -500,6 +500,25 @@ juce::String DynamicsLens::a11yRowValue (int group, int row) const
             if (best < 0 || total == 0) return a11ytext::T ("no reading yet");
             const int pct = juce::roundToInt (100.0 * (double) histogram[best] / (double) total);
             return juce::String (best + kBinsFloorLufs) + a11ytext::T (" LUFS, ") + juce::String (pct) + a11ytext::T (" percent of the time");
+        }
+        case drMostOfTime:
+        {
+            // The width of the histogram, as the eye sees it: where the middle 80 percent of the short-term
+            // readings since the reset lie (1 LU bins, like the bars).
+            juce::uint64 total = 0;
+            for (int i = 0; i < kBins; ++i) total += histogram[i];
+            if (total == 0) return a11ytext::T ("no reading yet");
+            juce::uint64 cum = 0;
+            int lo = -1, hi = -1;
+            for (int i = 0; i < kBins; ++i)
+            {
+                cum += histogram[i];
+                if (lo < 0 && (double) cum >= 0.1 * (double) total) lo = i;
+                if (hi < 0 && (double) cum >= 0.9 * (double) total) hi = i;
+            }
+            const auto lufsAt = [] (int bin) { return juce::String (bin + kBinsFloorLufs); };
+            if (hi <= lo) return lufsAt (lo) + a11ytext::T (" LUFS");
+            return a11ytext::TF ("{0} to {1}", { lufsAt (lo), lufsAt (hi) + a11ytext::T (" LUFS") });
         }
         case drClips:
             return juce::String ((int) clipEvents) + a11ytext::T (" above ") + spoken::trimmed (processor.clipThresholdDbtp(), 1) + a11ytext::T (" dBTP");

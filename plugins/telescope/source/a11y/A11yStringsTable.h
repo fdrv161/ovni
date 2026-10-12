@@ -207,6 +207,12 @@ inline const Row* rows() noexcept
         { { "Average", "Promedio", "Média", "Moyenne", "Mittelung", "Media", "Усреднение" } },
         { { "Peak hold", nullptr, nullptr, nullptr, nullptr, nullptr, nullptr } },
         { { "Smoothing", "Suavizado", "Suavização", "Lissage", "Glättung", "Lisciatura", "Сглаживание" } },
+        { { "Directions", "Direcciones", "Direções", "Directions", "Richtungen", "Direzioni", "Направления" } },
+        { { "centre: {0}", "centro: {0}", "centro: {0}", "centre : {0}", "Mitte: {0}", "centro: {0}", "центр: {0}" } },
+        { { "narrow", "estrecho", "estreito", "étroit", "schmal", "stretto", "узко" } },
+        { { "spread from {0} to {1}", "repartido de {0} a {1}", "espalhado de {0} a {1}", "réparti de {0} à {1}", "verteilt von {0} bis {1}", "distribuito da {0} a {1}", "разброс от {0} до {1}" } },
+        { { "strongest at {0}", "lo más fuerte en {0}", "o mais forte em {0}", "le plus fort à {0}", "am stärksten bei {0}", "il più forte a {0}", "сильнее всего {0}" } },
+        { { "Most of the time", "La mayor parte del tiempo", "A maior parte do tempo", "La plupart du temps", "Meistens", "Per la maggior parte del tempo", "Большую часть времени" } },
         { { "analysis fell behind", "el análisis se retrasó", "a análise atrasou", "l'analyse a pris du retard", "Analyse ist zurückgefallen", "l'analisi è rimasta indietro", "анализ отстал" } },
         { { "Analysis fell behind and skipped some audio, the readings may be off", "El análisis se retrasó y omitió parte del audio, las lecturas pueden no ser exactas", "A análise atrasou e pulou parte do áudio, as leituras podem estar erradas", "L'analyse a pris du retard et a sauté une partie du son, les mesures peuvent être fausses", "Die Analyse ist zurückgefallen und hat Audio übersprungen, die Messwerte können abweichen", "L'analisi è rimasta indietro e ha saltato parte dell'audio, le letture possono essere sbagliate", "Анализ отстал и пропустил часть звука, показания могут быть неточными" } },
         { { "no history yet", "todavía sin historia", "ainda sem histórico", "pas encore d'historique", "noch kein Verlauf", "ancora nessuno storico", "истории пока нет" } },
@@ -322,5 +328,5 @@ inline const Row* rows() noexcept
     return table;
 }
 
-inline int numRows() noexcept { return 311; }
+inline int numRows() noexcept { return 317; }
 }

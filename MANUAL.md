@@ -255,7 +255,7 @@ The 8 dB line on screen is a reference, not a judgement. Judgements are Verdict'
 
 ### With the keyboard
 
-- **Readings**: PLR, PSR (with "low" when it is under the reference), Short-term, Most frequent short-term (the histogram's peak and how much of the time it held), Clip events (count above the threshold), Clips in the last 10 minutes (and how long ago the latest one was).
+- **Readings**: PLR, PSR (with "low" when it is under the reference), Short-term, Most frequent short-term (the histogram's peak and how much of the time it held), Most of the time (where the middle 80 percent of the short-term readings lie, the width of the histogram, for example "-12 to -8 LUFS"), Clip events (count above the threshold), Clips in the last 10 minutes (and how long ago the latest one was).
 - **Actions**:
   - **Clip threshold**: plus and minus move it by 0.1 dB, a big step is 0.5 dB.
   - **Pause** and **Reset**: Enter.
@@ -413,7 +413,7 @@ For individual notes with frequencies, use CQT.
 
 ### With the keyboard
 
-- **Readings**: Picture, Correlation (with a word for its meaning, such as "nearly mono" or "out of phase"), Width, Balance ("1.2 dB louder on the right", or "centred"), Mono loss, Out of phase energy (percent), Measured over (the window length).
+- **Readings** (Directions only in Hemisphere mode, like the half circle it reads): Picture, Correlation (with a word for its meaning, such as "nearly mono" or "out of phase"), Width, Balance ("1.2 dB louder on the right", or "centred"), Mono loss, Out of phase energy (percent), Measured over (the window length), Directions: where the energy sits from left to right, as the filled half circle shows it, for example "centre: 10 percent right, spread from 40 percent left to 60 percent right, strongest at 80 percent right". Out-of-phase energy is not in it: it has its own row.
 - **Settings**: Mode (Lissajous, Polar, Hemisphere), Oscilloscope trigger (on, off), Window, Hemisphere decay (12, 24 or 48 dB per second) and Hemisphere scale (relative or decibels), these two only in Hemisphere mode, as on screen.
 
 The picture itself is not described in text: its meaning is these numbers.
