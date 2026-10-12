@@ -931,8 +931,8 @@ constexpr int    kGridPerOct   = 96;
 constexpr double kGridLoHz     = 20.0;
 constexpr juce::uint32 kShapeHoldMs = 1000;   // while music plays, the peak list holds still this long
 
-// Readings rows: probe, signal tilt, shape, difference from the snapshot, then the peaks and dips.
-enum ReadingRow { rrProbe = 0, rrTilt, rrShape, rrSnapshot, kFirstFeatureRow };
+// Readings rows: probe, signal tilt, shape, then the peaks and dips.
+enum ReadingRow { rrProbe = 0, rrTilt, rrShape, kFirstFeatureRow };
 
 double midiHz (int midi)   { return 440.0 * std::pow (2.0, (double) (midi - 69) / 12.0); }
 int    gridSize()          { return (int) std::floor (kGridPerOct * std::log2 (20000.0 / kGridLoHz)) + 1; }
@@ -1048,7 +1048,6 @@ juce::String SpectrumLens::a11yRowName (int group, int row) const
         if (row == rrProbe) return a11ytext::T ("Probe");
         if (row == rrTilt)  return a11ytext::T ("Signal tilt");
         if (row == rrShape) return a11ytext::T ("Shape against the line");
-        if (row == rrSnapshot) return a11ytext::T ("Difference from snapshot");
         const auto& sh = a11yShape();
         const int k = row - kFirstFeatureRow, peaks = (int) sh.peaks.size(), dips = (int) sh.dips.size();
         if (k < peaks)        return a11ytext::TF ("Peak {0}", { juce::String (k + 1) });
@@ -1082,7 +1081,6 @@ juce::String SpectrumLens::a11yRowValue (int group, int row) const
     }
     if (row == rrTilt)  return a11yTiltValue();
     if (row == rrShape) return a11yShapeValue();
-    if (row == rrSnapshot) return a11ySnapshotValue();
 
     const auto& sh = a11yShape();
     const int k = row - kFirstFeatureRow, peaks = (int) sh.peaks.size(), dips = (int) sh.dips.size();
@@ -1145,7 +1143,6 @@ bool SpectrumLens::a11yIsActivatable (int group, int row) const
         const int item = a11ySettingItem (row);
         return item == siPause || item == siReset;
     }
-    if (group == 0 && row == rrSnapshot) return a11yHasFrame;
     if (group != 0 || row < kFirstFeatureRow || ! a11yHasFrame) return false;
     const auto& sh = a11yShape();
     return row - kFirstFeatureRow < (int) (sh.peaks.size() + sh.dips.size());
@@ -1172,13 +1169,6 @@ juce::String SpectrumLens::a11yActivate (int group, int row)
         return {};
     }
     if (! a11yIsActivatable (group, row)) return {};
-
-    if (row == rrSnapshot)
-    {
-        snapshotBroad = a11yCurve().broad;
-        snapshotMs = juce::Time::getMillisecondCounter();
-        return a11ytext::T ("Snapshot taken");
-    }
 
     // Enter on a peak or a dip puts the probe on it, so the user can walk around it by semitones and hear how
     // wide it is. The editor then moves the cursor to the probe row (a11yTakeCursorRequest).
@@ -1258,15 +1248,11 @@ juce::String SpectrumLens::a11yRowHelp (int group, int row) const
         // 16: shape
         "Shape against the line: the stretches of the curve that lie clearly above or below the line, from "
         "low to high, with their average distance. It uses a broad 1/3 octave view whatever the Smoothing, like a "
-        "first glance at the picture.",
-        // 17: snapshot
-        "Difference from snapshot: Enter remembers the curve as it is now. Later this row says what changed since: "
-        "first the overall level, then the stretches that rose or fell compared with the rest, as two curves laid "
-        "over each other at the same loudness. Use it before and after an EQ move, or to compare a chorus with a verse."
+        "first glance at the picture."
     };
 
     int index = -1;
-    if (group == 0) index = row == rrShape ? 16 : (row == rrSnapshot ? 17 : juce::jmin (row, 2));
+    if (group == 0) index = row == rrShape ? 16 : juce::jmin (row, 2);
     else if (group == 2)
     {
         switch (a11ySettingItem (row))
@@ -1379,7 +1365,7 @@ const SpectrumLens::A11yCurve& SpectrumLens::a11yCurve() const
         curve.top[(size_t) i] = v;
     }
 
-    // The broad view for the line, the shape and the snapshot: the louder channel smoothed over 1/3 octave, whatever
+    // The broad view for the line and the shape: the louder channel smoothed over 1/3 octave, whatever
     // the user's smoothing, so the overview holds still while the user zooms into details.
     {
         std::vector<float> louder ((size_t) n);
@@ -1479,50 +1465,6 @@ juce::String SpectrumLens::a11yShapeValue() const
     if (! sh.lineValid) return a11ytext::T ("not enough signal");
     if (sh.stretches.empty()) return a11ytext::TF ("all within {0} dB of the line", { spoken::trimmed (sh.threshold, 1) });
     return stretchesText (sh.stretches);
-}
-
-// The difference from the snapshot, level-matched first: a mix that only got louder keeps its shape, and sighted users
-// compare curves at matched levels. The overall change is said apart, then the stretches that moved compared with the
-// rest. Two curves on one plot show a smaller gap than a bump on one curve, so here half the threshold counts.
-juce::String SpectrumLens::a11ySnapshotValue() const
-{
-    if (snapshotBroad.empty()) return a11ytext::T ("none, Enter takes one");
-    const auto& c = a11yCurve();
-    if (! a11yHasFrame || snapshotBroad.size() != c.broad.size()) return a11ytext::T ("no data yet");
-
-    const int   n = (int) c.broad.size();
-    const float floorDb = -(float) sets.rangeDb();
-    const int   lo = juce::jlimit (0, n - 1, (int) std::lround (gridPos (40.0)));
-    const int   hi = juce::jlimit (lo, n - 1, (int) std::lround (gridPos (16000.0)));
-    std::vector<float> diff ((size_t) n, 0.0f), inRange;
-    std::vector<char>  seen ((size_t) n, 0);
-    for (int i = 0; i < n; ++i)
-    {
-        // As drawn: with the slope, held at the edges of the plot; where both curves are under it there is nothing to see.
-        const float tilt = sets.slopeDbPerOct * c.oct[(size_t) i];
-        const float now = c.broad[(size_t) i] + tilt, then = snapshotBroad[(size_t) i] + tilt;
-        if (juce::jmax (now, then) <= floorDb) continue;
-        seen[(size_t) i] = 1;
-        diff[(size_t) i] = juce::jlimit (floorDb, 0.0f, now) - juce::jlimit (floorDb, 0.0f, then);
-        if (i >= lo && i <= hi) inRange.push_back (diff[(size_t) i]);
-    }
-    if ((int) inRange.size() < kGridPerOct) return a11ytext::T ("not enough signal");
-
-    std::vector<float> scratch;
-    const float overall = medianOf (inRange, 0, (int) inRange.size() - 1, scratch);
-    std::vector<float> dev ((size_t) n, 0.0f);
-    for (int i = 0; i < n; ++i)
-        if (seen[(size_t) i]) dev[(size_t) i] = diff[(size_t) i] - overall;
-    const float threshold = (float) sets.rangeDb() / 40.0f;
-    const auto stretches = findStretches (dev, threshold);
-
-    const double ago = (double) (juce::Time::getMillisecondCounter() - snapshotMs) / 1000.0;
-    juce::StringArray parts;
-    parts.add (a11ytext::TF ("taken {0} ago", { spoken::duration (std::round (ago)) }));
-    parts.add (a11ytext::TF ("overall {0}", { spoken::signedDb (std::round (overall * 2.0f) / 2.0f) }));
-    parts.add (stretches.empty() ? a11ytext::TF ("no other change of {0} dB or more", { spoken::trimmed (threshold, 1) })
-                                 : stretchesText (stretches));
-    return parts.joinIntoString (", ");
 }
 
 juce::String SpectrumLens::a11yFeatureValue (const Feature& f, bool dip) const
