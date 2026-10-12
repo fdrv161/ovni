@@ -1539,9 +1539,13 @@ const SpectrumLens::A11yShape& SpectrumLens::a11yShape() const
     // SIGNAL TILT: a straight-line fit of the third-octave band levels from 50 Hz to 10 kHz. Band power is flat for
     // pink noise while a bin falls 3 dB per octave, so the fit minus 3 is the tilt in the terms of the Slope
     // setting: pink noise falls 3 dB per octave, and a Slope of 3 makes it flat.
+    //
+    // The eye judges the lean past a narrow spike or notch (a tone, a resonance): one loud band would pull a plain
+    // fit towards it (a tone at 440 Hz, left of the middle, made a flat noise "fall"). So a band further than the
+    // threshold from the median of its neighbours (3 bands either side, about two octaves) counts at that median.
+    // Broad humps span more than half that window and are kept.
     {
-        double sx = 0.0, sy = 0.0, sxx = 0.0, sxy = 0.0;
-        int count = 0;
+        std::vector<float> xs, ys;
         for (int b = 0; b < SpectrumFrame::kNumThird; ++b)
         {
             const double fc = kThirdOctaveHz[b];
@@ -1550,9 +1554,17 @@ const SpectrumLens::A11yShape& SpectrumLens::a11yShape() const
             for (int s = 0; s < a11ySpectra; ++s) power += std::pow (10.0, (double) bandDb[s][b] / 10.0);
             const double db = 10.0 * std::log10 (juce::jmax (1.0e-30, power / (double) juce::jmax (1, a11ySpectra)));
             if (db < (double) floorDb) continue;   // under the plot: noise floor, not signal
-            const double x = std::log2 (fc / 1000.0);
-            sx += x; sy += db; sxx += x * x; sxy += x * db;
-            ++count;
+            xs.push_back ((float) std::log2 (fc / 1000.0));
+            ys.push_back ((float) db);
+        }
+        const int count = (int) ys.size();
+        double sx = 0.0, sy = 0.0, sxx = 0.0, sxy = 0.0;
+        for (int i = 0; i < count; ++i)
+        {
+            const float med = medianOf (ys, juce::jmax (0, i - 3), juce::jmin (count - 1, i + 3), scratch);
+            const double x  = xs[(size_t) i];
+            const double y  = std::abs (ys[(size_t) i] - med) > shape.threshold ? med : ys[(size_t) i];
+            sx += x; sy += y; sxx += x * x; sxy += x * y;
         }
         const double den = (double) count * sxx - sx * sx;
         if (count >= 8 && den > 1.0e-9)
