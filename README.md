@@ -20,6 +20,16 @@ Install on Windows: extract the ZIP and copy the `TELESCOPE.vst3` folder into `C
 
 Also in [Russian (Русский)](MANUAL.ru.md) and [Spanish (Español)](MANUAL.es.md). The English manual is the main version; the translations are updated together with it.
 
+## What's new in 0.2.0-a11y.2
+
+- **Spectrum** reads the picture the way the eye does: levels as on the plot, "the line", signal tilt, the shape against the line, and a list of peaks and dips. Enter on a peak moves the probe there.
+- **Keyboard probes** with the same numbers as the mouse in Spectrogram, Stereo spectrogram, Waterfall, CQT and Spiral.
+- **Loudness** history in words, **Dynamics** histogram width, **Scope** picture and directions.
+- Speech offers only what sighted users have on screen.
+- All translations reviewed. The manual is now also in Russian and Spanish.
+
+Full notes: [Releases](https://github.com/fdrv161/telescope-accessible/releases).
+
 ## In short
 
 - Thirteen lenses: Loudness, Dynamics, Spectrum, Spectrogram, Waterfall, CQT, Spiral, Scope, Band correlation, Stereo spectrogram, Field, Tonal balance, Verdict.
