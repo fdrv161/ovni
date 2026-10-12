@@ -171,8 +171,8 @@ private:
     bool   cursorToProbe = false;              // Enter on a peak asked the readings cursor to go to the probe
 
     // The curve for speech: the bins on a fixed log grid (96 points per octave, about one pixel column of a
-    // big window), so the numbers do not depend on the window size. Levels are true levels without the slope;
-    // the slope only sets the line they are compared with. See "the line" in SpectrumLens.cpp.
+    // big window), so the numbers do not depend on the window size. Stored without the slope; what is spoken
+    // gets the slope added, as the plot draws it. See "the line" in SpectrumLens.cpp.
     struct A11yCurve
     {
         std::vector<float> rawDb[SpectrumFrame::kMaxSpectra];      // unsmoothed, per channel
@@ -213,9 +213,8 @@ private:
     float  a11yProbeLevel (int slot, double hz, bool hold) const;
     juce::String a11yLevels (double hz, bool withHold) const;    // "L -18 dB, R -20 dB"
     juce::String a11yLineDeviation (double hz) const;            // "3 dB above the line"
-    juce::String a11yTiltValue() const;
-    juce::String a11yTiltVersusLine() const;                     // "brighter than the line by 0.5"
-    juce::String a11yShapeValue() const;                         // "35 to 80 Hz +5 dB, 85 to 400 Hz -4 dB"
+    juce::String a11yTiltValue() const;                          // "falls 0.5 dB per octave, darker than the line"
+    juce::String a11yShapeValue() const;                         // "line at -40 dB; 35 to 80 Hz +5 dB, 85 to 400 Hz -4 dB"
     juce::String stretchesText (const std::vector<Stretch>& stretches) const;
     static std::vector<Stretch> findStretches (const std::vector<float>& dev, float threshold);
 

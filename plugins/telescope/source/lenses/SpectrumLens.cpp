@@ -909,13 +909,14 @@ void SpectrumLens::mouseExit (const juce::MouseEvent&)
 // Text readings for the screen reader. A sighted user sees the whole curve at once: first its overall shape and
 // tilt, then what sticks out of it, and only then a number at one frequency. Speech gives one thing at a time,
 // so the readings hold the same three levels: the overview (signal tilt, shape), what sticks out (peaks and
-// dips) and the probe, a cursor for one frequency that comes first because it is used most. The display
-// settings change what is said and how much, not the levels themselves:
+// dips) and the probe, a cursor for one frequency that comes first because it is used most. Every level is the
+// one the plot shows, so a sighted helper reads the same numbers:
 //
-//   SLOPE      levels are true levels, as a meter reads them. The slope sets THE LINE: flat on the plot, at the
-//              median height of the curve. A mix that follows it sounds balanced. The probe says how far above or
-//              below the line it is; the signal tilt row says how much brighter or darker the signal is; the
-//              shape row lists the broad stretches above and below the line.
+//   SLOPE      levels are spoken with the slope, as drawn: tilted around 1 kHz (with 0 they are as a meter reads
+//              a tone). THE LINE is flat on the plot, at the median height of the curve; the shape row says its
+//              level. A mix that follows it sounds balanced. The probe says how far above or below the line it
+//              is; the signal tilt row says how the curve leans on the plot; the shape row lists the broad
+//              stretches above and below the line.
 //   SMOOTHING  the probe reads the curve smoothed as it is drawn, and the smoothing sets the size of the peaks
 //              and dips that are listed: off lists narrow resonances, 1/6 octave lists broad humps and holes.
 //              The line and the shape always use a broad 1/3 octave view, like a first glance: they do not
@@ -1141,20 +1142,23 @@ juce::String SpectrumLens::a11yRowHelp (int group, int row) const
 {
     static const char* const helps[] = {
         // 0: probe
-        "Probe: the level at one note. Plus and minus move it a semitone, Alt with Page Up or Page Down an octave. "
-        "It also says how far it is from the line: the straight line through the middle of the curve, tilted by "
-        "the Slope setting. A mix that follows the line sounds balanced.",
+        "Probe: the level at one note, as the plot shows it, with the Slope tilt. Plus and minus move it a semitone, "
+        "Alt with Page Up or Page Down an octave. With Smoothing on, the level is the height of the smoothed curve, "
+        "and the hold is the unsmoothed peak, the number the mouse box shows. It also says how far it is from the "
+        "line: a flat line at the middle height of the curve. A mix that follows the line sounds balanced.",
         // 1: signal tilt
-        "Signal tilt: how fast the level falls from the lows to the highs, measured from 50 Hz to 10 kHz. Pink "
-        "noise falls 3 dB per octave, a typical mix about 4.5. Brighter than the line means more highs than the "
-        "Slope setting expects, darker means more lows.",
+        "Signal tilt: how the curve leans on the plot from 50 Hz to 10 kHz. The Slope setting makes a balanced mix "
+        "flat, so falling means darker than the line, more lows, and rising means brighter, more highs. With Slope "
+        "at 0 it is the signal's own tilt: pink noise falls 3 dB per octave, a typical mix about 4.5.",
         // 2: peaks and dips
         "Peaks and dips: places where the curve stands out from the neighbouring frequencies, the biggest first. "
         "Smoothing sets their size: off lists narrow resonances, 1/6 octave lists broad humps and holes. Enter "
         "moves the probe there.",
         // 3: slope
-        "Slope tilts the picture and the line around 1 kHz. 3 dB per octave makes pink noise flat, 4.5 matches a "
-        "typical finished mix. It changes no level, only the line the levels are compared with.",
+        "Slope tilts the picture around 1 kHz, and every level spoken in this lens with it: above 1 kHz levels go "
+        "up, below they go down, by this much per octave. 3 dB per octave makes pink noise flat, 4.5 a typical "
+        "finished mix. At 0 a tone reads its true level, as in CQT and Spectrogram. The third-octave bands are not "
+        "tilted, as on screen.",
         // 4: smoothing
         "Smoothing sets how big a detail counts. Off: narrow resonances and many small peaks. 1/24 and 1/12 "
         "octave: medium details. 1/6 octave: broad humps and holes, the overall balance. The probe reads the "
@@ -1182,9 +1186,9 @@ juce::String SpectrumLens::a11yRowHelp (int group, int row) const
         "Display: on screen, a curve or bars in third-octave or Bark bands. Speech does not change: the bands are "
         "always spoken in third octaves.",
         // 13: shape
-        "Shape against the line: the stretches of the curve that lie clearly above or below the line, from "
-        "low to high, with their average distance. It uses a broad 1/3 octave view whatever the Smoothing, like a "
-        "first glance at the picture."
+        "Shape against the line: first the height of the line, where the curve lies on the plot, then the "
+        "stretches of the curve that lie clearly above or below it, from low to high, with their average distance. "
+        "It uses a broad 1/3 octave view whatever the Smoothing, like a first glance at the picture."
     };
 
     int index = -1;
@@ -1323,21 +1327,25 @@ float SpectrumLens::a11yCurveAt (const std::vector<float>& v, double hz) const
     return v[(size_t) i] + t * (v[(size_t) i + 1] - v[(size_t) i]);
 }
 
-// The probe level: the smoothed curve where it is drawn smoothed; otherwise the highest point within a quarter tone
-// either side, so a narrow peak between two probe notes is not missed. The hold is never smoothed (as on screen).
+// The probe level as the plot shows it, with the slope: the smoothed curve where it is drawn smoothed; otherwise the
+// highest point within a quarter tone either side, so a narrow peak between two probe notes is not missed. The hold
+// is never smoothed (as on screen), so it is the number the mouse box shows. The slope is linear in octaves, so
+// tilting after smoothing gives the same curve as the screen, which tilts first.
 float SpectrumLens::a11yProbeLevel (int slot, double hz, bool hold) const
 {
     const auto& c = a11yCurve();
     if (! a11yHasFrame || slot >= a11ySpectra) return SpectrumFrame::kFloorDb;
-    if (! hold && smoothDenom (processor.spectrumSmoothIndex()) > 0) return a11yCurveAt (c.smoothDb[slot], hz);
+    const float slopeDb = sets.slopeDbPerOct;
+    if (! hold && smoothDenom (processor.spectrumSmoothIndex()) > 0)
+        return spectrumDisplayDb (a11yCurveAt (c.smoothDb[slot], hz), hz, slopeDb);
 
     const auto& v = hold ? c.holdDb[slot] : c.rawDb[slot];
     const int    n = (int) v.size();
     const double centre = gridPos (hz);
     const int    lo = juce::jlimit (0, n - 1, (int) std::ceil (centre - kGridPerOct / 24.0));
     const int    hi = juce::jlimit (0, n - 1, (int) std::floor (centre + kGridPerOct / 24.0));
-    float db = a11yCurveAt (v, hz);
-    for (int i = lo; i <= hi; ++i) db = juce::jmax (db, v[(size_t) i]);
+    float db = spectrumDisplayDb (a11yCurveAt (v, hz), hz, slopeDb);
+    for (int i = lo; i <= hi; ++i) db = juce::jmax (db, v[(size_t) i] + slopeDb * c.oct[(size_t) i]);
     return db;
 }
 
@@ -1362,32 +1370,23 @@ juce::String SpectrumLens::a11yLineDeviation (double hz) const
     if (! sh.lineValid) return {};
     float level = a11yProbeLevel (0, hz, false);
     if (a11ySpectra >= 2) level = juce::jmax (level, a11yProbeLevel (1, hz, false));
-    const float onPlot = level + sets.slopeDbPerOct * (float) std::log2 (hz / 1000.0);
-    if (onPlot <= -(float) sets.rangeDb()) return {};
-    const int d = juce::roundToInt (onPlot - sh.lineDb);
+    if (level <= -(float) sets.rangeDb()) return {};
+    const int d = juce::roundToInt (level - sh.lineDb);
     if (d == 0) return a11ytext::T ("on the line");
     return a11ytext::TF (d > 0 ? "{0} dB above the line" : "{0} dB below the line", { juce::String (std::abs (d)) });
 }
 
+// How the curve leans on the plot: the signal's own tilt plus the slope. The line is flat, so rising to the right
+// is brighter than the line and falling darker. Under a quarter of a dB per octave (2.5 dB over the whole range)
+// it counts as flat.
 juce::String SpectrumLens::a11yTiltValue() const
 {
     const auto& sh = a11yShape();
     if (! sh.tiltValid) return a11ytext::T ("not enough signal");
-    const auto amount = spoken::trimmed (std::abs (sh.tiltDbPerOct), 1);
-    const auto own = amount == "0" ? a11ytext::T ("no tilt")
-                   : a11ytext::TF (sh.tiltDbPerOct < 0.0f ? "falls {0} dB per octave" : "rises {0} dB per octave", { amount });
-    return own + ", " + a11yTiltVersusLine();
-}
-
-// On the plot the signal leans by its own tilt plus the slope: rising to the right is brighter than the line.
-// Under a quarter of a dB per octave (2.5 dB over the whole range) it counts as following the line.
-juce::String SpectrumLens::a11yTiltVersusLine() const
-{
-    const auto& sh = a11yShape();
-    if (! sh.tiltValid) return {};
     const float onPlot = sh.tiltDbPerOct + sets.slopeDbPerOct;
-    if (std::abs (onPlot) < 0.25f) return a11ytext::T ("follows the line");
-    return a11ytext::TF (onPlot > 0.0f ? "brighter than the line by {0}" : "darker than the line by {0}",
+    if (std::abs (onPlot) < 0.25f) return a11ytext::T ("flat, follows the line");
+    return a11ytext::TF (onPlot > 0.0f ? "rises {0} dB per octave, brighter than the line"
+                                       : "falls {0} dB per octave, darker than the line",
                          { spoken::trimmed (std::abs (onPlot), 1) });
 }
 
@@ -1396,8 +1395,10 @@ juce::String SpectrumLens::a11yShapeValue() const
 {
     const auto& sh = a11yShape();
     if (! sh.lineValid) return a11ytext::T ("not enough signal");
-    if (sh.stretches.empty()) return a11ytext::TF ("all within {0} dB of the line", { spoken::trimmed (sh.threshold, 1) });
-    return stretchesText (sh.stretches);
+    // The height first: the line is flat on the plot, so it is where the eye sees the curve lie.
+    const auto line = a11ytext::TF ("line at {0}", { spoken::dB ((double) juce::roundToInt (sh.lineDb), 0) }) + "; ";
+    if (sh.stretches.empty()) return line + a11ytext::TF ("all within {0} dB of the line", { spoken::trimmed (sh.threshold, 1) });
+    return line + stretchesText (sh.stretches);
 }
 
 juce::String SpectrumLens::a11yFeatureValue (const Feature& f, bool dip) const
@@ -1406,7 +1407,8 @@ juce::String SpectrumLens::a11yFeatureValue (const Feature& f, bool dip) const
                                   { juce::String (juce::jmax (1, juce::roundToInt (f.prominence))) });
     // Unsmoothed, a peak is a resonance or a note: its pitch and level matter, its width is a bin or two.
     if (smoothDenom (processor.spectrumSmoothIndex()) <= 0)
-        return spoken::hz (f.hz) + ", " + spoken::noteWithCents (noteFor (f.hz)) + ", " + by + ", " + spoken::dB (f.db);
+        return spoken::hz (f.hz) + ", " + spoken::noteWithCents (noteFor (f.hz)) + ", " + by + ", "
+             + spoken::dB (spectrumDisplayDb (f.db, f.hz, sets.slopeDbPerOct));
     // Smoothed, a hump or a hole has no exact pitch: where it starts and ends says more (an EQ band to set).
     return spoken::hz (f.hz) + ", " + hzRange (f.loHz, f.hiHz) + ", " + by;
 }
@@ -1711,10 +1713,9 @@ juce::String SpectrumLens::a11yControlValue (int item) const
                  : (s.bandsMode == Spectrum::bandsBark ? a11ytext::T ("Bark bars") : a11ytext::T ("FFT curve"));
         case slope:
         {
-            // With its effect, so a change is heard at once: how the signal now sits against the line.
+            // With its effect, so a change is heard at once: how the curve now leans on the plot.
             auto t = spoken::trimmed (s.slopeDbPerOct, 1) + a11ytext::T (" dB per octave");
-            const auto versus = a11yHasFrame ? a11yTiltVersusLine() : juce::String();
-            if (versus.isNotEmpty()) t << ", " << versus;
+            if (a11yHasFrame && a11yShape().tiltValid) t << ". " << a11ytext::T ("Signal tilt") << ", " << a11yTiltValue();
             return t;
         }
         case average:
