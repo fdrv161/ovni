@@ -18,6 +18,8 @@ Install on Windows: extract the ZIP and copy the `TELESCOPE.vst3` folder into `C
 
 **[Read the manual](MANUAL.md)**: installing, first steps with a screen reader, all keys, and every lens explained, from what it measures to the rows you will hear.
 
+Also in [Russian (Русский)](MANUAL.ru.md) and [Spanish (Español)](MANUAL.es.md). The English manual is the main version; the translations are updated together with it.
+
 ## In short
 
 - Thirteen lenses: Loudness, Dynamics, Spectrum, Spectrogram, Waterfall, CQT, Spiral, Scope, Band correlation, Stereo spectrogram, Field, Tonal balance, Verdict.

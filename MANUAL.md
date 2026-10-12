@@ -1,5 +1,7 @@
 # TELESCOPE Accessible — manual
 
+This manual in other languages: [Русский](MANUAL.ru.md) · [Español](MANUAL.es.md). The English one is the main version; the translations are updated together with it.
+
 TELESCOPE is an audio analyser that also draws conclusions. This manual covers the accessible build: every lens, what it measures and how to read it, and how to use all of it with a keyboard and a screen reader.
 
 The analysis engine, the lenses and the measurement notes come from the original [TELESCOPE by OVNI Audio](https://github.com/ovniaudio/ovni), free and open source under AGPLv3. The keyboard and screen reader layer was added in [this fork](https://github.com/fdrv161/telescope-accessible/tree/accessible). Where this manual explains what a lens measures, it follows the author's manual, shortened. The full original, with every formula and test result, is in [`plugins/telescope/docs/manual/README.md`](plugins/telescope/docs/manual/README.md).
@@ -588,6 +590,8 @@ Speech in Spanish, Portuguese, French, German and Italian was translated for thi
 
 Units (dB, Hz, kHz, ms, LUFS) and industry terms that are normally left in English (Loudness, Scope, Short-term, Momentary, True peak, Peak hold, Bypass) stay in English in every language, as on the author's screens.
 
+Numbers are spoken with a decimal point in every language, as on screen: "-14.2 LUFS".
+
 **Note names follow each language's convention**: letters (C, D, E) in English and Russian, do-re-mi in Spanish, Portuguese, French and Italian, and the German system with H and B.
 
 ## Known limits
@@ -595,7 +599,6 @@ Units (dB, Hz, kHz, ms, LUFS) and industry terms that are normally left in Engli
 - The macOS build is experimental: it builds and passes validation, but has not been tested with VoiceOver.
 - Tested with NVDA in REAPER. Other hosts and screen readers should work but have not been tested.
 - The main fonts have no Cyrillic. With Russian selected, the system substitutes a font, so Russian text looks different from the rest.
-- Polar level (Hemisphere) gives its numbers but not the direction of the strongest energy as text.
 
 ## Licence and credits
 

@@ -13,7 +13,7 @@ inline const Row* rows() noexcept
         { { "Readings", "Lecturas", "Leituras", "Mesures", "Messwerte", "Letture", "Показания" } },
         { { "Actions", "Acciones", "Ações", "Actions", "Aktionen", "Azioni", "Действия" } },
         { { "State", "Estado", "Estado", "État", "Status", "Stato", "Состояние" } },
-        { { "Result", "Resultado", "Resultado", "Résultat", "Ergebnis", "Risultato", "Итог" } },
+        { { "Result", "Resultado", "Resultado", "Résultat", "Ergebnis", "Risultato", "Результат" } },
         { { "Window", "Ventana", "Janela", "Fenêtre", "Fenster", "Finestra", "Окно" } },
         { { "Channel", "Canal", "Canal", "Canal", "Kanal", "Canale", "Канал" } },
         { { "Mode", "Modo", "Modo", "Mode", "Modus", "Modalità", "Режим" } },
@@ -65,6 +65,7 @@ inline const Row* rows() noexcept
         { { " ms", nullptr, nullptr, nullptr, nullptr, nullptr, nullptr } },
         { { " percent", " por ciento", " por cento", " pour cent", " Prozent", " per cento", " %" } },
         { { " octave", " octava", " oitava", " octave", " Oktave", " ottava", " октава" } },
+        { { "1/{0} octave", "1/{0} de octava", "1/{0} de oitava", "1/{0} d'octave", "1/{0} Oktave", "1/{0} d'ottava", "1/{0} октавы" } },
         { { " points", " puntos", " pontos", " points", " Punkte", " punti", " точек" } },
         { { " dB per second", " dB por segundo", " dB por segundo", " dB par seconde", " dB pro Sekunde", " dB al secondo", " dB в секунду" } },
         { { " dB per octave", " dB por octava", " dB por oitava", " dB par octave", " dB pro Oktave", " dB per ottava", " dB на октаву" } },
@@ -336,5 +337,5 @@ inline const Row* rows() noexcept
     return table;
 }
 
-inline int numRows() noexcept { return 325; }
+inline int numRows() noexcept { return 326; }
 }

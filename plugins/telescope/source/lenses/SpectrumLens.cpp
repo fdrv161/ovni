@@ -1743,7 +1743,8 @@ juce::String SpectrumLens::a11yControlValue (int item) const
         {
             // With its effect: how many peaks and dips this smoothing leaves, the spoken amount of detail.
             const int denom = smoothDenom (processor.spectrumSmoothIndex());
-            auto t = denom <= 0 ? juce::String (a11ytext::T ("Off")) : "1/" + juce::String (denom) + a11ytext::T (" octave");
+            // A template, not "1/" + " octave": a fraction of an octave takes another case than "250 Hz octave" in some languages.
+            auto t = denom <= 0 ? juce::String (a11ytext::T ("Off")) : a11ytext::TF ("1/{0} octave", { juce::String (denom) });
             if (a11yHasFrame)
             {
                 const auto& sh = a11yShape();

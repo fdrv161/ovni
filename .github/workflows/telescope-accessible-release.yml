@@ -65,14 +65,14 @@ jobs:
           set -euo pipefail
           mkdir -p dist/pkg
           cp -r "$VST3_BUNDLE" dist/pkg/TELESCOPE.vst3
-          cp MANUAL.md LICENSE NOTICE.md dist/pkg/
+          cp MANUAL.md MANUAL.ru.md MANUAL.es.md LICENSE NOTICE.md dist/pkg/
           printf '%s\r\n' \
             "TELESCOPE Accessible ${GITHUB_REF_NAME#telescope-accessible-} for Windows" \
             "" \
             "Install: copy the TELESCOPE.vst3 folder into C:\\Program Files\\Common Files\\VST3" \
             "(or another folder your DAW scans for VST3 plugins), then rescan plugins." \
             "" \
-            "Manual: MANUAL.md in this ZIP, or https://github.com/fdrv161/telescope-accessible/blob/${GITHUB_REF_NAME}/MANUAL.md" \
+            "Manual: MANUAL.md (English), MANUAL.ru.md (Russian), MANUAL.es.md (Spanish) in this ZIP, or https://github.com/fdrv161/telescope-accessible/blob/${GITHUB_REF_NAME}/MANUAL.md" \
             "Source: https://github.com/fdrv161/telescope-accessible/tree/${GITHUB_REF_NAME} (GNU AGPLv3)" \
             > dist/pkg/README.txt
           (cd dist/pkg && 7z a -tzip ../TELESCOPE-accessible-windows-vst3.zip . > /dev/null)
@@ -142,7 +142,7 @@ jobs:
           mkdir -p dist/pkg
           cp -R "$VST3_BUNDLE" dist/pkg/TELESCOPE.vst3
           cp -R "$AU_BUNDLE" dist/pkg/TELESCOPE.component
-          cp MANUAL.md LICENSE NOTICE.md dist/pkg/
+          cp MANUAL.md MANUAL.ru.md MANUAL.es.md LICENSE NOTICE.md dist/pkg/
           printf '%s\n' \
             "TELESCOPE Accessible ${GITHUB_REF_NAME#telescope-accessible-} for macOS (experimental)" \
             "" \
@@ -155,7 +155,7 @@ jobs:
             "  xattr -dr com.apple.quarantine ~/Library/Audio/Plug-Ins/VST3/TELESCOPE.vst3 ~/Library/Audio/Plug-Ins/Components/TELESCOPE.component" \
             "Then rescan plugins in your DAW." \
             "" \
-            "Manual: MANUAL.md in this ZIP, or https://github.com/fdrv161/telescope-accessible/blob/${GITHUB_REF_NAME}/MANUAL.md" \
+            "Manual: MANUAL.md (English), MANUAL.ru.md (Russian), MANUAL.es.md (Spanish) in this ZIP, or https://github.com/fdrv161/telescope-accessible/blob/${GITHUB_REF_NAME}/MANUAL.md" \
             "Source: https://github.com/fdrv161/telescope-accessible/tree/${GITHUB_REF_NAME} (GNU AGPLv3)" \
             > dist/pkg/README.txt
           (cd dist && ditto -c -k --keepParent pkg TELESCOPE-accessible-macos.zip)
