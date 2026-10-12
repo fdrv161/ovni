@@ -644,10 +644,11 @@ void WaterfallLens::mouseExit (const juce::MouseEvent&)
 }
 
 //======================================================================================== accessibility
-// The waterfall is a 3D picture of the spectrum over time. An explanation and the settings; numbers are in the SPECTRUM lens.
+// Readings: the probe, which gives what the mouse readout gives: frequency and level of the front line, the only
+// one that can be read without ambiguity (see a11y/SonogramProbe.h). Settings: all of them.
 juce::String WaterfallLens::a11yGroupName (int group) const
 {
-    return group == 0 ? a11ytext::T ("About") : a11ytext::T ("Settings");
+    return group == 0 ? a11ytext::T ("Readings") : a11ytext::T ("Settings");
 }
 
 int WaterfallLens::a11yRowCount (int group) const
@@ -657,14 +658,21 @@ int WaterfallLens::a11yRowCount (int group) const
 
 juce::String WaterfallLens::a11yRowName (int group, int row) const
 {
-    if (group == 0) return a11ytext::T ("Spectrum over time in 3D, a picture only. For numbers use the Spectrum lens");
+    if (group == 0) return a11ytext::T ("Probe");
     static const char* const sets[kNumControls] = { "Lines", "Tilt", "History", "Range", "Palette" };
     return a11ytext::T (sets[juce::jlimit (0, (int) kNumControls - 1, row)]);
 }
 
 juce::String WaterfallLens::a11yRowValue (int group, int row) const
 {
-    if (group == 0) return {};
+    if (group == 0)
+    {
+        // The front line is the newest column of the ring: one column, the loudest point within a quarter tone.
+        const auto cell = sonoprobe::cellAt (processor.spectrogram(), 0.0, 0.0, probe.hz());
+        if (! cell.valid) return a11ytext::T ("no data yet");
+        return spoken::hz (probe.hz()) + ", " + sonoprobe::levelText (cell.level, processor.spectrumSettings().rangeDb())
+             + ", " + a11ytext::T ("now");
+    }
     const auto s = processor.spectrumSettings();
     switch (row)
     {
@@ -681,14 +689,26 @@ juce::String WaterfallLens::a11yRowValue (int group, int row) const
     }
 }
 
-bool WaterfallLens::a11yIsAdjustable (int group, int) const
+bool WaterfallLens::a11yIsAdjustable (int, int) const
 {
-    return group == 1;
+    return true;
 }
 
 bool WaterfallLens::a11yAdjust (int group, int row, int step)
 {
-    if (group != 1) return false;
+    if (group == 0)
+    {
+        if (! probe.stepFrequency (step)) return false;
+        // The crosshair follows the probe on the front line, for a sighted helper.
+        if (! zones.plot.isEmpty())
+        {
+            const auto front = proj.project ((float) xForFreq (probe.hz()), 0.0f, 0.0f);
+            cursor = { juce::jlimit (zones.plot.getX(), zones.plot.getRight() - 1, juce::roundToInt (front.x)),
+                       zones.plot.getCentreY() };
+            repaint();
+        }
+        return true;
+    }
     const auto s = processor.spectrumSettings();
     switch (row)
     {
@@ -699,5 +719,16 @@ bool WaterfallLens::a11yAdjust (int group, int row, int step)
         case ctrlPalette: return a11yStepCyclic (processor.paletteIndex(), look::kNumPalettes, step, [this] { cycleControl (ctrlPalette); });
         default:          return false;
     }
+}
+
+juce::String WaterfallLens::a11yRowHelp (int group, int) const
+{
+    if (group != 0) return {};
+    static const char* const helps[] = {
+        "Probe: what the mouse shows on the front line, the newest one: frequency and level now. Plus and minus move "
+        "it a semitone, Alt with Page Up or Page Down an octave. The lines behind are the past and cannot be read one "
+        "by one; the Spectrogram lens shows the same data, and its probe reaches back in time."
+    };
+    return a11ytext::T (helps[0]);
 }
 }

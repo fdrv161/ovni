@@ -520,7 +520,14 @@ void SpiralLens::mouseExit (const juce::MouseEvent&)
 }
 
 //======================================================================================== accessibility
-// The spiral is the same CQT folded by octaves. As text: the key and the strongest pitch classes.
+// The spiral is the same CQT folded by octaves. As text: the key, the strongest pitch classes, the probe (what the
+// mouse readout gives on one spike) and the probe's note in every octave: the spikes the eye sees lined up on one
+// ray from the centre, which is what the spiral is drawn for.
+namespace
+{
+enum SpiralRow { srKey = 0, srClasses, srProbe, srOctaves, kSpiralRows };
+}
+
 juce::String SpiralLens::a11yGroupName (int group) const
 {
     return group == 0 ? a11ytext::T ("Readings") : a11ytext::T ("Settings");
@@ -528,13 +535,14 @@ juce::String SpiralLens::a11yGroupName (int group) const
 
 int SpiralLens::a11yRowCount (int group) const
 {
-    return group == 0 ? 2 : (int) kNumControls;
+    return group == 0 ? (int) kSpiralRows : (int) kNumControls;
 }
 
 juce::String SpiralLens::a11yRowName (int group, int row) const
 {
     if (group == 1) return row == ctrlChannel ? a11ytext::T ("Channel") : a11ytext::T ("Chroma window");
-    return row == 0 ? a11ytext::T ("Key") : a11ytext::T ("Strongest pitch classes");
+    static const char* const names[kSpiralRows] = { "Key", "Strongest pitch classes", "Probe", "Same note in every octave" };
+    return a11ytext::T (names[juce::jlimit (0, (int) kSpiralRows - 1, row)]);
 }
 
 juce::String SpiralLens::a11yRowValue (int group, int row) const
@@ -545,21 +553,78 @@ juce::String SpiralLens::a11yRowValue (int group, int row) const
         if (row == ctrlChannel) return s.channel == Cqt::left ? a11ytext::T ("Left") : (s.channel == Cqt::right ? a11ytext::T ("Right") : a11ytext::T ("Mid"));
         return spoken::trimmed (s.chromaSeconds(), 1) + a11ytext::T (" seconds");
     }
-    if (row == 0) return spoken::keyReading (keyTonic, keyMode, keyConfidence, keyTimeFraction);
-    return spoken::strongestClasses (chromaSm);
+    if (row == srKey)     return spoken::keyReading (keyTonic, keyMode, keyConfidence, keyTimeFraction);
+    if (row == srClasses) return spoken::strongestClasses (chromaSm);
+
+    const int rangeDb = processor.spectrumSettings().rangeDb();
+    if (row == srProbe)
+    {
+        const auto r = noteprobe::read (targetDb, binsSeen, fMinSeen, bpoSeen, probeMidi);
+        if (! r.valid) return a11ytext::T ("no data yet");
+        return noteprobe::noteText (r, probeMidi) + ", " + spoken::hz (r.hz) + ", " + spoken::db (r.db, rangeDb);
+    }
+
+    // The probe's note in each octave the grid holds, low to high. Below the range floor no spike is drawn,
+    // so that octave is left out.
+    if (binsSeen <= 0 || bpoSeen <= 0) return a11ytext::T ("no data yet");
+    const int lo = noteprobe::lowestMidi (fMinSeen), hi = noteprobe::highestMidi (fMinSeen, binsSeen, bpoSeen);
+    juce::StringArray parts;
+    for (int m = lo + ((probeMidi - lo) % 12 + 12) % 12; m <= hi; m += 12)
+    {
+        const auto r = noteprobe::read (targetDb, binsSeen, fMinSeen, bpoSeen, m);
+        if (r.valid && r.db >= -(float) rangeDb)
+            parts.add (noteprobe::noteText (r, m) + ", " + spoken::dB (r.db));
+    }
+    return parts.isEmpty() ? a11ytext::T ("none") : parts.joinIntoString ("; ");
 }
 
-bool SpiralLens::a11yIsAdjustable (int group, int) const
+bool SpiralLens::a11yIsAdjustable (int group, int row) const
 {
-    return group == 1;
+    return group == 1 || row == srProbe || row == srOctaves;
+}
+
+void SpiralLens::a11yShowProbe()
+{
+    if (zones.plot.isEmpty() || rOuter <= 0.0f || bpoSeen <= 0) return;
+    const int bin = juce::jlimit (0, juce::jmax (0, binsSeen - 1),
+                                  (int) std::lround (noteprobe::binOf (probeMidi, fMinSeen, bpoSeen)));
+    const auto pos = positionFor (bin, bpoSeen);
+    const auto pt = pointForTurns (pos.turns, pos.classFraction);
+    cursor = { juce::roundToInt (pt.x), juce::roundToInt (pt.y) };
+    repaint();
 }
 
 bool SpiralLens::a11yAdjust (int group, int row, int step)
 {
-    if (group != 1) return false;
+    if (group == 0)
+    {
+        // On the octaves row plus and minus change the note too: the row then reads another ray.
+        if ((row != srProbe && row != srOctaves) || ! noteprobe::step (probeMidi, step, fMinSeen, binsSeen, bpoSeen))
+            return false;
+        a11yShowProbe();
+        return true;
+    }
     const auto s = processor.cqtSettings();
     if (row == ctrlChannel)
         return a11yStepCyclic (s.channel, (int) Cqt::kNumChannels, step, [this] { cycleControl (ctrlChannel); });
     return a11yStepCyclic (s.chromaSecIndex, Cqt::kNumChromaSecOptions, step, [this] { cycleControl (ctrlChroma); });
+}
+
+juce::String SpiralLens::a11yRowHelp (int group, int row) const
+{
+    if (group != 0) return {};
+    static const char* const helps[] = {
+        // 0: probe
+        "Probe: what the mouse shows on one spike: the note, its frequency and level. Plus and minus move it a "
+        "semitone, Alt with Page Up or Page Down an octave. When a quarter tone next to the note is louder, the "
+        "probe names it with 50 cents.",
+        // 1: same note in every octave
+        "The spiral puts a note at the same angle in every octave, so the eye sees them on one line from the "
+        "centre. This row reads that line for the note of the probe: each octave where it sounds, with its level. "
+        "Plus and minus change the note."
+    };
+    if (row == srProbe)   return a11ytext::T (helps[0]);
+    if (row == srOctaves) return a11ytext::T (helps[1]);
+    return {};
 }
 }

@@ -2,6 +2,7 @@
 #include <vector>
 #include "analysis/CqtFrame.h"
 #include "analysis/modules/Cqt.h"
+#include "a11y/NoteProbe.h"
 #include "lenses/Lens.h"
 #include "lenses/Look.h"
 #include "lenses/NoteName.h"
@@ -92,6 +93,7 @@ public:
     juce::String a11yRowValue (int group, int row) const override;
     bool         a11yIsAdjustable (int group, int row) const override;
     bool         a11yAdjust (int group, int row, int step) override;
+    juce::String a11yRowHelp (int group, int row) const override;
 
 protected:
     void renderStatic (juce::Graphics&, int width, int height) override;
@@ -136,6 +138,10 @@ private:
     int   hovered = -1;
     juce::Point<int> cursor { -1, -1 };
     int   lastRangeDb = 0;
+
+    // The keyboard probe walks the spikes by notes, like the mouse (see a11y/NoteProbe.h).
+    int   probeMidi = 69;            // 69 = A 4, 440 Hz
+    void  a11yShowProbe();           // the ring on the spike follows the probe, for a sighted helper
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (SpiralLens)
 };

@@ -1,5 +1,6 @@
 #pragma once
 #include <vector>
+#include "a11y/NoteProbe.h"
 #include "analysis/CqtFrame.h"
 #include "analysis/modules/Cqt.h"
 #include "lenses/Lens.h"
@@ -78,6 +79,10 @@ public:
     juce::String a11yRowValue (int group, int row) const override;
     bool         a11yIsAdjustable (int group, int row) const override;
     bool         a11yAdjust (int group, int row, int step) override;
+    bool         a11yIsActivatable (int group, int row) const override;
+    juce::String a11yActivate (int group, int row) override;
+    bool         a11yTakeCursorRequest (int& group, int& row) override;
+    juce::String a11yRowHelp (int group, int row) const override;
 
     // El mapeo del eje, público porque es una definición que se testea sola. La CELDA del bin k está
     // CENTRADA en su frecuencia: xForPosition(k) es donde vive f_k, y la celda va de k−0.5 a k+0.5. Que la
@@ -136,6 +141,12 @@ private:
     int   hovered = -1;
     int   cursorX = -1;
     int   lastRangeDb = 0;
+
+    // The keyboard probe walks the bins by notes, like the mouse along the bars (see a11y/NoteProbe.h).
+    int   probeMidi = 69;            // 69 = A 4, 440 Hz
+    bool  cursorToProbe = false;     // Enter on a note asked the readings cursor to go to the probe
+    std::vector<int> a11yLoudestNotes() const;   // the bins of the loudest notes, loudest first
+    void  a11yShowProbe();           // the crosshair follows the probe, for a sighted helper
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (CqtLens)
 };

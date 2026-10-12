@@ -1,6 +1,7 @@
 #pragma once
 #include <array>
 #include <vector>
+#include "a11y/SonogramProbe.h"
 #include "analysis/SpectrogramRing.h"
 #include "analysis/modules/Spectrum.h"
 #include "analysis/modules/StereoBands.h"
@@ -88,6 +89,7 @@ public:
     juce::String a11yRowValue (int group, int row) const override;
     bool         a11yIsAdjustable (int group, int row) const override;
     bool         a11yAdjust (int group, int row, int step) override;
+    juce::String a11yRowHelp (int group, int row) const override;
 
     double visibleSeconds() const;
 
@@ -155,6 +157,11 @@ private:
     int   lastRangeDb = 0;
 
     QuietTail quiet;   // ¿la ventana visible es toda la misma columna? (ver advanceFrame)
+
+    // The keyboard probe: the mouse readout at a moment and a frequency set from the keyboard.
+    sonoprobe::Probe probe;
+    double a11ySpan() const;      // the seconds on screen, or the history before the first paint
+    void   a11yShowProbe();       // the crosshair follows the probe, for a sighted helper
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (StereoSpectrogramLens)
 };

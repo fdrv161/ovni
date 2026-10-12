@@ -330,9 +330,23 @@ The FFT settings are shared with Spectrogram, Waterfall and the other spectral l
 
 ### With the keyboard
 
-This lens is a picture of the spectrum over time and has no numbers of its own. The **About** row says so. For numbers, use Spectrum.
+On screen, the mouse over the picture shows one point: how long ago, the frequency and the level. The keyboard probe gives the same numbers.
 
+- **Readings**:
+  - **Probe**: the frequency. Plus and minus move it a semitone, Alt with Page Up or Page Down an octave. For example "1.05 kHz, -34 dB, 2.5 seconds ago".
+  - **Probe time**: how long ago it looks. Plus goes a quarter second further back, minus towards now, Alt with Page Up or Page Down one mark of the time scale (2, 5 or 10 seconds, as on screen), Alt with Home now, Alt with End the oldest moment on screen. It also says the loudest frequency at that moment, the brightest point of the column: "2.5 seconds ago, 1.05 kHz, -34 dB, loudest at that moment: 6.3 kHz, -20 dB".
 - **Settings**: History, Range, Channel, Palette (Ovni, Inferno, Viridis, Spectrum). They are shared with Spectrum, so you can set them here too.
+
+The probe gives the loudest point within a quarter tone and a quarter second, so a short click between two steps is not missed. The crosshair on screen follows the probe, so a sighted helper sees where it looks; its box reads the single point under the crosshair and can be a little lower.
+
+**What sighted users look for** in a spectrogram, and how to find it with the probe:
+
+- a ringing resonance: a narrow line that stays on one frequency and goes on after the note. Put the probe on the frequency and step back in time: the level stays high;
+- hum: lines at 50 or 60 Hz and their multiples, all the time;
+- clicks: short vertical lines, loud at every frequency for a moment. Step through time at a high frequency;
+- sibilance: short bursts between about 4 and 10 kHz.
+
+The picture moves while sound plays. To hold it still and look at a moment, pause the analysis in the Loudness or Dynamics lens, as sighted users do; Pause stops all lenses.
 
 ---
 
@@ -346,8 +360,7 @@ This lens is a picture of the spectrum over time and has no numbers of its own. 
 
 ### With the keyboard
 
-A picture only; the **About** row says so. For numbers, use Spectrum.
-
+- **Readings**: **Probe**, what the mouse shows on the front line, the newest one: frequency and level now, for example "250 Hz, -18 dB, now". Plus and minus move it a semitone, Alt with Page Up or Page Down an octave. As on screen, the lines behind cannot be read one by one; the Spectrogram probe reaches back in time over the same data.
 - **Settings**: Lines (60, 90, 120), Tilt (low, medium, high), History, Range, Palette.
 
 ---
@@ -372,7 +385,8 @@ Silence reports no key, because "I don't know" is a result.
 - **Readings**:
   - **Key**: for example "A minor, confidence 0.82, best 64 percent of the time".
   - **Strongest pitch classes**: the three strongest notes of the chromagram.
-  - **Note 1 to 5**: the five loudest notes of the spectrum, each with octave, deviation in cents and level.
+  - **Probe**: what the mouse shows on one bar: the note, its frequency and level, for example "A 2, 110 Hz, -12 dB". Plus and minus move it a semitone, Alt with Page Up or Page Down an octave. Between two notes there is a fainter quarter-tone bar; when it is louder than the note, the probe names it with 50 cents ("A 2 plus 50 cents"), so a detuned note is not missed.
+  - **Note 1 to 5**: the five loudest notes of the spectrum, each with octave, deviation in cents and level. Enter puts the probe on the note.
 - **Settings**: Channel, Chroma window (how long the chromagram averages: 0.5, 2 or 5 seconds).
 
 Note names follow the plugin language (letters, do-re-mi, or German with H and B), and sharps are spoken as words.
@@ -387,10 +401,11 @@ Note names follow the plugin language (letters, do-re-mi, or German with H and B
 
 ### With the keyboard
 
-- **Readings**: Key, Strongest pitch classes.
+- **Readings**:
+  - **Key**, **Strongest pitch classes**, as in CQT.
+  - **Probe**: what the mouse shows on one spike: the note, its frequency and level. The same keys as the CQT probe.
+  - **Same note in every octave**: the spikes the eye sees lined up on one ray from the centre, for the note of the probe: each octave where it sounds above the range, with its level, for example "A 1, -40 dB; A 2, -12 dB; A 3, -25 dB". Plus and minus on this row change the note.
 - **Settings**: Channel, Chroma window.
-
-For individual notes with frequencies, use CQT.
 
 ---
 
@@ -448,9 +463,10 @@ The picture itself is not described in text: its meaning is these numbers.
 
 ### With the keyboard
 
-A picture only; the **About** row says so. For numbers per band, use Band correlation.
-
+- **Readings**: **Probe** and **Probe time**, as in Spectrogram, with the coherence the colour shows: "1.05 kHz, -30 dB, coherence 0.95, nearly mono, 2 seconds ago". 1 is mono, 0 wide, below 0 out of phase. A cell with no energy is black on screen and has no coherence, so only its level is spoken. The level is both channels together, so a mono signal reads 3 dB above what Spectrum shows for one channel.
 - **Settings**: History, Range, Window, Palette.
+
+For numbers per third-octave band, use Band correlation.
 
 ---
 

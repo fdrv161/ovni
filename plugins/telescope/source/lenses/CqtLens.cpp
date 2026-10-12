@@ -581,10 +581,12 @@ void CqtLens::mouseExit (const juce::MouseEvent&)
 
 //======================================================================================== accessibility
 // CQT is a spectrum by notes. As text: the key (like the caption under the keyboard), the strongest pitch classes
-// of the chromagram, and the five loudest notes of the spectrum with frequency and deviation in cents.
+// of the chromagram, the probe (what the mouse readout gives on one bar) and the five loudest notes of the
+// spectrum with frequency and deviation in cents.
 namespace
 {
 constexpr int kA11yNotes = 5;
+enum CqtRow { crKey = 0, crClasses, crProbe, kFirstNoteRow };
 
 juce::String cqtChannel (int c)
 {
@@ -599,32 +601,25 @@ juce::String CqtLens::a11yGroupName (int group) const
 
 int CqtLens::a11yRowCount (int group) const
 {
-    return group == 0 ? 2 + kA11yNotes : (int) kNumControls;
+    return group == 0 ? kFirstNoteRow + kA11yNotes : (int) kNumControls;
 }
 
 juce::String CqtLens::a11yRowName (int group, int row) const
 {
     if (group == 1) return row == ctrlChannel ? a11ytext::T ("Channel") : a11ytext::T ("Chroma window");
-    if (row == 0) return a11ytext::T ("Key");
-    if (row == 1) return a11ytext::T ("Strongest pitch classes");
-    return a11ytext::T ("Note ") + juce::String (row - 1);
+    if (row == crKey)     return a11ytext::T ("Key");
+    if (row == crClasses) return a11ytext::T ("Strongest pitch classes");
+    if (row == crProbe)   return a11ytext::T ("Probe");
+    return a11ytext::T ("Note ") + juce::String (row - kFirstNoteRow + 1);
 }
 
-juce::String CqtLens::a11yRowValue (int group, int row) const
+// Spectrum peaks by notes: local maxima of the bins (2 bins per semitone), at least a semitone apart,
+// and no more than 40 dB below the loudest.
+std::vector<int> CqtLens::a11yLoudestNotes() const
 {
-    if (group == 1)
-    {
-        const auto s = processor.cqtSettings();
-        if (row == ctrlChannel) return cqtChannel (s.channel);
-        return spoken::trimmed (s.chromaSeconds(), 1) + a11ytext::T (" seconds");
-    }
-    if (row == 0) return spoken::keyReading (keyTonic, keyMode, keyConfidence, keyTimeFraction);
-    if (row == 1) return spoken::strongestClasses (chromaSm);
-
-    // Spectrum peaks by notes: local maxima of the bins (2 bins per semitone), at least a semitone apart,
-    // and no more than 40 dB below the loudest.
+    std::vector<int> picked;
     const int n = juce::jmin (binsSeen, (int) targetDb.size());
-    if (n < 3 || bpoSeen <= 0) return a11ytext::T ("no data yet");
+    if (n < 3 || bpoSeen <= 0) return picked;
     struct P { int k; float db; };
     std::vector<P> cands;
     float top = CqtFrame::kFloorDb;
@@ -638,33 +633,114 @@ juce::String CqtLens::a11yRowValue (int group, int row) const
         }
     }
     std::sort (cands.begin(), cands.end(), [] (const P& a, const P& b) { return a.db > b.db; });
-    std::vector<P> picked;
     const int minSep = juce::jmax (1, bpoSeen / 12);
     for (const auto& c : cands)
     {
         if ((int) picked.size() >= kA11yNotes || c.db < top - 40.0f) break;
-        if (std::none_of (picked.begin(), picked.end(), [&c, minSep] (const P& p) { return std::abs (p.k - c.k) < minSep; }))
-            picked.push_back (c);
+        if (std::none_of (picked.begin(), picked.end(), [&c, minSep] (int k) { return std::abs (k - c.k) < minSep; }))
+            picked.push_back (c.k);
     }
-
-    const int i = row - 2;
-    if (i >= (int) picked.size()) return a11ytext::T ("none");
-    const double hz = (double) fMinSeen * std::pow (2.0, (double) picked[(size_t) i].k / (double) bpoSeen);
-    return spoken::noteWithCents (noteForFrequency (hz)) + ", " + spoken::hz (hz) + ", "
-         + spoken::trimmed (picked[(size_t) i].db, 1) + a11ytext::T (" dB");
+    return picked;
 }
 
-bool CqtLens::a11yIsAdjustable (int group, int) const
+juce::String CqtLens::a11yRowValue (int group, int row) const
 {
-    return group == 1;
+    if (group == 1)
+    {
+        const auto s = processor.cqtSettings();
+        if (row == ctrlChannel) return cqtChannel (s.channel);
+        return spoken::trimmed (s.chromaSeconds(), 1) + a11ytext::T (" seconds");
+    }
+    if (row == crKey)     return spoken::keyReading (keyTonic, keyMode, keyConfidence, keyTimeFraction);
+    if (row == crClasses) return spoken::strongestClasses (chromaSm);
+
+    if (row == crProbe)
+    {
+        const auto r = noteprobe::read (targetDb, binsSeen, fMinSeen, bpoSeen, probeMidi);
+        if (! r.valid) return a11ytext::T ("no data yet");
+        return noteprobe::noteText (r, probeMidi) + ", " + spoken::hz (r.hz) + ", "
+             + spoken::db (r.db, processor.spectrumSettings().rangeDb());
+    }
+
+    if (binsSeen < 3 || bpoSeen <= 0) return a11ytext::T ("no data yet");
+    const auto picked = a11yLoudestNotes();
+    const int i = row - kFirstNoteRow;
+    if (i >= (int) picked.size()) return a11ytext::T ("none");
+    const int k = picked[(size_t) i];
+    const double hz = (double) fMinSeen * std::pow (2.0, (double) k / (double) bpoSeen);
+    return spoken::noteWithCents (noteForFrequency (hz)) + ", " + spoken::hz (hz) + ", "
+         + spoken::trimmed (targetDb[(size_t) k], 1) + a11ytext::T (" dB");
+}
+
+bool CqtLens::a11yIsAdjustable (int group, int row) const
+{
+    return group == 1 || row == crProbe;
+}
+
+void CqtLens::a11yShowProbe()
+{
+    if (zones.plot.isEmpty() || bpoSeen <= 0) return;
+    cursorX = juce::jlimit (zones.plot.getX(), zones.plot.getRight() - 1,
+                            juce::roundToInt (xForPosition (noteprobe::binOf (probeMidi, fMinSeen, bpoSeen))));
+    repaint();
 }
 
 bool CqtLens::a11yAdjust (int group, int row, int step)
 {
-    if (group != 1) return false;
+    if (group == 0)
+    {
+        if (row != crProbe || ! noteprobe::step (probeMidi, step, fMinSeen, binsSeen, bpoSeen)) return false;
+        a11yShowProbe();
+        return true;
+    }
     const auto s = processor.cqtSettings();
     if (row == ctrlChannel)
         return a11yStepCyclic (s.channel, (int) Cqt::kNumChannels, step, [this] { cycleControl (ctrlChannel); });
     return a11yStepCyclic (s.chromaSecIndex, Cqt::kNumChromaSecOptions, step, [this] { cycleControl (ctrlChroma); });
+}
+
+bool CqtLens::a11yIsActivatable (int group, int row) const
+{
+    return group == 0 && row >= kFirstNoteRow && row - kFirstNoteRow < (int) a11yLoudestNotes().size();
+}
+
+juce::String CqtLens::a11yActivate (int group, int row)
+{
+    if (! a11yIsActivatable (group, row)) return {};
+    // Enter on a note puts the probe on it, like the peaks of SPECTRUM; the editor then moves the cursor to the
+    // probe row (a11yTakeCursorRequest).
+    const int k = a11yLoudestNotes()[(size_t) (row - kFirstNoteRow)];
+    const double hz = (double) fMinSeen * std::pow (2.0, (double) k / (double) bpoSeen);
+    probeMidi = juce::jlimit (noteprobe::lowestMidi (fMinSeen), noteprobe::highestMidi (fMinSeen, binsSeen, bpoSeen),
+                              noteForFrequency (hz).midi);
+    cursorToProbe = true;
+    a11yShowProbe();
+    return {};
+}
+
+bool CqtLens::a11yTakeCursorRequest (int& group, int& row)
+{
+    if (! cursorToProbe) return false;
+    cursorToProbe = false;
+    group = 0;
+    row = crProbe;
+    return true;
+}
+
+juce::String CqtLens::a11yRowHelp (int group, int row) const
+{
+    if (group != 0) return {};
+    static const char* const helps[] = {
+        // 0: probe
+        "Probe: what the mouse shows on one bar: the note, its frequency and level. Plus and minus move it a "
+        "semitone, Alt with Page Up or Page Down an octave. Between two notes there is a fainter quarter-tone bar; "
+        "when it is louder than the note, the probe names it with 50 cents, so a detuned note is not missed.",
+        // 1: loudest notes
+        "The loudest notes of the spectrum, the loudest first, with frequency and deviation in cents. Enter moves "
+        "the probe there."
+    };
+    if (row == crProbe) return a11ytext::T (helps[0]);
+    if (row >= kFirstNoteRow) return a11ytext::T (helps[1]);
+    return {};
 }
 }

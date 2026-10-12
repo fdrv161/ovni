@@ -1,6 +1,7 @@
 #pragma once
 #include <array>
 #include <vector>
+#include "a11y/SonogramProbe.h"
 #include "analysis/SpectrogramRing.h"
 #include "analysis/modules/Spectrum.h"
 #include "lenses/Lens.h"
@@ -189,6 +190,7 @@ public:
     juce::String a11yRowValue (int group, int row) const override;
     bool         a11yIsAdjustable (int group, int row) const override;
     bool         a11yAdjust (int group, int row, int step) override;
+    juce::String a11yRowHelp (int group, int row) const override;
 
 protected:
     void renderStatic (juce::Graphics&, int width, int height) override;
@@ -244,6 +246,9 @@ private:
     juce::Point<int> cursor { -1, -1 };
 
     QuietTail quiet;   // ¿la ventana visible es toda la misma columna? (ver advanceFrame)
+
+    // The keyboard probe: the mouse readout of the front line (now) at a frequency set from the keyboard.
+    sonoprobe::Probe probe;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (WaterfallLens)
 };

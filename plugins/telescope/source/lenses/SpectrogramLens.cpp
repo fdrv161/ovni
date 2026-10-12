@@ -423,10 +423,13 @@ void SpectrogramLens::mouseExit (const juce::MouseEvent&)
 }
 
 //======================================================================================== accessibility
-// A spectrogram is a "spectrum over time" picture that cannot be told as text. Say so in one line
-// and offer all the settings: they are shared with SPECTRUM (history, range, channel), so they can be set here too.
+// Readings: the probe, which gives what the mouse readout gives (how long ago, frequency, level) at a moment and
+// a frequency set from the keyboard (see a11y/SonogramProbe.h). Settings: all of them, shared with SPECTRUM
+// (history, range, channel), so they can be set here too.
 namespace
 {
+enum ProbeRow { prFreq = 0, prTime, kProbeRows };
+
 juce::String spokenChannel (int c)
 {
     switch (c)
@@ -442,24 +445,54 @@ juce::String spokenChannel (int c)
 
 juce::String SpectrogramLens::a11yGroupName (int group) const
 {
-    return group == 0 ? a11ytext::T ("About") : a11ytext::T ("Settings");
+    return group == 0 ? a11ytext::T ("Readings") : a11ytext::T ("Settings");
 }
 
 int SpectrogramLens::a11yRowCount (int group) const
 {
-    return group == 0 ? 1 : (int) kNumControls;
+    return group == 0 ? (int) kProbeRows : (int) kNumControls;
 }
 
 juce::String SpectrogramLens::a11yRowName (int group, int row) const
 {
-    if (group == 0) return a11ytext::T ("Spectrum over time, a picture only. For numbers use the Spectrum lens");
+    if (group == 0) return row == prFreq ? a11ytext::T ("Probe") : a11ytext::T ("Probe time");
     static const char* const sets[kNumControls] = { "History", "Range", "Channel", "Palette" };
     return a11ytext::T (sets[juce::jlimit (0, (int) kNumControls - 1, row)]);
 }
 
+double SpectrogramLens::a11ySpan() const
+{
+    const double span = visibleSeconds();
+    return span > 0.0 ? span : (double) processor.spectrogram().historySeconds();
+}
+
+void SpectrogramLens::a11yShowProbe()
+{
+    const double span = a11ySpan();
+    if (zones.plot.isEmpty() || span <= 0.0) return;
+    const int x = zones.plot.getRight() - 1 - juce::roundToInt (probe.seconds (span) / span * (double) zones.plot.getWidth());
+    const int y = juce::roundToInt (yForFreq (probe.hz()));
+    cursor = { juce::jlimit (zones.plot.getX(), zones.plot.getRight() - 1, x),
+               juce::jlimit (zones.plot.getY(), zones.plot.getBottom() - 1, y) };
+    repaint();
+}
+
 juce::String SpectrogramLens::a11yRowValue (int group, int row) const
 {
-    if (group == 0) return {};
+    if (group == 0)
+    {
+        const auto&  ring  = processor.spectrogram();
+        const double ago   = probe.seconds (a11ySpan());
+        const auto   cell  = sonoprobe::cellAt (ring, ago, sonoprobe::kTimeStep / 2.0, probe.hz());
+        if (! cell.valid) return a11ytext::T ("no data yet");
+        const int    rangeDb = processor.spectrumSettings().rangeDb();
+        const auto   hz    = spoken::hz (probe.hz());
+        const auto   level = sonoprobe::levelText (cell.level, rangeDb);
+        const auto   when  = sonoprobe::timeText (ago);
+        // Each row starts with what it moves.
+        if (row == prFreq) return hz + ", " + level + ", " + when;
+        return when + ", " + hz + ", " + level + ", " + sonoprobe::loudestText<1> (cell, rangeDb);
+    }
     const auto s = processor.spectrumSettings();
     switch (row)
     {
@@ -471,14 +504,19 @@ juce::String SpectrogramLens::a11yRowValue (int group, int row) const
     }
 }
 
-bool SpectrogramLens::a11yIsAdjustable (int group, int) const
+bool SpectrogramLens::a11yIsAdjustable (int, int) const
 {
-    return group == 1;
+    return true;
 }
 
 bool SpectrogramLens::a11yAdjust (int group, int row, int step)
 {
-    if (group != 1) return false;
+    if (group == 0)
+    {
+        if (! (row == prFreq ? probe.stepFrequency (step) : probe.stepTime (step, a11ySpan()))) return false;
+        a11yShowProbe();
+        return true;
+    }
     const auto s = processor.spectrumSettings();
     switch (row)
     {
@@ -488,5 +526,22 @@ bool SpectrogramLens::a11yAdjust (int group, int row, int step)
         case ctrlPalette: return a11yStepCyclic (processor.paletteIndex(), look::kNumPalettes, step, [this] { cycleControl (ctrlPalette); });
         default:          return false;
     }
+}
+
+juce::String SpectrogramLens::a11yRowHelp (int group, int row) const
+{
+    if (group != 0) return {};
+    static const char* const helps[] = {
+        // 0: probe
+        "Probe: what the mouse shows at one point of the picture. Plus and minus move it a semitone, Alt with Page "
+        "Up or Page Down an octave. It gives the loudest point within a quarter tone and a quarter second, so a "
+        "short click is not missed. The picture moves while sound plays; to hold it still, pause the analysis in "
+        "the Loudness or Dynamics lens.",
+        // 1: probe time
+        "Probe time: how long ago the probe looks. Plus goes a quarter second further back, minus towards now, Alt "
+        "with Page Up or Page Down one mark of the time scale, Alt with Home now, Alt with End the oldest moment on "
+        "screen. It also says the loudest frequency at that moment, the brightest point of the column."
+    };
+    return a11ytext::T (helps[juce::jlimit (0, 1, row)]);
 }
 }
