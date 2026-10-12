@@ -529,8 +529,8 @@ void TelescopeEditor::setupAccessibility()
     pluginRowsSource = std::make_unique<PluginRowsSource> (*this);
     a11yPlugin.setSource (pluginRowsSource.get());
     a11yPlugin.contextName = [] { return a11ytext::T ("Plugin"); };
-    a11yPlugin.helpText = "Plugin controls: bypass, presets, A and B comparison, window size, language of the "
-                          "on-screen labels and colour theme. Up and Down arrows: rows. Plus or minus: change. "
+    a11yPlugin.helpText = "Plugin controls: bypass, presets, A and B comparison, window size, language "
+                          "and colour theme. Up and Down arrows: rows. Plus or minus: change. "
                           "Enter: switch, open the preset menu or the save dialog. Escape: back to the lens list.";
     a11yPlugin.onEscape = [this] { focusA11y (a11yLensList); };
 
