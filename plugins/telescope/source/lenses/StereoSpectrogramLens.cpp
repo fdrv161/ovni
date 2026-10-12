@@ -621,8 +621,8 @@ juce::String StereoSpectrogramLens::a11yRowHelp (int group, int row) const
         // 0: probe
         "Probe: what the mouse shows at one point of the picture: the level of both channels together and the "
         "coherence, which is the colour on screen. 1 is mono, 0 wide, below 0 out of phase. Plus and minus move it "
-        "a semitone, Alt with Page Up or Page Down an octave. The picture moves while sound plays; to hold it still, "
-        "pause the analysis in the Loudness or Dynamics lens.",
+        "a semitone, Alt with Page Up or Page Down an octave. The picture moves while sound plays; to read a moment, stop "
+        "playback and read it before it scrolls away. The longer the History, the more time you have.",
         // 1: probe time
         "Probe time: how long ago the probe looks. Plus goes a quarter second further back, minus towards now, Alt "
         "with Page Up or Page Down one mark of the time scale, Alt with Home now, Alt with End the oldest moment on "

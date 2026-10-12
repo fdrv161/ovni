@@ -346,7 +346,7 @@ The probe gives the loudest point within a quarter tone and a quarter second, so
 - clicks: short vertical lines, loud at every frequency for a moment. Step through time at a high frequency;
 - sibilance: short bursts between about 4 and 10 kHz.
 
-The picture moves while sound plays. To hold it still and look at a moment, pause the analysis in the Loudness or Dynamics lens, as sighted users do; Pause stops all lenses.
+The picture moves while sound plays. To read a moment, stop playback and read it before it scrolls away; the longer the History, the more time you have. Pause in the Loudness lens does not help here: the plugin computes only what the open lens needs, so while Loudness is open the spectrogram is not written at all. Sighted users have the same limit in this plugin.
 
 ---
 
