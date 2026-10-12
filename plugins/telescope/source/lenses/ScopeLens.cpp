@@ -1097,9 +1097,11 @@ juce::String ScopeLens::a11yGroupName (int group) const
     return group == 0 ? a11ytext::T ("Readings") : a11ytext::T ("Settings");
 }
 
+// The hemisphere decay and scale buttons are on screen only in Hemisphere mode, so are their rows (they are last).
 int ScopeLens::a11yRowCount (int group) const
 {
-    return group == 0 ? (int) kScopeRows : (int) kScopeSets;
+    if (group == 0) return (int) kScopeRows;
+    return scopeMode() == Mode::hemisphere ? (int) kScopeSets : (int) ssHemiDecay;
 }
 
 juce::String ScopeLens::a11yRowName (int group, int row) const
@@ -1177,7 +1179,7 @@ bool ScopeLens::a11yIsAdjustable (int group, int) const
 
 bool ScopeLens::a11yAdjust (int group, int row, int step)
 {
-    if (group != 1) return false;
+    if (group != 1 || row >= a11yRowCount (group)) return false;   // a hemisphere row left over from another mode
     bool changed = false;
     switch (row)
     {

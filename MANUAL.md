@@ -225,7 +225,7 @@ Each lens below has two parts: what it measures and how to read it (from the aut
 
 ### With the keyboard
 
-- **Readings**: Integrated, Short-term, Momentary, Loudness range, True peak max (overall, then left and right), Max short-term, Max momentary, History, Target (the platform and how far you are from it). A value that is still filling is followed by "partial".
+- **Readings**: Integrated, Short-term, Momentary, Loudness range, True peak max (overall, then left and right), Max short-term, Max momentary, History, Target (the platform and how far you are from it). A value that is still filling is followed by "partial". When the analysis had to skip audio because the computer could not keep up, the screen shows an amber "analysis behind" line: TELESCOPE says it once when it appears, and Integrated is followed by "analysis fell behind" until the next reset.
 - **History** tells the three minutes of short-term history on screen the way the eye reads the graph: steady stretches with their length and level, oldest first, then the loudest and the quietest moment. For example: "last 3 minutes, 40 seconds around -14 LUFS, then 1 minute 20 seconds around -9 LUFS, then 1 minute around -11 LUFS, up to now, loudest -8.7 LUFS, 1 minute 30 seconds ago". It shows where the chorus is louder than the verse, or where the loudness jumped. At most five stretches: when there are more steps, small ones are joined, as the eye sees fewer steps from further away.
 - **Actions**:
   - **Platform target**: plus and minus step through the streaming platforms, or "none".
@@ -295,13 +295,10 @@ Slope and Smoothing exist to help the eye: Slope makes a balanced mix look flat,
 
     The list keeps the 10 most prominent of each; the Smoothing row says how many there are in all. Unsmoothed there are dozens of spikes and the list holds the tallest, as the eye picks them out; at 1/6 octave there are a few humps and usually all of them fit. If nothing stands out, the row says "none". Dips are listed only with smoothing on. **Enter** on a peak or a dip moves the probe there and the cursor to the probe row, so you can walk around it by semitones. While music plays, the list and the shape hold still for a second, so rows read one after another agree.
 - **Third-octave bands**: the 30 standard bands from 25 Hz to 20 kHz, with the level of each.
-- **Settings**, in this order:
-  - **Pause**: Enter holds the analysis of all lenses, so every reading comes from the same moment, like a still picture. It is the same pause as in Loudness and Dynamics.
-  - **Reset**: Enter clears the averages, the peak hold and the readings of all lenses.
+- **Settings**: the buttons under the plot, the ones that matter most for listening first:
   - **Slope**: 0 to 4.5 dB per octave. The value is followed by how the signal now sits against the line, so you hear the effect at once.
   - **Smoothing**: off, 1/24, 1/12 or 1/6 octave. The value is followed by how many peaks and dips stand out at this smoothing, for example "1/6 octave, peaks: 7, dips: 5": you hear how busy the picture is.
   - **Average**: off, a running average (its time is spoken), or infinite.
-  - **Average time**: 0.1 to 10 seconds for the running average. 2 or 3 seconds keeps the numbers from jumping between key presses. It says "not used now" when Average is off or infinite.
   - **Peak hold**: off, 12 dB per second, 30 dB per second, infinite.
   - **Range**: 60, 90 or 120 dB, how far below 0 dB the plot goes. It also sets what counts as standing out, see below.
   - **FFT size** (1,024 to 32,768 points), **Window** (Hann, Blackman-Harris, Kaiser), **Overlap**, **Channel** (left, right, mid, side, left and right), **Display** (FFT curve, third-octave bars, Bark bars).
@@ -311,11 +308,11 @@ Slope and Smoothing exist to help the eye: Slope makes a balanced mix look flat,
 
 A way to use it while mixing:
 
-1. Set Average time to 2 or 3 seconds. For a whole song, set Average to infinite and press Reset at the start.
+1. For a whole song, set Average to infinite and press Reset (in the Loudness or Dynamics lens) at the start.
 2. Read Signal tilt and Shape: is the mix brighter or darker than the line, and which ranges stick out or sag?
 3. Smoothing at 1/6 octave: the peaks and dips are the humps and holes inside those ranges, with their edges.
 4. Smoothing off: the peaks are narrow resonances and strong notes. A resonance shows in both the level and the peak hold; a peak that is only in the hold was a short hit.
-5. Enter on a peak, then plus and minus around it to hear its width. Pause when you need every number from the same moment.
+5. Enter on a peak, then plus and minus around it to hear its width. When you need every number from the same moment, use Pause in the Loudness or Dynamics lens: it holds every lens, Spectrum included.
 
 The FFT settings are shared with Spectrogram, Waterfall and the other spectral lenses: it is one setting, not a copy.
 
@@ -417,7 +414,7 @@ For individual notes with frequencies, use CQT.
 ### With the keyboard
 
 - **Readings**: Picture, Correlation (with a word for its meaning, such as "nearly mono" or "out of phase"), Width, Balance ("1.2 dB louder on the right", or "centred"), Mono loss, Out of phase energy (percent), Measured over (the window length).
-- **Settings**: Mode (Lissajous, Polar, Hemisphere), Oscilloscope trigger (on, off), Window, Hemisphere decay (12, 24 or 48 dB per second), Hemisphere scale (relative or decibels).
+- **Settings**: Mode (Lissajous, Polar, Hemisphere), Oscilloscope trigger (on, off), Window, Hemisphere decay (12, 24 or 48 dB per second) and Hemisphere scale (relative or decibels), these two only in Hemisphere mode, as on screen.
 
 The picture itself is not described in text: its meaning is these numbers.
 

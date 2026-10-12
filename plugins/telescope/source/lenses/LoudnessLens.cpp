@@ -636,7 +636,13 @@ juce::String LoudnessLens::a11yRowValue (int group, int row) const
 
     switch (row)
     {
-        case lrIntegrated:   return latest.integratedValid ? lufs (latest.integrated) : juce::String (a11ytext::T ("no reading yet"));
+        case lrIntegrated:
+        {
+            // The on-screen warning that the analysis dropped audio rides on the first row: the numbers may be off.
+            auto t = latest.integratedValid ? lufs (latest.integrated) : juce::String (a11ytext::T ("no reading yet"));
+            if (dropped > 0) t << ", " << a11ytext::T ("analysis fell behind");
+            return t;
+        }
         case lrShortTerm:    return lufs (a11yShortTerm, shortTermIsPartial);
         case lrMomentary:    return lufs (a11yMomentary, momentaryIsPartial);
         case lrRange:        return latest.integratedValid ? spoken::trimmed (latest.lra, 1) + a11ytext::T (" LU") : juce::String (a11ytext::T ("no reading yet"));
@@ -779,6 +785,16 @@ juce::String LoudnessLens::a11yHistoryValue() const
         parts.add (quiet == m - 1 ? a11ytext::TF ("quietest {0}, now", { value (quiet) })
                                   : a11ytext::TF ("quietest {0}, {1} ago", { value (quiet), length (m - 1 - quiet) }));
     return parts.joinIntoString (", ");
+}
+
+// The amber "analysis behind" line appears on screen when the analysis had to drop audio (the computer could not
+// keep up); a sighted user notices it, so it is spoken once when it appears. A reset clears it.
+juce::String LoudnessLens::a11yPollEvent()
+{
+    if (dropped == 0) { a11yBehindSaid = false; return {}; }
+    if (a11yBehindSaid) return {};
+    a11yBehindSaid = true;
+    return a11ytext::T ("Analysis fell behind and skipped some audio, the readings may be off");
 }
 
 bool LoudnessLens::a11yIsAdjustable (int group, int row) const

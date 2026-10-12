@@ -920,7 +920,8 @@ void SpectrumLens::mouseExit (const juce::MouseEvent&)
 //              and dips that are listed: off lists narrow resonances, 1/6 octave lists broad humps and holes.
 //              The line and the shape always use a broad 1/3 octave view, like a first glance: they do not
 //              change when the user zooms into details.
-//   AVERAGE    how much the numbers move between key presses; Pause holds all of them at one moment.
+//   AVERAGE    how much the numbers move between key presses; the Pause of the Loudness and Dynamics lenses
+//              holds all of them at one moment.
 //
 // Third-octave bands are spoken as before: band power, which is already flat for pink noise.
 namespace
@@ -939,17 +940,12 @@ int    gridSize()          { return (int) std::floor (kGridPerOct * std::log2 (2
 double gridHz (double i)   { return kGridLoHz * std::pow (2.0, i / kGridPerOct); }
 double gridPos (double hz) { return kGridPerOct * std::log2 (hz / kGridLoHz); }
 
-// Settings rows: the actions and the settings that matter most for listening come first.
-enum SettingItem { siPause = SpectrumLens::kNumControls, siReset, siAvgTime };
-constexpr int kSettingRows[] = { siPause, siReset, SpectrumLens::slope, SpectrumLens::smooth, SpectrumLens::average,
-                                 siAvgTime, SpectrumLens::hold, SpectrumLens::range, SpectrumLens::fftSize,
-                                 SpectrumLens::window, SpectrumLens::overlap, SpectrumLens::channel,
-                                 SpectrumLens::bandsMode };
+// Settings rows: the buttons under the plot, no more (sighted users have exactly these), with the ones that matter
+// most for listening first.
+constexpr int kSettingRows[] = { SpectrumLens::slope, SpectrumLens::smooth, SpectrumLens::average, SpectrumLens::hold,
+                                 SpectrumLens::range, SpectrumLens::fftSize, SpectrumLens::window,
+                                 SpectrumLens::overlap, SpectrumLens::channel, SpectrumLens::bandsMode };
 constexpr int kNumSettingRows = (int) (sizeof (kSettingRows) / sizeof (kSettingRows[0]));
-
-// Running average times offered from the keyboard (the engine accepts 0.1 to 10 seconds).
-constexpr float kAvgTimes[] = { 0.1f, 0.2f, 0.3f, 0.5f, 1.0f, 2.0f, 3.0f, 5.0f, 10.0f };
-constexpr int   kNumAvgTimes = (int) (sizeof (kAvgTimes) / sizeof (kAvgTimes[0]));
 
 // Smoothing as the denominator of the octave fraction, 0 = off.
 int smoothDenom (int index)
@@ -1057,9 +1053,6 @@ juce::String SpectrumLens::a11yRowName (int group, int row) const
     if (group == 1) return spoken::hz (kThirdOctaveHz[juce::jlimit (0, SpectrumFrame::kNumThird - 1, row)]);
 
     const int item = a11ySettingItem (row);
-    if (item == siPause)   return a11ytext::T ("Pause");
-    if (item == siReset)   return a11ytext::T ("Reset");
-    if (item == siAvgTime) return a11ytext::T ("Average time");
     static const char* const names[kNumControls] = { "FFT size", "Window", "Overlap", "Channel", "Display",
                                                      "Slope", "Average", "Peak hold", "Range", "Smoothing" };
     return a11ytext::T (names[juce::jlimit (0, kNumControls - 1, item)]);
@@ -1091,37 +1084,12 @@ juce::String SpectrumLens::a11yRowValue (int group, int row) const
 
 bool SpectrumLens::a11yIsAdjustable (int group, int row) const
 {
-    if (group == 2)
-    {
-        const int item = a11ySettingItem (row);
-        return item < kNumControls || item == siAvgTime;
-    }
-    return group == 0 && row == rrProbe;
+    return group == 2 || (group == 0 && row == rrProbe);
 }
 
 bool SpectrumLens::a11yAdjust (int group, int row, int step)
 {
-    if (group == 2)
-    {
-        const int item = a11ySettingItem (row);
-        if (item < kNumControls) return stepControl (item, step);
-        if (item != siAvgTime) return false;
-
-        // The running average time moves through a short list; a value from elsewhere snaps to the nearest one.
-        auto s = processor.spectrumSettings();
-        int idx = 0;
-        for (int i = 1; i < kNumAvgTimes; ++i)
-            if (std::abs (kAvgTimes[i] - s.avgSeconds) < std::abs (kAvgTimes[idx] - s.avgSeconds)) idx = i;
-        const int size = std::abs (step) >= a11yui::kExtreme ? kNumAvgTimes : (std::abs (step) >= a11yui::kCoarse ? 2 : 1);
-        const int next = juce::jlimit (0, kNumAvgTimes - 1, idx + (step > 0 ? size : -size));
-        if (next == idx && std::abs (kAvgTimes[idx] - s.avgSeconds) < 1.0e-4f) return false;
-        s.avgSeconds = kAvgTimes[next];
-        processor.setSpectrumSettings (s);
-        sets = processor.spectrumSettings();
-        invalidateStatic();
-        repaint();
-        return true;
-    }
+    if (group == 2) return stepControl (a11ySettingItem (row), step);
     if (group != 0 || row != rrProbe) return false;
 
     // The probe moves by notes: step is a semitone, coarse step an octave.
@@ -1138,11 +1106,6 @@ bool SpectrumLens::a11yAdjust (int group, int row, int step)
 
 bool SpectrumLens::a11yIsActivatable (int group, int row) const
 {
-    if (group == 2)
-    {
-        const int item = a11ySettingItem (row);
-        return item == siPause || item == siReset;
-    }
     if (group != 0 || row < kFirstFeatureRow || ! a11yHasFrame) return false;
     const auto& sh = a11yShape();
     return row - kFirstFeatureRow < (int) (sh.peaks.size() + sh.dips.size());
@@ -1150,24 +1113,6 @@ bool SpectrumLens::a11yIsActivatable (int group, int row) const
 
 juce::String SpectrumLens::a11yActivate (int group, int row)
 {
-    if (group == 2)
-    {
-        const int item = a11ySettingItem (row);
-        if (item == siPause)
-        {
-            // The same pause as in Loudness and Dynamics: it holds every lens.
-            processor.setAnalysisPaused (! processor.isAnalysisPaused());
-            repaint();
-            return processor.isAnalysisPaused() ? a11ytext::T ("Paused") : a11ytext::T ("Running");
-        }
-        if (item == siReset)
-        {
-            processor.resetAnalysis();
-            repaint();
-            return a11ytext::T ("Analysis reset");
-        }
-        return {};
-    }
     if (! a11yIsActivatable (group, row)) return {};
 
     // Enter on a peak or a dip puts the probe on it, so the user can walk around it by semitones and hear how
@@ -1207,69 +1152,57 @@ juce::String SpectrumLens::a11yRowHelp (int group, int row) const
         "Peaks and dips: places where the curve stands out from the neighbouring frequencies, the biggest first. "
         "Smoothing sets their size: off lists narrow resonances, 1/6 octave lists broad humps and holes. Enter "
         "moves the probe there.",
-        // 3: pause
-        "Pause holds the analysis of all lenses, so every reading comes from the same moment, like a still "
-        "picture. Enter switches it.",
-        // 4: reset
-        "Reset clears the averages, the peak hold and the readings of all lenses and starts again. Use it before "
-        "measuring a whole song with an infinite average or hold.",
-        // 5: slope
+        // 3: slope
         "Slope tilts the picture and the line around 1 kHz. 3 dB per octave makes pink noise flat, 4.5 matches a "
         "typical finished mix. It changes no level, only the line the levels are compared with.",
-        // 6: smoothing
+        // 4: smoothing
         "Smoothing sets how big a detail counts. Off: narrow resonances and many small peaks. 1/24 and 1/12 "
         "octave: medium details. 1/6 octave: broad humps and holes, the overall balance. The probe reads the "
         "smoothed curve too.",
-        // 7: average
-        "Average sets how the curve settles. Off: every frame, the numbers jump. Seconds: a running average over "
-        "the Average time. Infinite: everything since the start or the last reset, for a whole song.",
-        // 8: average time
-        "Average time of the running average. Longer gives steadier numbers between key presses but reacts more "
-        "slowly. 2 to 3 seconds suits reading by ear.",
-        // 9: peak hold
+        // 5: average
+        "Average sets how the curve settles. Off: every frame, the numbers jump. A time in seconds: a running "
+        "average over that time. Infinite: everything since the start or the last reset, for a whole song.",
+        // 6: peak hold
         "Peak hold remembers the highest level at each frequency, then lets it fall at the chosen speed, or keeps "
         "it with Infinite. A resonance shows in both the level and the hold; a peak only in the hold was a short hit.",
-        // 10: range
+        // 7: range
         "Range: how far below 0 dB the plot goes. Anything lower is spoken as below the range and is not searched "
         "for peaks. It also sets what counts as standing out: a twentieth of the range, 3 dB at 60, 6 dB at 120, "
         "because a wider range makes every bump smaller on screen.",
-        // 11: FFT size
+        // 8: FFT size
         "FFT size: more points give finer detail, above all in the lows, but react more slowly.",
-        // 12: window
+        // 9: window
         "Window: the shape of the FFT window. Hann suits most work. Blackman-Harris and Kaiser keep quiet details "
         "next to loud peaks apart better.",
-        // 13: overlap
+        // 10: overlap
         "Overlap: how often a new frame is computed. More overlap moves more smoothly and uses more processor time.",
-        // 14: channel
+        // 11: channel
         "Channel: what is analysed. Left, right, mid, side, or left and right as two curves.",
-        // 15: display
+        // 12: display
         "Display: on screen, a curve or bars in third-octave or Bark bands. Speech does not change: the bands are "
         "always spoken in third octaves.",
-        // 16: shape
+        // 13: shape
         "Shape against the line: the stretches of the curve that lie clearly above or below the line, from "
         "low to high, with their average distance. It uses a broad 1/3 octave view whatever the Smoothing, like a "
         "first glance at the picture."
     };
 
     int index = -1;
-    if (group == 0) index = row == rrShape ? 16 : juce::jmin (row, 2);
+    if (group == 0) index = row == rrShape ? 13 : juce::jmin (row, 2);
     else if (group == 2)
     {
         switch (a11ySettingItem (row))
         {
-            case siPause:   index = 3;  break;
-            case siReset:   index = 4;  break;
-            case slope:     index = 5;  break;
-            case smooth:    index = 6;  break;
-            case average:   index = 7;  break;
-            case siAvgTime: index = 8;  break;
-            case hold:      index = 9;  break;
-            case range:     index = 10; break;
-            case fftSize:   index = 11; break;
-            case window:    index = 12; break;
-            case overlap:   index = 13; break;
-            case channel:   index = 14; break;
-            case bandsMode: index = 15; break;
+            case slope:     index = 3;  break;
+            case smooth:    index = 4;  break;
+            case average:   index = 5;  break;
+            case hold:      index = 6;  break;
+            case range:     index = 7;  break;
+            case fftSize:   index = 8;  break;
+            case window:    index = 9;  break;
+            case overlap:   index = 10; break;
+            case channel:   index = 11; break;
+            case bandsMode: index = 12; break;
             default: break;
         }
     }
@@ -1759,13 +1692,6 @@ juce::String SpectrumLens::a11yControlValue (int item) const
     const auto s = processor.spectrumSettings();
     switch (item)
     {
-        case siPause: return processor.isAnalysisPaused() ? a11ytext::T ("paused") : a11ytext::T ("running");
-        case siReset: return {};
-        case siAvgTime:
-        {
-            const auto t = spoken::seconds (s.avgSeconds);
-            return s.avgMode == Spectrum::avgExp ? t : a11ytext::TF ("{0}, not used now", { t });
-        }
         case fftSize: return juce::String (s.fftSize()) + a11ytext::T (" points");
         case window:
             return s.window == Spectrum::hann ? a11ytext::T ("Hann")

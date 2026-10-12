@@ -49,6 +49,8 @@ public:
     bool         a11yIsActivatable (int group, int row) const override;
     juce::String a11yActivate (int group, int row) override;
     juce::String a11yHistoryValue() const;   // the 3 minutes of short-term history, as sections
+    juce::String a11yPollEvent() override;   // "analysis fell behind", once, when it appears on screen
+    bool         a11yBehindSaid = false;
 
 protected:
     void renderStatic (juce::Graphics&, int width, int height) override;
