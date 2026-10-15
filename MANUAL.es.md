@@ -4,7 +4,7 @@ Otros idiomas: [English](MANUAL.md) · [Русский](MANUAL.ru.md). La versi�
 
 TELESCOPE es un analizador de audio que además concluye. Este manual cubre la versión accesible: cada lente, qué mide y cómo leerla, y cómo usar todo con el teclado y un lector de pantalla.
 
-El motor de análisis, las lentes y las notas de medición vienen del [TELESCOPE original de OVNI Audio](https://github.com/ovniaudio/ovni), gratis y open source bajo AGPLv3. La capa de teclado y lector de pantalla se agregó en [este fork](https://github.com/fdrv161/telescope-accessible/tree/accessible). Donde este manual explica qué mide una lente, sigue el manual del autor, resumido. El original completo, con cada fórmula y resultado de test, está en [`plugins/telescope/docs/manual/README.es.md`](plugins/telescope/docs/manual/README.es.md).
+El motor de análisis, las lentes y las notas de medición vienen del [TELESCOPE original de OVNI Audio](https://ovniaudio.com/telescope), versión 0.2.0, que el autor publicó como open source bajo AGPLv3. La capa de teclado y lector de pantalla se agregó en [este fork](https://github.com/fdrv161/telescope-accessible/tree/accessible). Donde este manual explica qué mide una lente, sigue el manual del autor, resumido. El original completo, con cada fórmula y resultado de test, está en [`plugins/telescope/docs/manual/README.es.md`](plugins/telescope/docs/manual/README.es.md).
 
 ## Contenido
 
@@ -604,7 +604,7 @@ Los números se dicen con punto decimal en todos los idiomas, como en pantalla: 
 
 ## Licencia y créditos
 
-- **TELESCOPE** es de [OVNI Audio](https://ovniaudio.com), gratis y open source bajo la **GNU AGPLv3**. Código original: <https://github.com/ovniaudio/ovni>.
+- **TELESCOPE** es de [OVNI Audio](https://ovniaudio.com), gratis. La versión 0.2.0, en la que se basa este fork, se publicó como open source bajo la **GNU AGPLv3**. El autor ya no publica el código fuente, así que los cambios posteriores no llegan a este fork. Sitio del autor: <https://ovniaudio.com/telescope>.
 - La capa de accesibilidad, las traducciones de la voz y la traducción al ruso se agregaron en [fdrv161/telescope-accessible](https://github.com/fdrv161/telescope-accessible/tree/accessible), bajo la misma licencia. El código completo de cada versión está en ese repositorio, en la etiqueta de la versión.
 - Avisos de terceros: [`NOTICE.md`](NOTICE.md).
 

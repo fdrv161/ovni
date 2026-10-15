@@ -4,7 +4,7 @@
 
 TELESCOPE — анализатор звука, который ещё и делает выводы. Это руководство описывает доступную сборку: каждую линзу, что она измеряет и как её читать, и как пользоваться всем этим с клавиатуры и со скринридером.
 
-Движок анализа, линзы и пояснения к измерениям взяты из оригинального [TELESCOPE от OVNI Audio](https://github.com/ovniaudio/ovni), бесплатного и открытого, под лицензией AGPLv3. Слой для клавиатуры и скринридера добавлен в [этом форке](https://github.com/fdrv161/telescope-accessible/tree/accessible). Там, где руководство объясняет, что измеряет линза, оно следует руководству автора в сокращённом виде. Полный оригинал со всеми формулами и результатами тестов лежит в [`plugins/telescope/docs/manual/README.md`](plugins/telescope/docs/manual/README.md) (на английском) и [`README.es.md`](plugins/telescope/docs/manual/README.es.md) (на испанском).
+Движок анализа, линзы и пояснения к измерениям взяты из оригинального [TELESCOPE от OVNI Audio](https://ovniaudio.com/telescope) версии 0.2.0, которую автор опубликовал с открытым кодом под лицензией AGPLv3. Слой для клавиатуры и скринридера добавлен в [этом форке](https://github.com/fdrv161/telescope-accessible/tree/accessible). Там, где руководство объясняет, что измеряет линза, оно следует руководству автора в сокращённом виде. Полный оригинал со всеми формулами и результатами тестов лежит в [`plugins/telescope/docs/manual/README.md`](plugins/telescope/docs/manual/README.md) (на английском) и [`README.es.md`](plugins/telescope/docs/manual/README.es.md) (на испанском).
 
 ## Содержание
 
@@ -604,7 +604,7 @@ Tab переходит вперёд, Shift+Tab назад. После после
 
 ## Лицензия и авторы
 
-- **TELESCOPE** создан [OVNI Audio](https://ovniaudio.com), бесплатный и открытый, под лицензией **GNU AGPLv3**. Оригинальный исходный код: <https://github.com/ovniaudio/ovni>.
+- **TELESCOPE** создан [OVNI Audio](https://ovniaudio.com), бесплатный. Версия 0.2.0, на которой основан этот форк, вышла с открытым кодом под лицензией **GNU AGPLv3**. Автор больше не публикует исходный код, поэтому более поздние изменения в форк не попадают. Сайт автора: <https://ovniaudio.com/telescope>.
 - Слой доступности, переводы речи и русский перевод добавлены в [fdrv161/telescope-accessible](https://github.com/fdrv161/telescope-accessible/tree/accessible) под той же лицензией. Полный исходный код каждого релиза лежит в этом репозитории, под меткой релиза.
 - Уведомления о сторонних компонентах: [`NOTICE.md`](NOTICE.md).
 

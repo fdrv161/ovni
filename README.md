@@ -2,7 +2,7 @@
 
 **An audio analyser that works with a screen reader.** Loudness, dynamics, spectrum, stereo, key, tonal balance against a reference, and a rules engine that writes down what it measured, all readable with NVDA and fully usable from the keyboard.
 
-This is an accessible build of [TELESCOPE by OVNI Audio](https://github.com/ovniaudio/ovni), a free and open-source analyser plugin. The original draws everything as pictures, so screen readers found nothing in it. This fork adds real controls on top: every number as text, every setting from the keyboard, spoken messages when an analysis finishes. For sighted users the plugin looks and works exactly as before.
+This is an accessible build of [TELESCOPE by OVNI Audio](https://ovniaudio.com/telescope), a free analyser plugin. It is based on TELESCOPE 0.2.0, which the author published as open source under the GNU AGPLv3. The original draws everything as pictures, so screen readers found nothing in it. This fork adds real controls on top: every number as text, every setting from the keyboard, spoken messages when an analysis finishes. For sighted users the plugin looks and works exactly as before.
 
 ## Download
 
@@ -48,12 +48,12 @@ Tested with NVDA in REAPER on Windows. The macOS build is experimental.
 
 ## Source and licence
 
-TELESCOPE is free and open source under the **GNU AGPLv3**. The original is by [OVNI Audio](https://ovniaudio.com). This fork, with the accessibility layer, is on the [`accessible`](https://github.com/fdrv161/telescope-accessible/tree/accessible) branch, and the full source of every release is available at its tag.
+TELESCOPE is by [OVNI Audio](https://ovniaudio.com/telescope). Version 0.2.0, on which this fork is based, was published as open source under the **GNU AGPLv3**, and this fork stays under that licence. The author no longer publishes the source code of TELESCOPE, so this fork does not receive the author's later changes. This fork, with the accessibility layer, is on the [`accessible`](https://github.com/fdrv161/telescope-accessible/tree/accessible) branch, and the full source of every release is available at its tag.
 
 - Plugin source: [`plugins/telescope`](plugins/telescope)
 - Accessibility code: [`plugins/telescope/source/a11y`](plugins/telescope/source/a11y)
 - The author's original manual, with every formula and test result: [`plugins/telescope/docs/manual/README.md`](plugins/telescope/docs/manual/README.md)
-- The repository also holds OVNI's other plugins, unchanged in this fork. For them, see the [original OVNI README](https://github.com/ovniaudio/ovni#readme).
+- The repository also holds OVNI's other plugins as they were at that time, unchanged in this fork. For their current versions, see [ovniaudio.com](https://ovniaudio.com).
 - Third-party notices: [`NOTICE.md`](NOTICE.md)
 
 **How this was made.** The accessibility layer, the speech translations, the Russian translation, the build scripts and this documentation were written by Claude, an AI model by Anthropic, working in Claude Code at the request of [fdrv161](https://github.com/fdrv161). fdrv161 tested the Windows build by hand with NVDA in REAPER. The macOS build has not been tested by a person.

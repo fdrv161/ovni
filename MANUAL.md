@@ -4,7 +4,7 @@ This manual in other languages: [Русский](MANUAL.ru.md) · [Español](MAN
 
 TELESCOPE is an audio analyser that also draws conclusions. This manual covers the accessible build: every lens, what it measures and how to read it, and how to use all of it with a keyboard and a screen reader.
 
-The analysis engine, the lenses and the measurement notes come from the original [TELESCOPE by OVNI Audio](https://github.com/ovniaudio/ovni), free and open source under AGPLv3. The keyboard and screen reader layer was added in [this fork](https://github.com/fdrv161/telescope-accessible/tree/accessible). Where this manual explains what a lens measures, it follows the author's manual, shortened. The full original, with every formula and test result, is in [`plugins/telescope/docs/manual/README.md`](plugins/telescope/docs/manual/README.md).
+The analysis engine, the lenses and the measurement notes come from the original [TELESCOPE by OVNI Audio](https://ovniaudio.com/telescope), version 0.2.0, which the author published as open source under AGPLv3. The keyboard and screen reader layer was added in [this fork](https://github.com/fdrv161/telescope-accessible/tree/accessible). Where this manual explains what a lens measures, it follows the author's manual, shortened. The full original, with every formula and test result, is in [`plugins/telescope/docs/manual/README.md`](plugins/telescope/docs/manual/README.md).
 
 ## Contents
 
@@ -604,7 +604,7 @@ Numbers are spoken with a decimal point in every language, as on screen: "-14.2 
 
 ## Licence and credits
 
-- **TELESCOPE** is by [OVNI Audio](https://ovniaudio.com), free and open source under the **GNU AGPLv3**. Original source: <https://github.com/ovniaudio/ovni>.
+- **TELESCOPE** is by [OVNI Audio](https://ovniaudio.com), free. Version 0.2.0, on which this fork is based, was published as open source under the **GNU AGPLv3**. The author no longer publishes the source code, so this fork does not receive later changes. The author's site: <https://ovniaudio.com/telescope>.
 - The accessibility layer, the speech translations and the Russian translation were added in [fdrv161/telescope-accessible](https://github.com/fdrv161/telescope-accessible/tree/accessible), under the same licence. The full source of every release is in that repository, at the release tag.
 - Third-party notices: [`NOTICE.md`](NOTICE.md).
 
