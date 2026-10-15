@@ -485,7 +485,7 @@ void TelescopeEditor::layoutBody (juce::Rectangle<int> body)
 // ================== ACCESSIBILITY ==================
 void TelescopeEditor::setupAccessibility()
 {
-    setTitle ("TELESCOPE");
+    setTitle ("Periscope");   // the fork's name; the painted header and the author's texts keep TELESCOPE
     // The painted lens strip is for the eyes only: the controls below provide everything in it.
     strip.setAccessible (false);
 

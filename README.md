@@ -1,4 +1,4 @@
-# TELESCOPE Accessible
+# Periscope
 
 **An audio analyser that works with a screen reader.** Loudness, dynamics, spectrum, stereo, key, tonal balance against a reference, and a rules engine that writes down what it measured, all readable with NVDA and fully usable from the keyboard.
 
@@ -6,13 +6,13 @@ This is a fork of [TELESCOPE by OVNI Audio](https://ovniaudio.com/telescope), a 
 
 ## Download
 
-**[Download TELESCOPE Accessible for Windows](https://github.com/fdrv161/telescope-accessible/releases/latest/download/TELESCOPE-accessible-windows-vst3.zip)**: a ZIP with the VST3 plugin and the manual, for Windows 10 and 11, 64-bit.
+**[Download Periscope for Windows](https://github.com/fdrv161/periscope/releases/latest/download/Periscope-windows-vst3.zip)**: a ZIP with the VST3 plugin and the manual, for Windows 10 and 11, 64-bit.
 
-**[macOS, experimental](https://github.com/fdrv161/telescope-accessible/releases/latest/download/TELESCOPE-accessible-macos.zip)**: VST3 and AU, Apple Silicon and Intel. It builds and passes validation, but speech has only been tested with NVDA on Windows: VoiceOver may or may not work well. Reports are welcome.
+**[macOS, experimental](https://github.com/fdrv161/periscope/releases/latest/download/Periscope-macos.zip)**: VST3 and AU, Apple Silicon and Intel. It builds and passes validation, but speech has only been tested with NVDA on Windows: VoiceOver may or may not work well. Reports are welcome.
 
-Release notes and older versions: [Releases](https://github.com/fdrv161/telescope-accessible/releases).
+Release notes and older versions: [Releases](https://github.com/fdrv161/periscope/releases).
 
-Install on Windows: extract the ZIP and copy the `TELESCOPE Accessible.vst3` folder into `C:\Program Files\Common Files\VST3` (or another folder your DAW scans), then rescan plugins. In the DAW it is listed as "TELESCOPE Accessible (fdrv161)", so it can sit next to the original TELESCOPE. For macOS, see [Installing](MANUAL.md#installing) in the manual.
+Install on Windows: extract the ZIP and copy the `Periscope.vst3` folder into `C:\Program Files\Common Files\VST3` (or another folder your DAW scans), then rescan plugins. In the DAW it is listed as "Periscope (fdrv161)", so it can sit next to the original TELESCOPE. For macOS, see [Installing](MANUAL.md#installing) in the manual.
 
 ## Manual
 
@@ -20,26 +20,13 @@ Install on Windows: extract the ZIP and copy the `TELESCOPE Accessible.vst3` fol
 
 Also in [Russian (Русский)](MANUAL.ru.md) and [Spanish (Español)](MANUAL.es.md). The English manual is the main version; the translations are updated together with it.
 
-## What's new in 0.2.0-a11y.4
+## What's new in 1.0.0
 
-- REAPER no longer stays running in the background after you close it: interface images now free their video memory when the plugin window closes, not when the plugin is unloaded.
-- Background threads are never killed any more. A thread killed by force could keep the DAW running after it was closed or crash it: the same hang OVNI Audio describes in TELESCOPE 0.3.
-- Removing or moving the plugin while the Tonal Balance reference or the Verdict file is being analysed is safe.
+- **New name: Periscope.** Until now the plugin was called TELESCOPE Accessible. In the DAW it is now "Periscope (fdrv161)", on disk `Periscope.vst3`. Your projects and settings keep working.
+- Updating: delete the old `TELESCOPE Accessible.vst3` folder and copy `Periscope.vst3` in its place.
+- Nothing else changed since TELESCOPE Accessible 0.2.0-a11y.4: the last fix there was REAPER no longer staying in the background after you close it.
 
-## What's new in 0.2.0-a11y.3
-
-- The plugin has its own name: "TELESCOPE Accessible (fdrv161)" in the DAW, `TELESCOPE Accessible.vst3` on disk. It can be installed next to the original TELESCOPE.
-- Updating: delete the old `TELESCOPE.vst3` folder unless it is the original plugin, and insert the plugin again in older projects. Saved user presets stay available.
-
-## What's new in 0.2.0-a11y.2
-
-- **Spectrum** reads the picture the way the eye does: levels as on the plot, "the line", signal tilt, the shape against the line, and a list of peaks and dips. Enter on a peak moves the probe there.
-- **Keyboard probes** with the same numbers as the mouse in Spectrogram, Stereo spectrogram, Waterfall, CQT and Spiral.
-- **Loudness** history in words, **Dynamics** histogram width, **Scope** picture and directions.
-- Speech offers only what sighted users have on screen.
-- All translations reviewed. The manual is now also in Russian and Spanish.
-
-Full notes: [Releases](https://github.com/fdrv161/telescope-accessible/releases).
+Earlier versions and their notes: [Releases](https://github.com/fdrv161/periscope/releases).
 
 ## In short
 
@@ -54,7 +41,7 @@ Tested with NVDA in REAPER on Windows. The macOS build is experimental.
 
 ## Source and licence
 
-TELESCOPE is by [OVNI Audio](https://ovniaudio.com/telescope). Version 0.2.0, on which this fork is based, was published as open source under the **GNU AGPLv3**, and this fork stays under that licence. The author no longer publishes the source code of TELESCOPE, so this fork does not receive the author's later changes. This fork is on the [`accessible`](https://github.com/fdrv161/telescope-accessible/tree/accessible) branch, and the full source of every release is available at its tag.
+TELESCOPE is by [OVNI Audio](https://ovniaudio.com/telescope). Version 0.2.0, on which this fork is based, was published as open source under the **GNU AGPLv3**, and this fork stays under that licence. The author no longer publishes the source code of TELESCOPE, so this fork does not receive the author's later changes. This fork is on the [`accessible`](https://github.com/fdrv161/periscope/tree/accessible) branch, and the full source of every release is available at its tag.
 
 - Plugin source: [`plugins/telescope`](plugins/telescope)
 - Speech and keyboard code: [`plugins/telescope/source/a11y`](plugins/telescope/source/a11y)
@@ -66,4 +53,4 @@ TELESCOPE is by [OVNI Audio](https://ovniaudio.com/telescope). Version 0.2.0, on
 
 ## Feedback
 
-Found something that is not readable, a key that does not work, or a phrase that sounds wrong in your language? [Open an issue](https://github.com/fdrv161/telescope-accessible/issues).
+Found something that is not readable, a key that does not work, or a phrase that sounds wrong in your language? [Open an issue](https://github.com/fdrv161/periscope/issues).

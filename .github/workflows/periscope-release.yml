@@ -1,13 +1,13 @@
-# Publishes a release of TELESCOPE Accessible: VST3 for Windows x64, and an experimental macOS build
+# Publishes a release of Periscope: VST3 for Windows x64, and an experimental macOS build
 # (VST3 + AU, universal arm64 + x86_64, ad hoc signed, accessibility untested with VoiceOver).
-# Triggered by pushing a tag named telescope-accessible-<version>, e.g. telescope-accessible-0.2.0-a11y.1.
+# Triggered by pushing a tag named periscope-<version>, e.g. periscope-1.0.0.
 # The tag does not start with "v", so the upstream release.yml (tags v*) never runs for it.
 # Release notes come from .github/release-notes/<tag>.md, which must exist: a release without notes fails.
-name: TELESCOPE Accessible release
+name: Periscope release
 
 on:
   push:
-    tags: ['telescope-accessible-*']
+    tags: ['periscope-*']
 
 permissions:
   contents: write
@@ -64,23 +64,23 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p dist/pkg
-          cp -r "$VST3_BUNDLE" "dist/pkg/TELESCOPE Accessible.vst3"
+          cp -r "$VST3_BUNDLE" "dist/pkg/Periscope.vst3"
           cp MANUAL.md MANUAL.ru.md MANUAL.es.md LICENSE NOTICE.md dist/pkg/
           printf '%s\r\n' \
-            "TELESCOPE Accessible ${GITHUB_REF_NAME#telescope-accessible-} for Windows" \
+            "Periscope ${GITHUB_REF_NAME#periscope-} for Windows" \
             "" \
-            "Install: copy the TELESCOPE Accessible.vst3 folder into C:\\Program Files\\Common Files\\VST3" \
+            "Install: copy the Periscope.vst3 folder into C:\\Program Files\\Common Files\\VST3" \
             "(or another folder your DAW scans for VST3 plugins), then rescan plugins." \
             "" \
-            "Manual: MANUAL.md (English), MANUAL.ru.md (Russian), MANUAL.es.md (Spanish) in this ZIP, or https://github.com/fdrv161/telescope-accessible/blob/${GITHUB_REF_NAME}/MANUAL.md" \
-            "Source: https://github.com/fdrv161/telescope-accessible/tree/${GITHUB_REF_NAME} (GNU AGPLv3)" \
+            "Manual: MANUAL.md (English), MANUAL.ru.md (Russian), MANUAL.es.md (Spanish) in this ZIP, or https://github.com/fdrv161/periscope/blob/${GITHUB_REF_NAME}/MANUAL.md" \
+            "Source: https://github.com/fdrv161/periscope/tree/${GITHUB_REF_NAME} (GNU AGPLv3)" \
             > dist/pkg/README.txt
-          (cd dist/pkg && 7z a -tzip ../TELESCOPE-accessible-windows-vst3.zip . > /dev/null)
+          (cd dist/pkg && 7z a -tzip ../Periscope-windows-vst3.zip . > /dev/null)
 
       - uses: actions/upload-artifact@v4
         with:
           name: release-windows
-          path: dist/TELESCOPE-accessible-windows-vst3.zip
+          path: dist/Periscope-windows-vst3.zip
           if-no-files-found: error
 
   macos:
@@ -140,30 +140,30 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p dist/pkg
-          cp -R "$VST3_BUNDLE" "dist/pkg/TELESCOPE Accessible.vst3"
-          cp -R "$AU_BUNDLE" "dist/pkg/TELESCOPE Accessible.component"
+          cp -R "$VST3_BUNDLE" "dist/pkg/Periscope.vst3"
+          cp -R "$AU_BUNDLE" "dist/pkg/Periscope.component"
           cp MANUAL.md MANUAL.ru.md MANUAL.es.md LICENSE NOTICE.md dist/pkg/
           printf '%s\n' \
-            "TELESCOPE Accessible ${GITHUB_REF_NAME#telescope-accessible-} for macOS (experimental)" \
+            "Periscope ${GITHUB_REF_NAME#periscope-} for macOS (experimental)" \
             "" \
             "The accessibility layer has only been tested with NVDA on Windows. VoiceOver may or may not work well." \
             "" \
             "Install:" \
-            "  TELESCOPE Accessible.vst3      -> ~/Library/Audio/Plug-Ins/VST3" \
-            "  TELESCOPE Accessible.component -> ~/Library/Audio/Plug-Ins/Components" \
+            "  Periscope.vst3      -> ~/Library/Audio/Plug-Ins/VST3" \
+            "  Periscope.component -> ~/Library/Audio/Plug-Ins/Components" \
             "The build is not notarized. After copying, run in Terminal:" \
-            "  xattr -dr com.apple.quarantine ~/Library/Audio/Plug-Ins/VST3/TELESCOPE\ Accessible.vst3 ~/Library/Audio/Plug-Ins/Components/TELESCOPE\ Accessible.component" \
+            "  xattr -dr com.apple.quarantine ~/Library/Audio/Plug-Ins/VST3/Periscope.vst3 ~/Library/Audio/Plug-Ins/Components/Periscope.component" \
             "Then rescan plugins in your DAW." \
             "" \
-            "Manual: MANUAL.md (English), MANUAL.ru.md (Russian), MANUAL.es.md (Spanish) in this ZIP, or https://github.com/fdrv161/telescope-accessible/blob/${GITHUB_REF_NAME}/MANUAL.md" \
-            "Source: https://github.com/fdrv161/telescope-accessible/tree/${GITHUB_REF_NAME} (GNU AGPLv3)" \
+            "Manual: MANUAL.md (English), MANUAL.ru.md (Russian), MANUAL.es.md (Spanish) in this ZIP, or https://github.com/fdrv161/periscope/blob/${GITHUB_REF_NAME}/MANUAL.md" \
+            "Source: https://github.com/fdrv161/periscope/tree/${GITHUB_REF_NAME} (GNU AGPLv3)" \
             > dist/pkg/README.txt
-          (cd dist && ditto -c -k --keepParent pkg TELESCOPE-accessible-macos.zip)
+          (cd dist && ditto -c -k --keepParent pkg Periscope-macos.zip)
 
       - uses: actions/upload-artifact@v4
         with:
           name: release-macos
-          path: dist/TELESCOPE-accessible-macos.zip
+          path: dist/Periscope-macos.zip
           if-no-files-found: error
 
   publish:
@@ -180,7 +180,7 @@ jobs:
           notes=".github/release-notes/${GITHUB_REF_NAME}.md"
           [ -f "$notes" ] || { echo "Missing $notes"; exit 1; }
           echo "NOTES=$notes" >> "$GITHUB_ENV"
-          echo "VERSION=${GITHUB_REF_NAME#telescope-accessible-}" >> "$GITHUB_ENV"
+          echo "VERSION=${GITHUB_REF_NAME#periscope-}" >> "$GITHUB_ENV"
 
       - uses: actions/download-artifact@v4
         with:
@@ -193,10 +193,10 @@ jobs:
       - name: Publish release
         uses: softprops/action-gh-release@v2
         with:
-          name: TELESCOPE Accessible ${{ env.VERSION }}
+          name: Periscope ${{ env.VERSION }}
           body_path: ${{ env.NOTES }}
           files: |
-            dist/TELESCOPE-accessible-windows-vst3.zip
-            dist/TELESCOPE-accessible-macos.zip
+            dist/Periscope-windows-vst3.zip
+            dist/Periscope-macos.zip
             dist/SHA256SUMS.txt
           make_latest: true

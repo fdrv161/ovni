@@ -1,10 +1,10 @@
-# TELESCOPE Accessible — manual
+# Periscope — manual
 
 Otros idiomas: [English](MANUAL.md) · [Русский](MANUAL.ru.md). La versión principal es la inglesa; las traducciones se actualizan junto con ella.
 
-TELESCOPE es un analizador de audio que además concluye. Este manual cubre cada lente, qué mide y cómo leerla, y cómo usar todo con el teclado y un lector de pantalla.
+Periscope es TELESCOPE, el analizador de audio de OVNI Audio que además concluye, con voz y control por teclado. La pantalla del plugin sigue diciendo TELESCOPE, y este manual también lo llama así cuando describe el analizador. Este manual cubre cada lente, qué mide y cómo leerla, y cómo usar todo con el teclado y un lector de pantalla.
 
-El motor de análisis, las lentes y las notas de medición vienen del [TELESCOPE original de OVNI Audio](https://ovniaudio.com/telescope), versión 0.2.0, que el autor publicó como open source bajo AGPLv3. La capa de teclado y lector de pantalla se agregó en [este fork](https://github.com/fdrv161/telescope-accessible/tree/accessible). Donde este manual explica qué mide una lente, sigue el manual del autor, resumido. El original completo, con cada fórmula y resultado de test, está en [`plugins/telescope/docs/manual/README.es.md`](plugins/telescope/docs/manual/README.es.md).
+El motor de análisis, las lentes y las notas de medición vienen del [TELESCOPE original de OVNI Audio](https://ovniaudio.com/telescope), versión 0.2.0, que el autor publicó como open source bajo AGPLv3. La capa de teclado y lector de pantalla se agregó en [este fork](https://github.com/fdrv161/periscope/tree/accessible). Donde este manual explica qué mide una lente, sigue el manual del autor, resumido. El original completo, con cada fórmula y resultado de test, está en [`plugins/telescope/docs/manual/README.es.md`](plugins/telescope/docs/manual/README.es.md).
 
 ## Contenido
 
@@ -68,29 +68,31 @@ Probado con NVDA en REAPER en Windows. Otros lectores de pantalla que usan UI Au
 
 Un **plugin VST3 para Windows 10 u 11, de 64 bits**. Es la versión probada.
 
-1. Descargá [`TELESCOPE-accessible-windows-vst3.zip`](https://github.com/fdrv161/telescope-accessible/releases/latest/download/TELESCOPE-accessible-windows-vst3.zip) desde la [última versión publicada](https://github.com/fdrv161/telescope-accessible/releases/latest).
-2. Descomprimí el ZIP. Adentro hay una carpeta llamada `TELESCOPE Accessible.vst3`. Copiá esa carpeta entera a tu carpeta de VST3:
+1. Descargá [`Periscope-windows-vst3.zip`](https://github.com/fdrv161/periscope/releases/latest/download/Periscope-windows-vst3.zip) desde la [última versión publicada](https://github.com/fdrv161/periscope/releases/latest).
+2. Descomprimí el ZIP. Adentro hay una carpeta llamada `Periscope.vst3`. Copiá esa carpeta entera a tu carpeta de VST3:
    - la estándar es `C:\Program Files\Common Files\VST3` (Windows pide permiso de administrador para copiar ahí);
    - o cualquier carpeta que hayas agregado a las rutas VST3 de tu DAW. En REAPER: Options, Preferences, Plug-ins, VST, "VST plug-in paths".
 3. Reiniciá la DAW o volvé a escanear los plugins. En REAPER: Options, Preferences, Plug-ins, VST, "Re-scan".
-4. Insertá **TELESCOPE Accessible** en una pista o en el máster. En la lista de plugins aparece como "TELESCOPE Accessible (fdrv161)".
+4. Insertá **Periscope** en una pista o en el máster. En la lista de plugins aparece como "Periscope (fdrv161)".
 
-Para actualizar, cerrá la DAW y reemplazá la carpeta `TELESCOPE Accessible.vst3` por la nueva.
+Para actualizar, cerrá la DAW y reemplazá la carpeta `Periscope.vst3` por la nueva.
 
-**Si venís de la 0.2.0-a11y.2 o anterior.** Esas versiones se llamaban TELESCOPE de OVNI, como el original, y tenían su código de plugin. Ahora el fork es un plugin aparte, así que se puede instalar junto al TELESCOPE original. Borrá la carpeta vieja `TELESCOPE.vst3`, salvo que sea el plugin original y también lo uses. En los proyectos que usaban una versión vieja, insertá TELESCOPE Accessible de nuevo: los ajustes viejos no se pasan. Los presets de usuario guardados siguen disponibles.
+**Si venís de TELESCOPE Accessible.** Hasta la versión 1.0.0 el plugin se llamaba TELESCOPE Accessible. Borrá la carpeta vieja `TELESCOPE Accessible.vst3` y copiá `Periscope.vst3` en su lugar. Tus proyectos y ajustes siguen funcionando; en la lista de plugins el nombre pasa a ser "Periscope (fdrv161)".
+
+**Si venís de la 0.2.0-a11y.2 o anterior.** Esas versiones se llamaban TELESCOPE de OVNI, como el original, y tenían su código de plugin. Ahora el fork es un plugin aparte, así que se puede instalar junto al TELESCOPE original. Borrá la carpeta vieja `TELESCOPE.vst3`, salvo que sea el plugin original y también lo uses. En los proyectos que usaban una versión vieja, insertá Periscope de nuevo: los ajustes viejos no se pasan. Los presets de usuario guardados siguen disponibles.
 
 La versión no tiene firma de código. Eso no afecta a un VST3 que carga una DAW.
 
 ### macOS (experimental)
 
-VST3 y AU, universal (Apple Silicon e Intel), macOS 11 o posterior. Compila y pasa pluginval, pero **la voz sólo se probó con NVDA en Windows**. JUCE expone los mismos controles a VoiceOver y los avisos usan el mecanismo propio de VoiceOver, así que puede funcionar bien, a medias o nada. Si lo probás, por favor [contá cómo te fue](https://github.com/fdrv161/telescope-accessible/issues).
+VST3 y AU, universal (Apple Silicon e Intel), macOS 11 o posterior. Compila y pasa pluginval, pero **la voz sólo se probó con NVDA en Windows**. JUCE expone los mismos controles a VoiceOver y los avisos usan el mecanismo propio de VoiceOver, así que puede funcionar bien, a medias o nada. Si lo probás, por favor [contá cómo te fue](https://github.com/fdrv161/periscope/issues).
 
-1. Descargá [`TELESCOPE-accessible-macos.zip`](https://github.com/fdrv161/telescope-accessible/releases/latest/download/TELESCOPE-accessible-macos.zip) y abrilo.
-2. Copiá `TELESCOPE Accessible.vst3` a `~/Library/Audio/Plug-Ins/VST3` y `TELESCOPE Accessible.component` a `~/Library/Audio/Plug-Ins/Components`.
+1. Descargá [`Periscope-macos.zip`](https://github.com/fdrv161/periscope/releases/latest/download/Periscope-macos.zip) y abrilo.
+2. Copiá `Periscope.vst3` a `~/Library/Audio/Plug-Ins/VST3` y `Periscope.component` a `~/Library/Audio/Plug-Ins/Components`.
 3. La versión está firmada ad hoc, sin notarización de Apple, así que macOS la bloquea hasta que quites la marca de cuarentena. En Terminal:
 
    ```bash
-   xattr -dr com.apple.quarantine ~/Library/Audio/Plug-Ins/VST3/TELESCOPE\ Accessible.vst3 ~/Library/Audio/Plug-Ins/Components/TELESCOPE\ Accessible.component
+   xattr -dr com.apple.quarantine ~/Library/Audio/Plug-Ins/VST3/Periscope.vst3 ~/Library/Audio/Plug-Ins/Components/Periscope.component
    ```
 
 4. Volvé a escanear los plugins en tu DAW. Logic puede necesitar un reinicio para listar el AU.
@@ -101,7 +103,7 @@ En macOS las teclas son las mismas que abajo, con Opción en lugar de Alt.
 
 ## Primeros pasos con un lector de pantalla
 
-1. Insertá TELESCOPE Accessible y abrí su ventana. En REAPER la ventana de FX se abre con el plugin; presioná Tab si el foco sigue en la lista de FX.
+1. Insertá Periscope y abrí su ventana. En REAPER la ventana de FX se abre con el plugin; presioná Tab si el foco sigue en la lista de FX.
 2. El foco cae en la **lista de lentes**. NVDA dice algo como "Lentes, Loudness".
 3. Presioná **flecha arriba** y **flecha abajo** para elegir una lente. La lente cambia enseguida, igual que con un clic.
 4. Presioná **Intro** para ir a las **lecturas** de esa lente. NVDA lee la fila actual, por ejemplo "Integrado, -14.2 LUFS".
@@ -605,7 +607,7 @@ Los números se dicen con punto decimal en todos los idiomas, como en pantalla: 
 ## Licencia y créditos
 
 - **TELESCOPE** es de [OVNI Audio](https://ovniaudio.com), gratis. La versión 0.2.0, en la que se basa este fork, se publicó como open source bajo la **GNU AGPLv3**. El autor ya no publica el código fuente, así que los cambios posteriores no llegan a este fork. Sitio del autor: <https://ovniaudio.com/telescope>.
-- La voz y el control por teclado, sus traducciones y la traducción al ruso se agregaron en [fdrv161/telescope-accessible](https://github.com/fdrv161/telescope-accessible/tree/accessible), bajo la misma licencia. El código completo de cada versión está en ese repositorio, en la etiqueta de la versión.
+- La voz y el control por teclado, sus traducciones y la traducción al ruso se agregaron en [fdrv161/periscope](https://github.com/fdrv161/periscope/tree/accessible), bajo la misma licencia. El código completo de cada versión está en ese repositorio, en la etiqueta de la versión.
 - Avisos de terceros: [`NOTICE.md`](NOTICE.md).
 
 **Cómo se hizo.** La voz y el control por teclado, sus traducciones, la traducción al ruso, los scripts de compilación y esta documentación los escribió Claude, un modelo de IA de Anthropic, trabajando en Claude Code a pedido de [fdrv161](https://github.com/fdrv161). La versión para Windows fue probada a mano con NVDA en REAPER por fdrv161. La versión para macOS no la probó ninguna persona.

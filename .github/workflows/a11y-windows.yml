@@ -1,6 +1,6 @@
-# Builds the accessible TELESCOPE (VST3, Windows x64) for testing with NVDA.
+# Builds Periscope (VST3, Windows x64) for testing with NVDA.
 # Runs on every push to the accessible branch and manually (Actions -> Run workflow).
-# Output: the TELESCOPE-accessible-windows-vst3 artifact (the TELESCOPE Accessible.vst3 folder inside a ZIP).
+# Output: the Periscope-windows-vst3 artifact (the Periscope.vst3 folder inside a ZIP).
 name: A11y Windows build
 
 on:
@@ -64,7 +64,7 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: TELESCOPE-accessible-windows-vst3
+          name: Periscope-windows-vst3
           path: ${{ env.VST3_DIR }}
           if-no-files-found: error
           retention-days: 30

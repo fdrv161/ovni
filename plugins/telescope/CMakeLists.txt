@@ -76,14 +76,15 @@ endif ()
 
 juce_add_plugin(telescope
     VERSION                  ${TELESCOPE_VERSION}     # propia, NO la del project() raíz (D-51)
-    # Accessible fork: its own name, bundle and codes, so the DAW lists it apart from the original
-    # TELESCOPE and both can be installed side by side (the original is OVNI / Ovni / Tlsc / "TELESCOPE").
+    # Fork: its own name, bundle and codes, so the DAW lists it apart from the original TELESCOPE and
+    # both can be installed side by side (the original is OVNI / Ovni / Tlsc / "TELESCOPE"). Renamed from
+    # "TELESCOPE Accessible" to "Periscope" in 1.0.0; the codes stay, so saved projects still open.
     COMPANY_NAME             "fdrv161"
-    BUNDLE_ID                "com.fdrv161.telescope-accessible"
+    BUNDLE_ID                "com.fdrv161.periscope"
     PLUGIN_MANUFACTURER_CODE Fdrv
     PLUGIN_CODE              Tlsa
     FORMATS                  AU VST3 Standalone
-    PRODUCT_NAME             "TELESCOPE Accessible"
+    PRODUCT_NAME             "Periscope"
     IS_SYNTH                 FALSE
     NEEDS_MIDI_INPUT         TRUE             # interceptar Program Change (preset por MIDI) -> NO quitar
     EDITOR_WANTS_KEYBOARD_FOCUS TRUE          # accessibility: without this the plugin window gets no keys on Windows

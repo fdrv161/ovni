@@ -1,8 +1,8 @@
-# Experimental macOS build of TELESCOPE Accessible (VST3 + AU, universal arm64 + x86_64).
+# Experimental macOS build of Periscope (VST3 + AU, universal arm64 + x86_64).
 # The accessibility layer is written for JUCE on both platforms but has only been tested with NVDA on Windows.
 # Runs once before each release, not on every push: day-to-day work is tested on Windows.
 # Start it manually: Actions -> Run workflow, or `gh workflow run a11y-macos.yml --ref accessible`.
-# Output: the TELESCOPE-accessible-macos artifact (TELESCOPE Accessible.vst3 and .component inside a ZIP).
+# Output: the Periscope-macos artifact (Periscope.vst3 and .component inside a ZIP).
 name: A11y macOS build
 
 on:
@@ -62,14 +62,14 @@ jobs:
           codesign --force --deep --sign - "$au"
           lipo -info "$vst3/Contents/MacOS/"*
           mkdir -p dist
-          cp -R "$vst3" "dist/TELESCOPE Accessible.vst3"
-          cp -R "$au" "dist/TELESCOPE Accessible.component"
+          cp -R "$vst3" "dist/Periscope.vst3"
+          cp -R "$au" "dist/Periscope.component"
           echo "VST3_BUNDLE=$vst3" >> "$GITHUB_ENV"
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: TELESCOPE-accessible-macos
+          name: Periscope-macos
           path: dist
           if-no-files-found: error
           retention-days: 30
