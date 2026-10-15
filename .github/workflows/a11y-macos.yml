@@ -1,12 +1,13 @@
 # Experimental macOS build of TELESCOPE Accessible (VST3 + AU, universal arm64 + x86_64).
 # The accessibility layer is written for JUCE on both platforms but has only been tested with NVDA on Windows.
-# Runs on every push to the accessible branch and manually (Actions -> Run workflow).
+# Runs once before each release, not on every push: day-to-day work is tested on Windows.
+# Start it manually (Actions -> Run workflow) or with `git push fork accessible:mac-build`.
 # Output: the TELESCOPE-accessible-macos artifact (TELESCOPE Accessible.vst3 and .component inside a ZIP).
 name: A11y macOS build
 
 on:
   push:
-    branches: [accessible]
+    branches: [mac-build]
   workflow_dispatch: {}
 
 concurrency:
