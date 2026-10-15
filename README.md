@@ -20,6 +20,11 @@ Install on Windows: extract the ZIP and copy the `TELESCOPE Accessible.vst3` fol
 
 Also in [Russian (Русский)](MANUAL.ru.md) and [Spanish (Español)](MANUAL.es.md). The English manual is the main version; the translations are updated together with it.
 
+## What's new in 0.2.0-a11y.4
+
+- Background threads are never killed any more. A thread killed by force could keep the DAW running after it was closed or crash it: the same hang OVNI Audio describes in TELESCOPE 0.3.
+- Removing or moving the plugin while the Tonal Balance reference or the Verdict file is being analysed is safe.
+
 ## What's new in 0.2.0-a11y.3
 
 - The plugin has its own name: "TELESCOPE Accessible (fdrv161)" in the DAW, `TELESCOPE Accessible.vst3` on disk. It can be installed next to the original TELESCOPE.
