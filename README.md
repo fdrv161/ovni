@@ -22,9 +22,7 @@ Also in [Russian (Русский)](MANUAL.ru.md) and [Spanish (Español)](MANUAL
 
 ## What's new in 1.0.0
 
-- **New name: Periscope.** Until now the plugin was called TELESCOPE Accessible. In the DAW it is now "Periscope (fdrv161)", on disk `Periscope.vst3`. Your projects and settings keep working.
-- Updating: delete the old `TELESCOPE Accessible.vst3` folder and copy `Periscope.vst3` in its place.
-- Since the last TELESCOPE Accessible build, nothing else changed: REAPER no longer stays in the background after you close it, and removing the plugin during a file analysis is safe.
+- First release under the name Periscope: "Periscope (fdrv161)" in the DAW, `Periscope.vst3` on disk.
 
 ## In short
 

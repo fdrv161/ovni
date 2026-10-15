@@ -77,10 +77,6 @@ Un **plugin VST3 para Windows 10 u 11, de 64 bits**. Es la versión probada.
 
 Para actualizar, cerrá la DAW y reemplazá la carpeta `Periscope.vst3` por la nueva.
 
-**Si venís de TELESCOPE Accessible.** Hasta la versión 1.0.0 el plugin se llamaba TELESCOPE Accessible. Borrá la carpeta vieja `TELESCOPE Accessible.vst3` y copiá `Periscope.vst3` en su lugar. Tus proyectos y ajustes siguen funcionando; en la lista de plugins el nombre pasa a ser "Periscope (fdrv161)".
-
-**Si venís de la 0.2.0-a11y.2 o anterior.** Esas versiones se llamaban TELESCOPE de OVNI, como el original, y tenían su código de plugin. Ahora el fork es un plugin aparte, así que se puede instalar junto al TELESCOPE original. Borrá la carpeta vieja `TELESCOPE.vst3`, salvo que sea el plugin original y también lo uses. En los proyectos que usaban una versión vieja, insertá Periscope de nuevo: los ajustes viejos no se pasan. Los presets de usuario guardados siguen disponibles.
-
 La versión no tiene firma de código. Eso no afecta a un VST3 que carga una DAW.
 
 ### macOS (experimental)
