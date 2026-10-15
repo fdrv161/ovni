@@ -22,6 +22,7 @@ Also in [Russian (Русский)](MANUAL.ru.md) and [Spanish (Español)](MANUAL
 
 ## What's new in 0.2.0-a11y.4
 
+- REAPER no longer stays running in the background after you close it: interface images now free their video memory when the plugin window closes, not when the plugin is unloaded.
 - Background threads are never killed any more. A thread killed by force could keep the DAW running after it was closed or crash it: the same hang OVNI Audio describes in TELESCOPE 0.3.
 - Removing or moving the plugin while the Tonal Balance reference or the Verdict file is being analysed is safe.
 

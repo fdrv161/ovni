@@ -9,6 +9,7 @@ Each ZIP contains the manual in English, Russian and Spanish.
 
 ## What's new since 0.2.0-a11y.3
 
+- **The DAW no longer stays running after you close it.** Once TELESCOPE had been added to a project, even if it was removed again, REAPER kept running in the background at full load on one CPU core after its window closed. Two images of the interface background lived until the plugin was unloaded, and freeing their video memory at that moment made the graphics driver wait forever (seen with an AMD driver on Windows). They are now freed when the plugin window closes.
 - **Background threads are never killed.** Before, when the analysis, file analysis or reference waveform thread took longer than 2 seconds to stop, it was killed by force. A killed thread can leave a lock taken inside the DAW, which can keep the DAW running after it is closed or crash it. This is the same hang OVNI Audio describes in TELESCOPE 0.3. Now the plugin asks the thread to stop and waits until it does.
 - **Removing or moving the plugin while a file is being analysed** (the Tonal Balance reference or the Verdict file) is safe: the file analyzers are stopped before the engine they report to.
 - The reference waveform in Tonal Balance is read at normal priority, so a busy DAW cannot hold it back when the window closes.
