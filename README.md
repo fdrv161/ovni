@@ -10,7 +10,7 @@ This is a fork of [TELESCOPE by OVNI Audio](https://ovniaudio.com/telescope), a 
 
 **[macOS, experimental](https://github.com/fdrv161/periscope/releases/latest/download/Periscope-macos.zip)**: VST3 and AU, Apple Silicon and Intel. It builds and passes validation, but speech has only been tested with NVDA on Windows: VoiceOver may or may not work well. Reports are welcome.
 
-Release notes and older versions: [Releases](https://github.com/fdrv161/periscope/releases).
+Release notes: [Releases](https://github.com/fdrv161/periscope/releases).
 
 Install on Windows: extract the ZIP and copy the `Periscope.vst3` folder into `C:\Program Files\Common Files\VST3` (or another folder your DAW scans), then rescan plugins. In the DAW it is listed as "Periscope (fdrv161)", so it can sit next to the original TELESCOPE. For macOS, see [Installing](MANUAL.md#installing) in the manual.
 
@@ -24,9 +24,7 @@ Also in [Russian (Русский)](MANUAL.ru.md) and [Spanish (Español)](MANUAL
 
 - **New name: Periscope.** Until now the plugin was called TELESCOPE Accessible. In the DAW it is now "Periscope (fdrv161)", on disk `Periscope.vst3`. Your projects and settings keep working.
 - Updating: delete the old `TELESCOPE Accessible.vst3` folder and copy `Periscope.vst3` in its place.
-- Nothing else changed since TELESCOPE Accessible 0.2.0-a11y.4: the last fix there was REAPER no longer staying in the background after you close it.
-
-Earlier versions and their notes: [Releases](https://github.com/fdrv161/periscope/releases).
+- Since the last TELESCOPE Accessible build, nothing else changed: REAPER no longer stays in the background after you close it, and removing the plugin during a file analysis is safe.
 
 ## In short
 

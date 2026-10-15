@@ -11,7 +11,7 @@ Each ZIP contains the manual in English, Russian and Spanish.
 
 - **New name.** In the DAW the plugin is now "Periscope (fdrv161)", on disk `Periscope.vst3` (and `Periscope.component` on macOS). The plugin codes did not change, so your projects and settings keep working.
 - **Updating from TELESCOPE Accessible**: delete the old `TELESCOPE Accessible.vst3` folder and copy `Periscope.vst3` in its place.
-- Version numbers start again at 1.0.0. Nothing else changed since TELESCOPE Accessible 0.2.0-a11y.4; for that and older versions, see [Releases](https://github.com/fdrv161/periscope/releases).
+- Version numbers start again at 1.0.0. This release also has the last fixes of TELESCOPE Accessible: REAPER no longer stays in the background after you close it, background threads are never killed, and removing or moving the plugin while a file is being analysed is safe.
 
 Tested with NVDA in REAPER on Windows.
 
