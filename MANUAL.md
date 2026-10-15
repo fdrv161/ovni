@@ -2,7 +2,7 @@
 
 This manual in other languages: [Русский](MANUAL.ru.md) · [Español](MANUAL.es.md). The English one is the main version; the translations are updated together with it.
 
-TELESCOPE is an audio analyser that also draws conclusions. This manual covers the accessible build: every lens, what it measures and how to read it, and how to use all of it with a keyboard and a screen reader.
+TELESCOPE is an audio analyser that also draws conclusions. This manual covers every lens, what it measures and how to read it, and how to use all of it with a keyboard and a screen reader.
 
 The analysis engine, the lenses and the measurement notes come from the original [TELESCOPE by OVNI Audio](https://ovniaudio.com/telescope), version 0.2.0, which the author published as open source under AGPLv3. The keyboard and screen reader layer was added in [this fork](https://github.com/fdrv161/telescope-accessible/tree/accessible). Where this manual explains what a lens measures, it follows the author's manual, shortened. The full original, with every formula and test result, is in [`plugins/telescope/docs/manual/README.md`](plugins/telescope/docs/manual/README.md).
 
@@ -45,7 +45,7 @@ Thirteen **lenses** over one analysis engine, plus a rules engine (Verdict) that
 - **It does not locate sources.** Field and the polar views show energy by pan direction, not where a sound was in a room.
 - **No AI, no network, no telemetry.** Verdict is a fixed table of thresholds: the same signal always gives the same report, and nothing leaves your computer.
 
-### What the accessible build adds
+### What this fork adds
 
 The original interface is fully painted, so screen readers found nothing in it. This build puts real, focusable controls on top of the painted interface:
 
@@ -83,7 +83,7 @@ The build is not code-signed. That does not affect a VST3 loaded by a DAW.
 
 ### macOS (experimental)
 
-VST3 and AU, universal (Apple Silicon and Intel), macOS 11 or newer. It builds and passes pluginval, but **the accessibility layer has only been tested with NVDA on Windows**. JUCE exposes the same controls to VoiceOver and the announcements use VoiceOver's own mechanism, so it may work well, partly, or not at all. If you try it, please [report how it goes](https://github.com/fdrv161/telescope-accessible/issues).
+VST3 and AU, universal (Apple Silicon and Intel), macOS 11 or newer. It builds and passes pluginval, but **speech has only been tested with NVDA on Windows**. JUCE exposes the same controls to VoiceOver and the announcements use VoiceOver's own mechanism, so it may work well, partly, or not at all. If you try it, please [report how it goes](https://github.com/fdrv161/telescope-accessible/issues).
 
 1. Download [`TELESCOPE-accessible-macos.zip`](https://github.com/fdrv161/telescope-accessible/releases/latest/download/TELESCOPE-accessible-macos.zip) and open it.
 2. Copy `TELESCOPE Accessible.vst3` into `~/Library/Audio/Plug-Ins/VST3` and `TELESCOPE Accessible.component` into `~/Library/Audio/Plug-Ins/Components`.
@@ -605,7 +605,7 @@ Numbers are spoken with a decimal point in every language, as on screen: "-14.2 
 ## Licence and credits
 
 - **TELESCOPE** is by [OVNI Audio](https://ovniaudio.com), free. Version 0.2.0, on which this fork is based, was published as open source under the **GNU AGPLv3**. The author no longer publishes the source code, so this fork does not receive later changes. The author's site: <https://ovniaudio.com/telescope>.
-- The accessibility layer, the speech translations and the Russian translation were added in [fdrv161/telescope-accessible](https://github.com/fdrv161/telescope-accessible/tree/accessible), under the same licence. The full source of every release is in that repository, at the release tag.
+- Speech and keyboard control, their translations and the Russian translation were added in [fdrv161/telescope-accessible](https://github.com/fdrv161/telescope-accessible/tree/accessible), under the same licence. The full source of every release is in that repository, at the release tag.
 - Third-party notices: [`NOTICE.md`](NOTICE.md).
 
-**How this was made.** The accessibility layer, the speech translations, the Russian translation, the build scripts and this documentation were written by Claude, an AI model by Anthropic, working in Claude Code at the request of [fdrv161](https://github.com/fdrv161). fdrv161 tested the Windows build by hand with NVDA in REAPER. The macOS build has not been tested by a person.
+**How this was made.** The speech and keyboard layer, its translations, the Russian translation, the build scripts and this documentation were written by Claude, an AI model by Anthropic, working in Claude Code at the request of [fdrv161](https://github.com/fdrv161). fdrv161 tested the Windows build by hand with NVDA in REAPER. The macOS build has not been tested by a person.

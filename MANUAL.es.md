@@ -2,7 +2,7 @@
 
 Otros idiomas: [English](MANUAL.md) · [Русский](MANUAL.ru.md). La versión principal es la inglesa; las traducciones se actualizan junto con ella.
 
-TELESCOPE es un analizador de audio que además concluye. Este manual cubre la versión accesible: cada lente, qué mide y cómo leerla, y cómo usar todo con el teclado y un lector de pantalla.
+TELESCOPE es un analizador de audio que además concluye. Este manual cubre cada lente, qué mide y cómo leerla, y cómo usar todo con el teclado y un lector de pantalla.
 
 El motor de análisis, las lentes y las notas de medición vienen del [TELESCOPE original de OVNI Audio](https://ovniaudio.com/telescope), versión 0.2.0, que el autor publicó como open source bajo AGPLv3. La capa de teclado y lector de pantalla se agregó en [este fork](https://github.com/fdrv161/telescope-accessible/tree/accessible). Donde este manual explica qué mide una lente, sigue el manual del autor, resumido. El original completo, con cada fórmula y resultado de test, está en [`plugins/telescope/docs/manual/README.es.md`](plugins/telescope/docs/manual/README.es.md).
 
@@ -45,11 +45,11 @@ Trece **lentes** sobre un solo motor de análisis, más un motor de reglas (Vere
 - **No localiza fuentes.** Campo y las vistas polares muestran energía por dirección de paneo, no dónde estaba un sonido en una sala.
 - **Sin IA, sin red, sin telemetría.** Veredicto es una tabla fija de umbrales: la misma señal da siempre el mismo informe, y no sale nada de tu computadora.
 
-### Qué agrega la versión accesible
+### Qué agrega este fork
 
 La interfaz original está toda dibujada, así que los lectores de pantalla no encontraban nada en ella. Esta versión pone controles reales, que pueden recibir el foco, encima de la interfaz dibujada:
 
-- una **lista de lentes**, un **panel de lecturas** y un **panel del plugin**, todos accesibles con Tab;
+- una **lista de lentes**, un **panel de lecturas** y un **panel del plugin**, y se pasa de uno a otro con Tab;
 - cada número de cada lente como filas de texto ("Integrado, -14.2 LUFS");
 - cada ajuste se puede cambiar desde el teclado;
 - mensajes hablados cuando termina un análisis en segundo plano;
@@ -83,7 +83,7 @@ La versión no tiene firma de código. Eso no afecta a un VST3 que carga una DAW
 
 ### macOS (experimental)
 
-VST3 y AU, universal (Apple Silicon e Intel), macOS 11 o posterior. Compila y pasa pluginval, pero **la capa de accesibilidad sólo se probó con NVDA en Windows**. JUCE expone los mismos controles a VoiceOver y los avisos usan el mecanismo propio de VoiceOver, así que puede funcionar bien, a medias o nada. Si lo probás, por favor [contá cómo te fue](https://github.com/fdrv161/telescope-accessible/issues).
+VST3 y AU, universal (Apple Silicon e Intel), macOS 11 o posterior. Compila y pasa pluginval, pero **la voz sólo se probó con NVDA en Windows**. JUCE expone los mismos controles a VoiceOver y los avisos usan el mecanismo propio de VoiceOver, así que puede funcionar bien, a medias o nada. Si lo probás, por favor [contá cómo te fue](https://github.com/fdrv161/telescope-accessible/issues).
 
 1. Descargá [`TELESCOPE-accessible-macos.zip`](https://github.com/fdrv161/telescope-accessible/releases/latest/download/TELESCOPE-accessible-macos.zip) y abrilo.
 2. Copiá `TELESCOPE Accessible.vst3` a `~/Library/Audio/Plug-Ins/VST3` y `TELESCOPE Accessible.component` a `~/Library/Audio/Plug-Ins/Components`.
@@ -605,7 +605,7 @@ Los números se dicen con punto decimal en todos los idiomas, como en pantalla: 
 ## Licencia y créditos
 
 - **TELESCOPE** es de [OVNI Audio](https://ovniaudio.com), gratis. La versión 0.2.0, en la que se basa este fork, se publicó como open source bajo la **GNU AGPLv3**. El autor ya no publica el código fuente, así que los cambios posteriores no llegan a este fork. Sitio del autor: <https://ovniaudio.com/telescope>.
-- La capa de accesibilidad, las traducciones de la voz y la traducción al ruso se agregaron en [fdrv161/telescope-accessible](https://github.com/fdrv161/telescope-accessible/tree/accessible), bajo la misma licencia. El código completo de cada versión está en ese repositorio, en la etiqueta de la versión.
+- La voz y el control por teclado, sus traducciones y la traducción al ruso se agregaron en [fdrv161/telescope-accessible](https://github.com/fdrv161/telescope-accessible/tree/accessible), bajo la misma licencia. El código completo de cada versión está en ese repositorio, en la etiqueta de la versión.
 - Avisos de terceros: [`NOTICE.md`](NOTICE.md).
 
-**Cómo se hizo.** La capa de accesibilidad, las traducciones de la voz, la traducción al ruso, los scripts de compilación y esta documentación los escribió Claude, un modelo de IA de Anthropic, trabajando en Claude Code a pedido de [fdrv161](https://github.com/fdrv161). La versión para Windows fue probada a mano con NVDA en REAPER por fdrv161. La versión para macOS no la probó ninguna persona.
+**Cómo se hizo.** La voz y el control por teclado, sus traducciones, la traducción al ruso, los scripts de compilación y esta documentación los escribió Claude, un modelo de IA de Anthropic, trabajando en Claude Code a pedido de [fdrv161](https://github.com/fdrv161). La versión para Windows fue probada a mano con NVDA en REAPER por fdrv161. La versión para macOS no la probó ninguna persona.
