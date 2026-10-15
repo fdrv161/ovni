@@ -190,9 +190,15 @@ private:
     }
 
     // tile 128×128 de grano (mitad clarea, mitad oscurece — emula el blend overlay del mockup)
-    static const juce::Image& grainTile()
+    //
+    // Accessible fork: shared through a SharedResourcePointer, not a function-local static, so it is freed
+    // when the last Panel goes (the window closes) instead of at DLL unload, where releasing its graphics
+    // resources hung REAPER on exit (see Bloom::sprite in Glow.h).
+    const juce::Image& grainTile() const { return grainHolder->tile; }
+
+    struct GrainTile
     {
-        static const juce::Image tile = []
+        juce::Image tile = []
         {
             constexpr int kSize = 128;
             juce::Image t (juce::Image::ARGB, kSize, kSize, true);
@@ -207,9 +213,9 @@ private:
                 }
             return t;
         }();
-        return tile;
-    }
+    };
 
+    juce::SharedResourcePointer<GrainTile> grainHolder;
     juce::Image  img;
     juce::Colour hue = theme::cyan;   // hue de familia (lo setea el editor)
     int   rw = 0, rh = 0;

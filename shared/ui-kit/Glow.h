@@ -25,12 +25,20 @@ class Bloom
 {
 public:
     // Disco radial blanco premultiplicado (perfil bloom: núcleo denso, cola suave). Compartido.
-    static const juce::Image& sprite()
+    //
+    // Accessible fork: shared through a SharedResourcePointer instead of a function-local static. A static
+    // image lives until the DLL is unloaded, and on Windows its destructor then runs under the loader lock;
+    // releasing graphics resources there made the AMD driver wait forever and REAPER never exited. Now
+    // the image dies with the last Bloom, i.e. when the plugin window closes. It is only read through
+    // BitmapData, so a software image is enough and never touches the GPU at all.
+    const juce::Image& sprite() const { return spriteHolder->image; }
+
+    struct SpriteImage
     {
-        static const juce::Image s = []
+        juce::Image image = []
         {
             constexpr int S = 160;
-            juce::Image img (juce::Image::ARGB, S, S, true);
+            juce::Image img (juce::Image::ARGB, S, S, true, juce::SoftwareImageType());
             const float c = S * 0.5f;
             juce::Image::BitmapData bd (img, juce::Image::BitmapData::writeOnly);
             for (int y = 0; y < S; ++y)
@@ -46,8 +54,7 @@ public:
                 }
             return img;
         }();
-        return s;
-    }
+    };
 
     // Prepara el buffer additivo (px-físico) para un componente w×h a la escala dada. Lo limpia a 0.
     void begin (int w, int h, float scale)
@@ -152,6 +159,7 @@ private:
         dst = (juce::uint8) (v > 255 ? 255 : v);
     }
 
+    juce::SharedResourcePointer<SpriteImage> spriteHolder;
     juce::Image buf;
     std::unique_ptr<juce::Graphics> gctx;   // Graphics sobre buf (coords lógicas); vive entre begin/composite
     float sc = 1.0f;
