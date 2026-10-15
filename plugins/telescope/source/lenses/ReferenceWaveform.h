@@ -4,6 +4,7 @@
 #include <vector>
 #include <juce_audio_formats/juce_audio_formats.h>
 #include <juce_core/juce_core.h>
+#include "analysis/ThreadStop.h"
 
 namespace telescope
 {
@@ -24,6 +25,7 @@ class ReferenceWaveform : private juce::Thread
 public:
     // 2 048 tramos: la tira más ancha (L a 2×) mide unos 2 000 píxeles físicos.
     static constexpr int kBuckets = 2048;
+    static constexpr int kStopGraceMs = 2000;   // only when to log; the wait itself has no limit
 
     struct Overview
     {
@@ -34,7 +36,8 @@ public:
     };
 
     ReferenceWaveform() : juce::Thread ("TelescopeRefWaveform") { formats.registerBasicFormats(); }
-    ~ReferenceWaveform() override { stopThread (2000); }
+    // Accessible fork: stop without killing (see ThreadStop.h). The worker checks for exit per bucket.
+    ~ReferenceWaveform() override { stopThreadWithoutKilling (*this, kStopGraceMs); }
 
     // Pide la forma de onda de `f`. Si ya es la que hay (o la que se está calculando), no hace nada.
     void load (const juce::File& f)
@@ -45,7 +48,7 @@ public:
             if (path == requested) return;
             requested = path;
         }
-        stopThread (2000);
+        stopThreadWithoutKilling (*this, kStopGraceMs);
         if (path.isEmpty())
         {
             const juce::ScopedLock sl (lock);
@@ -53,7 +56,9 @@ public:
             return;
         }
         pending = f;
-        startThread (juce::Thread::Priority::low);
+        // Accessible fork: normal priority, not low. A low-priority reader can be starved by a busy DAW,
+        // and then closing the window has to wait for it.
+        startThread();
     }
 
     std::shared_ptr<const Overview> latest() const

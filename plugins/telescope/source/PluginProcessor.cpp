@@ -340,6 +340,11 @@ void TelescopeProcessor::setStateInformation (const void* data, int sizeInBytes)
 
 TelescopeProcessor::~TelescopeProcessor()
 {
+    // Accessible fork: the file analyzers go first, explicitly. The reference analyzer's onFinished pushes
+    // its result into analysisThread from its own thread, so it must be fully stopped before the engine
+    // is (implicit member destruction would do it the other way round).
+    verdictAnalyzer.reset();
+    fileAnalyzer.reset();
     analysisThread.stop();
 }
 
@@ -398,7 +403,9 @@ void TelescopeProcessor::syncReference()
         // El resultado se le empuja al motor DESDE EL THREAD DEL ANALIZADOR: el módulo Reference lo
         // protege con su propia CriticalSection, así que no hace falta rebotar por el message thread
         // (que puede no estar corriendo: en un host sin ventana abierta nadie bombea mensajes).
-        fileAnalyzer->onFinished = [this] { analysisThread.setReference (fileAnalyzer->result()); };
+        // Accessible fork: capture the analyzer itself, not the unique_ptr. During reset() the pointer is
+        // already null while ~FileAnalyzer waits for this callback; the analyzer is alive until it returns.
+        fileAnalyzer->onFinished = [this, fa = fileAnalyzer.get()] { analysisThread.setReference (fa->result()); };
     }
 
     const auto path = referencePath();

@@ -1,4 +1,5 @@
 #include "analysis/AnalysisThread.h"
+#include "analysis/ThreadStop.h"
 #include <cmath>
 
 namespace telescope
@@ -142,17 +143,11 @@ bool AnalysisThread::stop()
     // Por eso, si no salió en el plazo, esperamos PARA SIEMPRE (stopThread(-1)). Un cuelgue honesto —
     // visible en cualquier sampler, con el stack del worker a la vista — es infinitamente mejor que
     // memoria corrupta. El jassert lo caza en debug antes de que llegue a nadie.
-    const bool exited = stopThread (kStopGraceMs);
+    //
+    // Accessible fork: stopThread (kStopGraceMs) used to KILL the worker when the grace period ran out,
+    // so the stopThread (-1) after it never waited for anything. The helper only waits (see ThreadStop.h).
+    const bool exited = stopThreadWithoutKilling (*this, kStopGraceMs);
     jassert (exited);
-    if (! exited)
-    {
-        // El jassert sólo existe en debug. En release, si esto pasa dentro del DAW de alguien, el único
-        // rastro que queda es este log: sin él, el host se cuelga sin que nadie pueda decir por qué.
-        juce::Logger::writeToLog ("TELESCOPE: el thread \"" + getThreadName() + "\" no salio en "
-                                  + juce::String (kStopGraceMs) + " ms; esperando sin plazo antes de tocar "
-                                  "sus buffers (ver AnalysisThread::stop)");
-        stopThread (-1);
-    }
     return exited;
 }
 

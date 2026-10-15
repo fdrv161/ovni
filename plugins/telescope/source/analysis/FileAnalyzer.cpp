@@ -1,4 +1,5 @@
 #include "analysis/FileAnalyzer.h"
+#include "analysis/ThreadStop.h"
 #include <algorithm>
 #include <cmath>
 
@@ -41,12 +42,9 @@ void FileAnalyzer::cancel()
 {
     if (! isThreadRunning() && ! running.load (std::memory_order_acquire)) return;
 
-    if (! stopThread (kCancelGraceMs))
-    {
-        juce::Logger::writeToLog ("TELESCOPE: el analizador de archivo no salio en "
-                                  + juce::String (kCancelGraceMs) + " ms; esperando sin plazo");
-        stopThread (-1);
-    }
+    // Accessible fork: never kill the worker (see ThreadStop.h). It checks for exit once per read block,
+    // so the wait is short; a killed worker could crash or hang the DAW.
+    stopThreadWithoutKilling (*this, kCancelGraceMs);
     running.store (false, std::memory_order_release);
 }
 
