@@ -74,7 +74,12 @@ VerdictLens::VerdictLens (TelescopeProcessor& p) : Lens (12), processor (p)
     a11yWasBusy      = processor.verdictFileBusy();
 }
 
-VerdictLens::~VerdictLens() = default;
+// Periscope (audit H1): as in TonalBalanceLens, the file dialog and the frame timer go before any member.
+VerdictLens::~VerdictLens()
+{
+    stopAnimation();
+    chooser.reset();
+}
 
 //======================================================================================== geometría
 VerdictLens::Zones VerdictLens::zonesFor (int w, int h) const

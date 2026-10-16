@@ -41,6 +41,15 @@ public:
 
     int numReady() const noexcept { return fifo.getNumReady(); }
 
+    // Consumer side only: drops up to n ready samples without copying them. Unlike reset(), it is safe while
+    // the producer keeps writing (it only moves the read position, as pop does).
+    void skip (int n) noexcept
+    {
+        int start1, size1, start2, size2;
+        fifo.prepareToRead (juce::jmin (n, fifo.getNumReady()), start1, size1, start2, size2);
+        fifo.finishedRead (size1 + size2);
+    }
+
 private:
     juce::AbstractFifo fifo;
     std::vector<float> buffer;

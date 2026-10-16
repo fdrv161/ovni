@@ -87,6 +87,10 @@ protected:
     // PLUGIN (opcional): prepará tu motor con sample rate / block size. Llamado desde prepareToPlay.
     virtual void prepareEngine (const juce::dsp::ProcessSpec&) {}
 
+    // PLUGIN (opcional) · Periscope (audit M3): the A/B comparator or a user preset replaced the whole state.
+    // Push it to the engine here (the host's setStateInformation is the plugin's own override).
+    virtual void stateReplaced() {}
+
     // PLUGIN (opcional): aporte extra al LED de clip 0..1 (p.ej. la reducción de tu limiter). La base ya
     // computa el empuje por pico de salida; devolvé acá el de tu limiter para que el LED tome el mayor.
     virtual float extraClipPush() const { return 0.0f; }

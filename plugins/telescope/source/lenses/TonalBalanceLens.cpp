@@ -68,7 +68,15 @@ TonalBalanceLens::TonalBalanceLens (TelescopeProcessor& p) : Lens (30), processo
 }
 
 // Do not lose a pending section (the user stepped with the arrows and left the lens right away).
-TonalBalanceLens::~TonalBalanceLens() { a11yApplyPendingSection(); }
+// Periscope (audit H1): the file dialog goes first, while the whole lens is still alive. Destroying an open
+// Windows file dialog pumps the message queue until its thread ends; a frame in that loop used to reach the
+// already destroyed waveform reader. The frame timer is stopped before that for the same reason.
+TonalBalanceLens::~TonalBalanceLens()
+{
+    stopAnimation();
+    chooser.reset();
+    a11yApplyPendingSection();
+}
 
 //======================================================================================== geometría
 TonalBalanceLens::Zones TonalBalanceLens::zonesFor (int w, int h) const

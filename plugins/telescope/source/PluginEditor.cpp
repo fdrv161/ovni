@@ -324,6 +324,10 @@ TelescopeEditor::TelescopeEditor (TelescopeProcessor& p)
 // lleva el processor: con dos ventanas abiertas, cerrar una no le apaga el módulo a la otra.
 TelescopeEditor::~TelescopeEditor()
 {
+    // Periscope (audit H1): the lens goes first, while the accessible grids and their sources still exist; a
+    // lens being destroyed can pump the message queue (an open file dialog) and run pending async calls.
+    a11yPoll.stopTimer();
+    lens.reset();
     ThemePreference::changed().removeChangeListener (&themeListener);
     proc.apvts.state.removeListener (this);
     proc.apvts.removeParameterListener ("lens", this);

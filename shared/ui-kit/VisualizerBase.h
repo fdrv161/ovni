@@ -54,6 +54,9 @@ protected:
     void  invalidateStatic() noexcept { staticDirty = true; }       // forzar rehornear (cambió algo estático)
     void  setSettleHold (int frames) noexcept { settleHold = juce::jmax (0, frames); }  // frames idle antes de pausar
     float currentScale() const noexcept { return staticScale; }     // escala física vigente
+    // Periscope: a subclass destructor calls this first, so no frame runs while its members are torn down
+    // (the base destructor stops the timer only after every derived member is gone).
+    void  stopAnimation() { juce::Timer::stopTimer(); }
 
     // REDUCED MOTION (accesibilidad): true => el visualizador NO anima (un frame estático coherente, CPU 0).
     // Default = el flag GLOBAL del sello (el host/app lo setea desde la preferencia del SO de "reducir

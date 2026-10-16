@@ -130,6 +130,7 @@ void AnalysisThread::prepare (double sampleRate)
     cqt.applySettings (cqtSettings());
     cqt.prepare (sr);   // barato: los ~229 kernels se construyen recién en el primer frame (ver Cqt.h)
     emitRateHz.store (spectrum.emitRate(), std::memory_order_release);
+    bus.reset();   // the audio thread is not running during prepare: a full reset is safe here
     doReset();
     startThread();
 }
@@ -157,7 +158,9 @@ bool AnalysisThread::stop()
 
 void AnalysisThread::doReset()
 {
-    bus.reset();
+    // Periscope (audit M7): this also runs on the worker for a Reset during playback, while the audio thread
+    // pushes; only the consumer-side discard is safe then. prepare() resets the bus fully before the restart.
+    bus.discardReady();
     history.clear();
     loudness.reset();
     stereo.reset();

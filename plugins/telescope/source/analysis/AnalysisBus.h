@@ -57,6 +57,18 @@ public:
 
     juce::uint32 droppedSamples() const noexcept { return dropped.load (std::memory_order_relaxed); }
 
+    // Worker thread, while the audio thread may be pushing: throws away what is waiting, the same count from
+    // both channels, so L and R stay aligned. Periscope (audit M7): a Reset during playback used reset(), which
+    // is not safe against a live producer; landing between the L and R push shifted R by one block for good.
+    void discardReady() noexcept
+    {
+        const int n = numReady();
+        fifoL.skip (n);
+        fifoR.skip (n);
+        dropped.store (0, std::memory_order_relaxed);
+    }
+
+    // Only while the audio thread is not running (prepare): both write and read positions back to zero.
     void reset() noexcept
     {
         fifoL.reset();

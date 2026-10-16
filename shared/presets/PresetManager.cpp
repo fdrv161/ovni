@@ -107,7 +107,10 @@ void PresetManager::applyUserFile (const juce::File& f)
 {
     if (auto xml = juce::XmlDocument::parse (f))
         if (xml->hasTagName (apvts.state.getType()))
+        {
             apvts.replaceState (juce::ValueTree::fromXml (*xml));
+            if (onStateReplaced) onStateReplaced();
+        }
     cur = { f.getFileNameWithoutExtension(), Category::Production, true, false };
     snapshot();
     sendChangeMessage();

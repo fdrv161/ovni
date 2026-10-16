@@ -304,6 +304,8 @@ protected:
     // TELESCOPE mide, no procesa: acá no se escribe una sola muestra del buffer.
     void processAudio (juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midi) override;
     void prepareEngine (const juce::dsp::ProcessSpec& spec) override;
+    // Periscope (audit M3): A/B and user presets replace the whole state; the engine must hear about it.
+    void stateReplaced() override { syncLensSettings(); }
 
 private:
     // Fija los defaults que falten en el ValueTree y empuja TODOS los settings al motor. Se llama al

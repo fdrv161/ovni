@@ -1,4 +1,5 @@
 #pragma once
+#include <functional>
 #include <juce_audio_processors/juce_audio_processors.h>
 #include "presets/PresetTypes.h"
 
@@ -23,6 +24,9 @@ public:
 
     void applyFactory (int index);              // reset a default + aplica el preset i
     void applyUserFile (const juce::File& f);   // carga un .preset de disco
+    // Periscope (audit M3): called after a user preset replaced the whole state, so the plugin can push it to
+    // its engine (replaceState alone tells nobody).
+    std::function<void()> onStateReplaced;
     void next();                                // recorre la lista visible (fábrica + user), envuelve
     void prev();
     Current current() const { return cur; }

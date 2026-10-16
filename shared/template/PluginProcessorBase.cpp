@@ -31,6 +31,11 @@ PluginProcessorBase::PluginProcessorBase (PrivateTag, juce::String pn,
     pInGain   = apvts.getRawParameterValue ("inGain");
     pOutput   = apvts.getRawParameterValue ("output");
     pMonoSafe = apvts.getRawParameterValue ("monoSafe");
+
+    // Periscope (audit M3): whole-state replacements reach the plugin. Virtual dispatch happens at call time,
+    // long after construction, so the plugin's override runs.
+    abState.onStateReplaced       = [this] { stateReplaced(); };
+    presetManager.onStateReplaced = [this] { stateReplaced(); };
 }
 
 // Inyecta los params de utilidad del sello — TODOS los plugins los heredan. IDs/rangos = ÓRBITA:
@@ -202,6 +207,7 @@ void PluginProcessorBase::setStateInformation (const void* data, int sizeInBytes
             auto tree = juce::ValueTree::fromXml (*xml);
             // const int stateVersion = (int) tree.getProperty ("stateVersion", 1); // ramificar al migrar
             apvts.replaceState (tree);
+            abState.resync();   // Periscope (audit M3): A/B compares from the restored project, not from construction
         }
 }
 }
