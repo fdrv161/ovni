@@ -89,6 +89,8 @@ void Cqt::Settings::sanitise() noexcept
 {
     channel           = std::clamp (channel, 0, (int) kNumChannels - 1);
     chromaSecIndex    = std::clamp (chromaSecIndex, 0, kNumChromaSecOptions - 1);
+    // Periscope: std::clamp keeps a NaN, which would differ from itself forever (see Spectrum::Settings::sanitise).
+    if (! std::isfinite (holdDecayDbPerSec)) holdDecayDbPerSec = Settings{}.holdDecayDbPerSec;
     holdDecayDbPerSec = std::clamp (holdDecayDbPerSec, 0.0f, 60.0f);
 }
 

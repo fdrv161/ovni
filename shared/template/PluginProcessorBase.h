@@ -128,6 +128,9 @@ private:
     std::atomic<float>* pInGain   = nullptr;
     std::atomic<float>* pOutput   = nullptr;
     std::atomic<float>* pMonoSafe = nullptr;
+    // Periscope: looked up in prepareToPlay (bypassParamID() is virtual, so not in the constructor). Building
+    // the juce::String id in every block allocated on the audio thread.
+    std::atomic<float>* pBypass   = nullptr;
     float prevInGain  = 1.0f;
     float prevOutGain = 1.0f;
     float bassMonoL = 0.0f, bassMonoR = 0.0f, bassMonoCoef = 0.0f;

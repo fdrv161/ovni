@@ -76,7 +76,11 @@ void TelescopeProcessor::setScopeTrigger (bool on) { apvts.state.setProperty (kS
 
 float TelescopeProcessor::clipThresholdDbtp() const
 {
-    return (float) (double) apvts.state.getProperty (kClipThreshold, Loudness::kDefaultClipThresholdDbtp);
+    // Periscope: limited like the setter. A NaN from a saved state made the worker clear the clip history on
+    // every hop, because NaN never equals the threshold it already has.
+    const auto v = (float) (double) apvts.state.getProperty (kClipThreshold, Loudness::kDefaultClipThresholdDbtp);
+    if (! std::isfinite (v)) return Loudness::kDefaultClipThresholdDbtp;
+    return juce::jlimit (Loudness::kMinClipThresholdDbtp, Loudness::kMaxClipThresholdDbtp, v);
 }
 
 void TelescopeProcessor::setClipThresholdDbtp (float dbtp)
@@ -262,7 +266,7 @@ void TelescopeProcessor::syncLensSettings()
     // ===== 54: TONAL BALANCE · engancha la salida y RE-ANALIZA la referencia del estado =====
     analysisThread.setReferenceOutput (&refFrames);
     analysisThread.setSecondHistory (&seconds);   // ===== 55 =====
-    syncReference();
+    syncReference (true);   // Periscope: an undo or a preset does not re-analyse the same file
 
     // ===== 55: VERDICT =====
     // Periscope: a new instance (or a project saved without a language) starts in the language the user chose
@@ -274,7 +278,7 @@ void TelescopeProcessor::syncLensSettings()
                                  strings::tableFor (saved) != nullptr ? saved : juce::String (rules::kDefaultLanguage), nullptr);
     }
     if (! apvts.state.hasProperty (kVerdictMode)) apvts.state.setProperty (kVerdictMode, verdictLive, nullptr);
-    syncVerdictFile();
+    syncVerdictFile (true);
 }
 
 //------------------------------------------------------------------------------------ 55 · VERDICT
@@ -312,18 +316,30 @@ void TelescopeProcessor::clearVerdictFile()
 {
     apvts.state.setProperty (kVerdictFilePath, juce::String(), nullptr);
     setVerdictMode (verdictLive);
+    verdictStartedPath.clear();
     if (verdictAnalyzer != nullptr) verdictAnalyzer->cancel();
 }
 
-void TelescopeProcessor::syncVerdictFile()
+void TelescopeProcessor::syncVerdictFile (bool onlyIfChanged)
 {
     if (verdictAnalyzer == nullptr) verdictAnalyzer = std::make_unique<FileAnalyzer>();
 
     const auto path = verdictFilePath();
-    if (path.isEmpty()) return;
+    if (path.isEmpty()) { verdictStartedPath.clear(); return; }
 
+    // Periscope: REAPER restores the state on every undo; the same file, still running or analysed to the end,
+    // keeps its result. This also keeps the message thread off the disk (an offline network share) on undo.
+    if (onlyIfChanged && path == verdictStartedPath
+        && (verdictAnalyzer->busy() || verdictAnalyzer->result().valid))
+        return;
+
+    verdictStartedPath.clear();
     const juce::File f (path);
-    if (f.existsAsFile()) verdictAnalyzer->start (f);
+    if (f.existsAsFile())
+    {
+        verdictStartedPath = path;
+        verdictAnalyzer->start (f);
+    }
 }
 
 juce::String TelescopeProcessor::verdictFileName() const
@@ -361,7 +377,9 @@ TelescopeProcessor::~TelescopeProcessor()
 
 void TelescopeProcessor::prepareEngine (const juce::dsp::ProcessSpec& spec)
 {
-    monoScratch.assign ((size_t) juce::jmax (1u, spec.maximumBlockSize), 0.0f);
+    // Periscope: at least 4096, so a host that announces 0 still gets mono measured (processAudio pushes in
+    // pieces of this size).
+    monoScratch.assign ((size_t) juce::jmax (4096u, spec.maximumBlockSize), 0.0f);
     analysisThread.prepare (spec.sampleRate);
 }
 
@@ -377,19 +395,26 @@ void TelescopeProcessor::processAudio (juce::AudioBuffer<float>& buffer, juce::M
 {
     const int n   = buffer.getNumSamples();
     const int nch = buffer.getNumChannels();
-    if (n <= 0) return;
+    if (n <= 0 || nch <= 0) return;
 
-    if (nch >= 2)
+    // Periscope: decided by the INPUT channels. With mono in and stereo out the buffer still has two channels,
+    // and the base class has zeroed the second one, so measuring channels 0 and 1 gave "left and silence".
+    if (nch >= 2 && getTotalNumInputChannels() >= 2)
     {
         bus.push (buffer.getReadPointer (0), buffer.getReadPointer (1), n);
     }
-    else if (nch == 1)
+    else if (! monoScratch.empty())
     {
         // Fuente mono: se mide el mismo canal en L y R (correlación +1, ancho 0 — que es la verdad).
+        // Periscope: a block larger than announced is pushed in pieces of the scratch size instead of dropped.
         const float* m = buffer.getReadPointer (0);
-        if ((int) monoScratch.size() < n) return;   // bloque más grande que el declarado: se saltea, no se aloca
-        std::copy (m, m + n, monoScratch.begin());
-        bus.push (m, monoScratch.data(), n);
+        const int step = (int) monoScratch.size();
+        for (int pos = 0; pos < n; pos += step)
+        {
+            const int len = juce::jmin (step, n - pos);
+            std::copy (m + pos, m + pos + len, monoScratch.begin());
+            bus.push (m + pos, monoScratch.data(), len);
+        }
     }
 }
 
@@ -406,7 +431,7 @@ juce::AudioProcessorEditor* TelescopeProcessor::createEditor()
 // si no está, la lente lo dice con el nombre. Guardar 30 números en el preset y dibujarlos como si fueran
 // el archivo sería mostrar una referencia que ya no existe, sin que nadie pueda notarlo.
 // ========================================================================================================
-void TelescopeProcessor::syncReference()
+void TelescopeProcessor::syncReference (bool onlyIfChanged)
 {
     if (fileAnalyzer == nullptr)
     {
@@ -420,8 +445,21 @@ void TelescopeProcessor::syncReference()
     }
 
     const auto path = referencePath();
-    if (path.isEmpty()) { refMissing.clear(); analysisThread.clearReference(); return; }
+    if (path.isEmpty()) { refStartedKey.clear(); refMissing.clear(); analysisThread.clearReference(); return; }
 
+    // F4 (T6): el tramo, si el estado pide uno. Sin tramo, la llamada es la de siempre (el archivo entero).
+    double from = 0.0, to = 0.0;
+    const bool ranged = referenceRange (from, to);
+
+    // Periscope: REAPER restores the state on every undo. The same file and range, still running or analysed
+    // to the end, keeps its result: no new analysis, no "analysing" in the lens, no disk access on this thread.
+    // The engine still has that reference, because only clearing it (which empties the key) removes it.
+    const auto key = path + (ranged ? "|" + juce::String (from, 6) + "|" + juce::String (to, 6) : juce::String());
+    if (onlyIfChanged && key == refStartedKey && refMissing.isEmpty()
+        && (fileAnalyzer->busy() || fileAnalyzer->result().valid))
+        return;
+
+    refStartedKey.clear();
     const juce::File f (path);
     if (! f.existsAsFile())
     {
@@ -431,10 +469,9 @@ void TelescopeProcessor::syncReference()
     }
 
     refMissing.clear();
-    // F4 (T6): el tramo, si el estado pide uno. Sin tramo, la llamada es la de siempre (el archivo entero).
-    double from = 0.0, to = 0.0;
-    if (referenceRange (from, to)) fileAnalyzer->start (f, from, to);
-    else                           fileAnalyzer->start (f);
+    refStartedKey = key;
+    if (ranged) fileAnalyzer->start (f, from, to);
+    else        fileAnalyzer->start (f);
 }
 
 void TelescopeProcessor::loadReference (const juce::File& f)
@@ -484,6 +521,7 @@ void TelescopeProcessor::clearReference()
     apvts.state.removeProperty (kRefFrom, nullptr);   // F4 (T6)
     apvts.state.removeProperty (kRefTo, nullptr);
     refMissing.clear();
+    refStartedKey.clear();
     if (fileAnalyzer != nullptr) fileAnalyzer->cancel();
     analysisThread.clearReference();
 }

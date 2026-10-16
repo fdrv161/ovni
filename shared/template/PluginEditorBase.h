@@ -165,6 +165,22 @@ public:
     // El lock entre procesos de OVNI.settings (D-100). Público: TELESCOPE guarda su tema con el mismo.
     static juce::InterProcessLock& settingsProcessLock();
 
+    // Periscope: takes settingsProcessLock() for at most one second. The named mutex is shared with every OVNI
+    // product in every process, and JUCE's ScopedLockType waits forever: one frozen process holding it would
+    // freeze the DAW's main thread here. A caller that does not get the lock uses its default value or skips
+    // the write. While it is held, the PropertiesFile's own lock only counts up and does not wait.
+    class ScopedSettingsLock
+    {
+    public:
+        ScopedSettingsLock() : locked (settingsProcessLock().enter (1000)) {}
+        ~ScopedSettingsLock() { if (locked) settingsProcessLock().exit(); }
+        bool isLocked() const noexcept { return locked; }
+
+    private:
+        const bool locked;
+        JUCE_DECLARE_NON_COPYABLE (ScopedSettingsLock)
+    };
+
 private:
 
     // Tamaño LÓGICO del canvas: base×zoom por default; en modo flexible = tamaño real del editor.

@@ -49,13 +49,18 @@ public:
     // regla de D-100: sólo esa clave, relectura justo antes de escribir, lock entre procesos.
     static juce::String getValue (const juce::String& key, const juce::String& fallback)
     {
+        // Periscope: the file is read under a lock with a time limit (PluginEditorBase::ScopedSettingsLock);
+        // when another process keeps it too long, the default is used instead of freezing the DAW.
+        const ovni::PluginEditorBase::ScopedSettingsLock lock;
+        if (! lock.isLocked()) return fallback;
         auto f = open();
         return f->getValue (key, fallback);
     }
 
     static bool setValue (const juce::String& key, const juce::String& value)
     {
-        const juce::InterProcessLock::ScopedLockType lock (ovni::PluginEditorBase::settingsProcessLock());
+        const ovni::PluginEditorBase::ScopedSettingsLock lock;   // Periscope: bounded wait, as in getValue
+        if (! lock.isLocked()) return false;
         auto f = open();   // relee el disco AHORA, con el lock tomado
        #if TELESCOPE_TEST_BUILD
         if (auto& pause = betweenReadAndWriteForTest()) pause();

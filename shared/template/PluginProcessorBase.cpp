@@ -89,8 +89,10 @@ void PluginProcessorBase::prepareToPlay (double sampleRate, int samplesPerBlock)
 
     juce::dsp::ProcessSpec spec;
     spec.sampleRate       = sampleRate;
-    spec.maximumBlockSize = (juce::uint32) samplesPerBlock;
+    spec.maximumBlockSize = (juce::uint32) juce::jmax (1, samplesPerBlock);   // Periscope: a negative size wrapped to ~4 billion
     spec.numChannels      = (juce::uint32) juce::jmax (1, getTotalNumOutputChannels());
+
+    pBypass = apvts.getRawParameterValue (bypassParamID());   // Periscope: see the header
 
     // Gain staging del chasis: arrancar el suavizado en el valor actual (sin salto en el 1er bloque).
     prevInGain  = pInGain ? juce::Decibels::decibelsToGain (pInGain->load()) : 1.0f;
@@ -124,7 +126,7 @@ void PluginProcessorBase::processBlock (juce::AudioBuffer<float>& buffer, juce::
         buffer.clear (i, 0, buffer.getNumSamples());
 
     // Bypass: pass-through (la salida es estéreo; si entró mono, duplicar a R).
-    if (auto* bp = apvts.getRawParameterValue (bypassParamID()))
+    if (auto* bp = pBypass)
         if (bp->load() >= 0.5f)
         {
             if (numOut > 1 && numIn == 1)

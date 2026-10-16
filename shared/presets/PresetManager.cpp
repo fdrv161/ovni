@@ -121,7 +121,12 @@ void PresetManager::saveUser (const juce::String& name)
     auto d = userDir();
     d.createDirectory();
     if (auto xml = apvts.copyState().createXml())
-        d.getChildFile (name + ".preset").replaceWithText (xml->toString());
+    {
+        // Periscope: characters like \ / : * ? " < > | made the write fail silently or land in another folder.
+        const auto safeName = juce::File::createLegalFileName (name).trim();
+        if (safeName.isNotEmpty() && safeName != "." && safeName != "..")
+            d.getChildFile (safeName + ".preset").replaceWithText (xml->toString());
+    }
     rescanUser();
 }
 

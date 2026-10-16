@@ -343,14 +343,19 @@ private:
     // en orden inverso, así que su thread se junta ANTES de que muera el thread de análisis al que le
     // empuja el resultado.
     // Crea el analizador si hace falta y (re)dispara el análisis de lo que diga el estado.
-    void syncReference();
+    // Periscope: with onlyIfChanged (state restore, undo, presets) a file that is already analysed or being
+    // analysed with the same path and range is left alone instead of being analysed again.
+    void syncReference (bool onlyIfChanged = false);
 
     TripleBuffer<ReferenceFrame>  refFrames;
     std::unique_ptr<FileAnalyzer> fileAnalyzer;
     // ===== 55: el analizador de VERDICT, aparte del de la referencia (ver el comentario de arriba).
-    void                          syncVerdictFile();
+    void                          syncVerdictFile (bool onlyIfChanged = false);
     std::unique_ptr<FileAnalyzer> verdictAnalyzer;
     juce::String                  refMissing;   // nombre del archivo que el estado pide y no está
+    // Periscope: what each analyzer was last started on (path, plus the range for the reference); empty when
+    // nothing was started or it was cleared. Read and written on the message thread only.
+    juce::String                  refStartedKey, verdictStartedPath;
     // ========================================================================================================
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (TelescopeProcessor)

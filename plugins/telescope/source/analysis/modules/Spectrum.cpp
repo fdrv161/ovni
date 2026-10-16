@@ -48,6 +48,13 @@ void Spectrum::Settings::sanitise() noexcept
     historySecIndex = std::clamp (historySecIndex, 0, SpectrogramRing::kNumHistoryOptions - 1);
     weighting       = std::clamp (weighting, 0, (int) telescope::weighting::kNumCurves - 1);
 
+    // Periscope: std::clamp passes NaN through, and a NaN never compares equal, so a "nan" in a saved state
+    // made the worker rebuild the spectrum on every chunk. Non-finite values fall back to the defaults.
+    const Settings d;
+    if (! std::isfinite (slopeDbPerOct))     slopeDbPerOct     = d.slopeDbPerOct;
+    if (! std::isfinite (avgSeconds))        avgSeconds        = d.avgSeconds;
+    if (! std::isfinite (holdDecayDbPerSec)) holdDecayDbPerSec = d.holdDecayDbPerSec;
+
     // El slope va de a 0.5 dB/oct: son 10 posiciones, no un continuo. Se redondea al paso para que el
     // número que muestra la UI sea EL número (y no 2.9999998).
     slopeDbPerOct = std::clamp (std::round (slopeDbPerOct / kSlopeStep) * kSlopeStep,

@@ -558,7 +558,10 @@ void AnalysisThread::run()
         const int got = bus.pop (chunkL.data(), chunkR.data(), (int) chunkL.size());
         if (got <= 0)
         {
-            wait (2);   // ms — nada que analizar todavía
+            // Periscope: 10 ms, not 2. Every prepared instance polls even when stopped and closed; with dozens of
+            // instances 2 ms meant tens of thousands of wake-ups a second. The bus holds seconds of audio, and
+            // the 100 ms hop does not need 2 ms latency.
+            wait (10);   // ms — nada que analizar todavía
             continue;
         }
 

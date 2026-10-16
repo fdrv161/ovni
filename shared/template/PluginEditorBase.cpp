@@ -51,7 +51,8 @@ void PluginEditorBase::setBaseSize (int w, int h)
 {
     baseW = w; baseH = h;
     content.setSize (w, h);                                  // coords base (el transform lo escala)
-    const int z = uiSettings()->getIntValue ("uiZoom", (int) Zoom::medium);
+    const ScopedSettingsLock lock;   // Periscope: bounded wait; without the lock, medium zoom
+    const int z = lock.isLocked() ? uiSettings()->getIntValue ("uiZoom", (int) Zoom::medium) : (int) Zoom::medium;
     zoom = (z >= (int) Zoom::small && z <= (int) Zoom::large) ? (Zoom) z : Zoom::medium;
     applyZoom (zoom);
 }
@@ -115,7 +116,8 @@ void PluginEditorBase::setZoom (Zoom z)
     // Relee ANTES de escribir, con el lock tomado (D-100). `uiSettings()` es una copia cargada al abrir la
     // primera ventana: guardarla tal cual borraba toda clave que otro producto —u otra ventana— hubiera
     // escrito después (el tema de TELESCOPE, el «no mostrar más» de EYEPIECE).
-    const juce::InterProcessLock::ScopedLockType lock (settingsProcessLock());
+    const ScopedSettingsLock lock;   // Periscope: bounded wait (see the header); no lock, no write
+    if (! lock.isLocked()) return;
     auto s = uiSettings();   // freshly read from disk, with the lock taken
     s->setValue ("uiZoom", (int) z);
     s->saveIfNeeded();
@@ -413,17 +415,20 @@ void PluginEditorBase::showPresetMenu()
     if (processor.presets().userPresets().size() > 0)
         root.addSubMenu ("USER", user);
 
+    // Periscope: a SafePointer, as in the save dialog below; the callback may run after the editor is gone.
     root.showMenuAsync (juce::PopupMenu::Options().withTargetScreenArea (content.localAreaToGlobal (presetNameZone)),
-        [this] (int r)
+        [safe = juce::Component::SafePointer<PluginEditorBase> (this)] (int r)
         {
+            if (safe == nullptr) return;
+            auto& presetManager = safe->processor.presets();
             const auto& fp = presets::factoryPresets();
             if (r >= 1 && r <= (int) fp.size())
-                processor.presets().applyFactory (r - 1);
+                presetManager.applyFactory (r - 1);
             else if (r >= 10001)
             {
-                auto users = processor.presets().userPresets();
+                auto users = presetManager.userPresets();
                 const int idx = r - 10001;
-                if (idx >= 0 && idx < users.size()) processor.presets().applyUserFile (users[idx]);
+                if (idx >= 0 && idx < users.size()) presetManager.applyUserFile (users[idx]);
             }
         });
 }
@@ -435,13 +440,16 @@ void PluginEditorBase::showSaveDialog()
     w->addTextEditor ("name", "My Preset");
     w->addButton ("Save",   1, juce::KeyPress (juce::KeyPress::returnKey));
     w->addButton ("Cancel", 0, juce::KeyPress (juce::KeyPress::escapeKey));
+    // Periscope: the AlertWindow is its own desktop window and can outlive the editor (close the plugin
+    // window while it is open, then press Save). A SafePointer instead of `this`, as the keyboard version has.
     w->enterModalState (true, juce::ModalCallbackFunction::create (
-        [this, w] (int res)
+        [safe = juce::Component::SafePointer<PluginEditorBase> (this), w] (int res)
         {
+            if (safe == nullptr) return;
             if (res == 1)
             {
                 const auto nm = w->getTextEditorContents ("name").trim();
-                if (nm.isNotEmpty()) processor.presets().saveUser (nm);
+                if (nm.isNotEmpty()) safe->processor.presets().saveUser (nm);
             }
         }), true);   // deleteWhenDismissed
 }

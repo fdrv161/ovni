@@ -42,6 +42,8 @@ public:
     // Copia los últimos `count` puntos en orden cronológico (el más viejo primero). Devuelve cuántos copió.
     int copyLatest (std::vector<Point>& dst, int count) const
     {
+        // Periscope: room is made before the spin lock, so the resize inside never allocates while the worker spins.
+        dst.reserve ((size_t) juce::jlimit (0, kCapacity, count));
         const juce::SpinLock::ScopedLockType sl (lock);
         const int have = juce::jmin (writePos, kCapacity);
         const int n    = juce::jmin (count, have);

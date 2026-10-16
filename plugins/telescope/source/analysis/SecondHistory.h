@@ -466,6 +466,8 @@ public:
     // el índice absoluto de la primera (para que los `mm:ss` sean los del tema y no los del buffer).
     int copyLatest (std::vector<SecondRow>& dst, int count, int* firstSecond = nullptr) const
     {
+        // Periscope: room is made before the spin lock, so the resize inside never allocates while the worker spins.
+        dst.reserve ((size_t) juce::jlimit (0, kCapacity, count));
         const juce::SpinLock::ScopedLockType sl (lock);
         const int have = juce::jmin (writePos, kCapacity);
         const int n    = juce::jmin (count, have);

@@ -408,7 +408,9 @@ TEST_CASE ("telescope: cancelar el analisis vuelve enseguida y deja el resultado
     REQUIRE (ms < 200.0);
     REQUIRE_FALSE (fa.busy());
     REQUIRE_FALSE (a.valid);
-    REQUIRE (a.error.isNotEmpty());
+    // Periscope (audit L5): a cancelled run is not published, so the previous result (here: none) stays.
+    REQUIRE (a.error.isEmpty());
+    REQUIRE (fa.revision() == 0);
 }
 
 // ============================================================================================= 7 · errores

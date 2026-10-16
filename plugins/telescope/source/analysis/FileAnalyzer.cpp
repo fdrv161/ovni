@@ -87,6 +87,15 @@ void FileAnalyzer::publish (const RangeMeasurement& m)
 void FileAnalyzer::run()
 {
     const auto m = analyse (pending);
+
+    // Periscope: a cancelled run is not a result. Publishing it replaced the previous result with an invalid
+    // one and pushed it to the engine, with an internal Spanish error the lens could show.
+    if (m.status == RangeMeasurement::Status::cancelled)
+    {
+        running.store (false, std::memory_order_release);
+        return;
+    }
+
     publish (m);
     progressValue.store (1.0f, std::memory_order_release);
     running.store (false, std::memory_order_release);
