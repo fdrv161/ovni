@@ -20,6 +20,17 @@ Install on Windows: extract the ZIP and copy the `Periscope.vst3` folder into `C
 
 Also in [Russian (Русский)](MANUAL.ru.md) and [Spanish (Español)](MANUAL.es.md). The English manual is the main version; the translations are updated together with it.
 
+## What's new in 1.1.1
+
+Fixes only, found by a review of how the plugin starts, stops and restores its state.
+
+- REAPER no longer stays in the task manager after closing: the last cause, a settings file kept open until unload, is gone.
+- The first A/B press no longer loses the language, the reference and the lens settings.
+- Undo, presets and A/B no longer analyse the same reference or Verdict file again.
+- A mono input is measured as identical left and right, not as left and silence.
+- Fixed rare crashes when a lens or the plugin window closed while a file or Save preset dialog was open.
+- Smaller fixes: Reset during playback, preset names, damaged projects, the shared settings file. The manuals were checked against the code.
+
 ## What's new in 1.1.0
 
 - **Weighting** in the Spectrum lens: A, B, C, D, K, ITU-R 468, ISO 226 and the inverse cinema X and N curves, in place of the Slope tilt. The plot, the bars and every spoken level follow it.
