@@ -24,6 +24,9 @@ class ThemePreference
 {
 public:
     static constexpr const char* kKey = "telescopeTheme";
+    // Periscope: the language is a preference of the user too, like the theme. A new instance starts in the
+    // language chosen last; a saved project keeps its own. Its own key, so the original TELESCOPE is not affected.
+    static constexpr const char* kLanguageKey = "periscopeLanguage";
 
     static look::Theme load()
     {

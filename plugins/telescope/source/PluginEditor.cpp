@@ -184,6 +184,7 @@ struct TelescopeEditor::PluginRowsSource final : a11yui::GridSource
                 const int next = juce::jlimit (0, codes.size() - 1, now + (up ? 1 : -1));
                 if (next == now) return false;
                 strings::setLanguage (p.apvts.state, codes[next]);
+                ThemePreference::setValue (ThemePreference::kLanguageKey, codes[next]);   // Periscope: for new instances
                 return true;
             }
             case rowTheme:
@@ -287,6 +288,7 @@ TelescopeEditor::TelescopeEditor (TelescopeProcessor& p)
     strip.onLanguage = [this] (const juce::String& code)
     {
         strings::setLanguage (proc.apvts.state, code);
+        ThemePreference::setValue (ThemePreference::kLanguageKey, strings::languageOf (proc.apvts.state));   // Periscope
     };
 
     strip.onTheme = [this] { toggleTheme(); };

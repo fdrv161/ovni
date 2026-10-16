@@ -1,5 +1,6 @@
 #include "PluginProcessor.h"
 #include "data/Rules.h"   // ===== 55: los idiomas de VERDICT (D-50) =====
+#include "lenses/Strings.h"   // Periscope: strings::tableFor for the saved language
 #include "PluginEditor.h"
 #include "lenses/LensIds.h"
 #include "lenses/Palettes.h"   // ===== 57b: look::kNumPalettes =====
@@ -264,8 +265,14 @@ void TelescopeProcessor::syncLensSettings()
     syncReference();
 
     // ===== 55: VERDICT =====
+    // Periscope: a new instance (or a project saved without a language) starts in the language the user chose
+    // last in any instance, kept in the settings file like the theme (ui/ThemePreference.h); English otherwise.
     if (! apvts.state.hasProperty (kVerdictLanguage))
-        apvts.state.setProperty (kVerdictLanguage, juce::String (rules::kDefaultLanguage), nullptr);
+    {
+        const auto saved = ThemePreference::getValue (ThemePreference::kLanguageKey, {});
+        apvts.state.setProperty (kVerdictLanguage,
+                                 strings::tableFor (saved) != nullptr ? saved : juce::String (rules::kDefaultLanguage), nullptr);
+    }
     if (! apvts.state.hasProperty (kVerdictMode)) apvts.state.setProperty (kVerdictMode, verdictLive, nullptr);
     syncVerdictFile();
 }
