@@ -5,6 +5,7 @@
 #include <vector>
 #include "analysis/SpectrogramRing.h"
 #include "analysis/SpectrumFrame.h"
+#include "analysis/Masking.h"
 
 // ========================================================================================================
 // Spectrum — el analizador de espectro de TELESCOPE (spec §5.2, prompt 50). Es el motor de la lente que
@@ -73,6 +74,7 @@ public:
         int   rangeDbIndex      = 1;                  // 90 dB
         int   historySecIndex   = 1;                  // 30 s de espectrograma
         int   weighting         = 0;                  // Periscope: weighting::Curve, 0 = Slope (display only)
+        bool  masking           = false;              // Periscope: compute auditory masking (Masking.h)
 
         // Acota todo al rango legal (un estado guardado por una versión futura no puede romper el motor).
         void sanitise() noexcept;
@@ -218,6 +220,9 @@ private:
     // La columna del espectrograma del frame emitido, y el ring donde va a parar.
     std::array<juce::uint8, (size_t) SpectrogramRing::kRows> column {};
     std::vector<double> midPow;        // potencia instantánea de M cuando el modo es L+R
+    // Periscope 1.1.0: the masking model and the power it reads (the drawn, averaged spectrum; L and R averaged).
+    AuditoryMasking     masking;
+    std::vector<double> maskPow;
     SpectrogramRing*    spectrogram = nullptr;
 
     SpectrumFrame out;

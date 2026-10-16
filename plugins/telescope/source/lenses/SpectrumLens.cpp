@@ -87,8 +87,8 @@ SpectrumLens::Zones SpectrumLens::zonesFor (int w, int h) const
             if (i < n - 1) row.removeFromLeft (gap);
         }
     };
-    juce::Rectangle<int> analysis[5], display[6];
-    share (top, 5, analysis);
+    juce::Rectangle<int> analysis[6], display[6];
+    share (top, 6, analysis);   // Periscope: + Masking
     share (bottom, 6, display);   // 57b: el quinto es el suavizado de pantalla · Periscope: + Weighting
 
     z.button[fftSize]   = analysis[0];
@@ -96,6 +96,7 @@ SpectrumLens::Zones SpectrumLens::zonesFor (int w, int h) const
     z.button[overlap]   = analysis[2];
     z.button[channel]   = analysis[3];
     z.button[bandsMode] = analysis[4];
+    z.button[maskCtl]   = analysis[5];
     z.button[slope]       = display[0];
     z.button[weightCurve] = display[1];
     z.button[average]     = display[2];
@@ -294,7 +295,7 @@ bool SpectrumLens::advanceFrame()
     const auto& f = processor.spectrum().read();
     const bool  geometry = f.fftSize != fftSizeSeen || f.channelMode != channelSeen;
     const bool  fresh = f.frameIndex != lastFrameIndex || geometry;
-    bool holdMoved = false;
+    bool holdMoved = false, maskMoved = false;
     if (fresh)
     {
         lastFrameIndex = f.frameIndex;
@@ -304,6 +305,14 @@ bool SpectrumLens::advanceFrame()
         srSeen      = f.sr;
         for (int s = 0; s < SpectrumFrame::kMaxSpectra; ++s) holdBefore[s] = colHold[s];
         rebuildColumns (f);
+
+        // Periscope: the masking of this frame; a change shows on the overlay, so it counts as movement.
+        const int np = juce::jlimit (0, SpectrumFrame::kMaxMaskParts, f.maskParts);
+        maskMoved = np != maskParts || ! std::equal (f.maskState, f.maskState + np, maskState);
+        maskParts = np;
+        std::copy (f.maskLoHz, f.maskLoHz + np, maskLoHz);
+        std::copy (f.maskHiHz, f.maskHiHz + np, maskHiHz);
+        std::copy (f.maskState, f.maskState + np, maskState);
 
         // Accessibility: a copy of the raw bins for the text readings (probe and peaks). The picture's columns depend
         // on the window width in pixels, while the screen reader needs numbers that do not depend on scale.
@@ -346,7 +355,7 @@ bool SpectrumLens::advanceFrame()
     // Antes era `fresh || moved`: con el transporte parado el motor sigue publicando una FFT por hop —de
     // silencio, idéntica a la anterior— y la lente repintaba 30 veces por segundo para siempre (prompt 96).
     // Ahora cuenta lo que SE VE: la curva, el hold, la geometría del cuadro y los ajustes.
-    return moved || holdMoved || geometry || settingsChanged;
+    return moved || holdMoved || maskMoved || geometry || settingsChanged;
 }
 
 //======================================================================================== capa viva
@@ -375,6 +384,7 @@ void SpectrumLens::paintLive (juce::Graphics& g)
         g.restoreState();
     }
 
+    paintMasking (g);
     paintReadout (g);
 
     // ---- la tira de controles ----
@@ -395,6 +405,8 @@ void SpectrumLens::paintLive (juce::Graphics& g)
                  s.weighting == weighting::slope ? juce::String (s.slopeDbPerOct, 1) + " dB/oct" : tr (strings::Key::off),
                  hovered == slope);
     paintButton (g, zones.button[weightCurve], tr (strings::Key::weighting), weighting::name (s.weighting), hovered == weightCurve);
+    paintButton (g, zones.button[maskCtl], tr (strings::Key::masking),
+                 s.masking ? tr (strings::Key::on) : tr (strings::Key::off), hovered == maskCtl);
     paintButton (g, zones.button[average],   tr (strings::Key::average),  avgValue,                        hovered == average);
     paintButton (g, zones.button[hold],      tr (strings::Key::hold),     holdValue,                       hovered == hold);
     paintButton (g, zones.button[range],     tr (strings::Key::range),    juce::String (s.rangeDb()) + " dB", hovered == range);
@@ -883,6 +895,7 @@ void SpectrumLens::cycleControl (int control)
             if (s.slopeDbPerOct > Spectrum::kMaxSlopeDbPerOct + 1.0e-4f) s.slopeDbPerOct = Spectrum::kMinSlopeDbPerOct;
             break;
         case weightCurve: s.weighting = (s.weighting + 1) % weighting::kNumCurves; break;
+        case maskCtl:     s.masking = ! s.masking; break;
         case average:   s.avgMode      = (s.avgMode + 1) % Spectrum::kNumAverages; break;
         case hold:
             // OFF → 12 dB/s → 30 → ∞ (0) → OFF. Lo que un peak hold necesita elegir es cuánto TARDA en
@@ -960,7 +973,7 @@ constexpr double kGridLoHz     = 20.0;
 constexpr juce::uint32 kShapeHoldMs = 1000;   // while music plays, the peak list holds still this long
 
 // Readings rows: probe, signal tilt, shape, then the peaks and dips.
-enum ReadingRow { rrProbe = 0, rrTilt, rrShape, kFirstFeatureRow };
+enum ReadingRow { rrProbe = 0, rrTilt, rrShape, rrMasking, kFirstFeatureRow };   // Periscope: + masking
 
 double midiHz (int midi)   { return 440.0 * std::pow (2.0, (double) (midi - 69) / 12.0); }
 int    gridSize()          { return (int) std::floor (kGridPerOct * std::log2 (20000.0 / kGridLoHz)) + 1; }
@@ -969,7 +982,7 @@ double gridPos (double hz) { return kGridPerOct * std::log2 (hz / kGridLoHz); }
 
 // Settings rows: the buttons under the plot, no more (sighted users have exactly these), with the ones that matter
 // most for listening first.
-constexpr int kSettingRows[] = { SpectrumLens::weightCurve, SpectrumLens::slope, SpectrumLens::smooth, SpectrumLens::average, SpectrumLens::hold,
+constexpr int kSettingRows[] = { SpectrumLens::weightCurve, SpectrumLens::maskCtl, SpectrumLens::slope, SpectrumLens::smooth, SpectrumLens::average, SpectrumLens::hold,
                                  SpectrumLens::range, SpectrumLens::fftSize, SpectrumLens::window,
                                  SpectrumLens::overlap, SpectrumLens::channel, SpectrumLens::bandsMode };
 constexpr int kNumSettingRows = (int) (sizeof (kSettingRows) / sizeof (kSettingRows[0]));
@@ -1071,6 +1084,7 @@ juce::String SpectrumLens::a11yRowName (int group, int row) const
         if (row == rrProbe) return a11ytext::T ("Probe");
         if (row == rrTilt)  return a11ytext::T ("Signal tilt");
         if (row == rrShape) return a11ytext::T ("Shape against the line");
+        if (row == rrMasking) return a11ytext::T ("Masking");
         const auto& sh = a11yShape();
         const int k = row - kFirstFeatureRow, peaks = (int) sh.peaks.size(), dips = (int) sh.dips.size();
         if (k < peaks)        return a11ytext::TF ("Peak {0}", { juce::String (k + 1) });
@@ -1082,13 +1096,14 @@ juce::String SpectrumLens::a11yRowName (int group, int row) const
     const int item = a11ySettingItem (row);
     static const char* const names[kNumControls] = { "FFT size", "Window", "Overlap", "Channel", "Display",
                                                      "Slope", "Average", "Peak hold", "Range", "Smoothing",
-                                                     "Weighting" };
+                                                     "Weighting", "Masking" };
     return a11ytext::T (names[juce::jlimit (0, kNumControls - 1, item)]);
 }
 
 juce::String SpectrumLens::a11yRowValue (int group, int row) const
 {
     if (group == 2) return a11yControlValue (a11ySettingItem (row));
+    if (group == 0 && row == rrMasking && ! sets.masking) return a11ytext::T ("Off");
     if (! a11yHasFrame) return a11ytext::T ("no data yet");
     if (group == 1) return a11yBandValue (juce::jlimit (0, SpectrumFrame::kNumThird - 1, row));
 
@@ -1098,10 +1113,13 @@ juce::String SpectrumLens::a11yRowValue (int group, int row) const
         auto t = spoken::hz (hz) + ", " + spoken::note (noteFor (hz)) + ", " + a11yLevels (hz, true);
         const auto line = a11yLineDeviation (hz);
         if (line.isNotEmpty()) t << ", " << line;
+        const auto mask = a11yMaskAt (hz);   // Periscope: as the overlay shows it under the probe
+        if (mask.isNotEmpty()) t << ", " << mask;
         return t;
     }
     if (row == rrTilt)  return a11yTiltValue();
     if (row == rrShape) return a11yShapeValue();
+    if (row == rrMasking) return a11yMaskingValue();
 
     const auto& sh = a11yShape();
     const int k = row - kFirstFeatureRow, peaks = (int) sh.peaks.size(), dips = (int) sh.dips.size();
@@ -1221,17 +1239,27 @@ juce::String SpectrumLens::a11yRowHelp (int group, int row) const
         "and D are the curves of sound level meters, K is the loudness curve of LUFS, ITU-R 468 weighs noise as "
         "the ear hears it, ISO 226 is the equal-loudness contour at 80 phon, and the inverse X-curve shows what a "
         "cinema room takes away. Every curve is 0 dB at 1 kHz. All levels spoken in this lens follow it, the bands "
-        "too. Choose Slope to tilt by the Slope setting again."
+        "too. Choose Slope to tilt by the Slope setting again.",
+        // 15: masking reading (Periscope 1.1.0)
+        "Masking: the frequency ranges that louder sounds nearby cover up, so the ear does not hear them in "
+        "the mix, and the ranges below the threshold of hearing. On screen they are darkened. It follows the "
+        "curve as drawn, so the Average setting sets how fast it changes; with Average off it is moment by "
+        "moment. A lot of masking in one range means the parts there fight for the same place.",
+        // 16: masking setting
+        "Masking turns on the auditory masking estimate, the model that lossy audio codecs use to decide what "
+        "the ear will not miss. It is an estimate, not a full model of hearing. The result is in the Masking "
+        "row of the readings, and the probe and the peaks say when their frequency is masked."
     };
 
     int index = -1;
-    if (group == 0) index = row == rrShape ? 13 : juce::jmin (row, 2);
+    if (group == 0) index = row == rrShape ? 13 : (row == rrMasking ? 15 : juce::jmin (row, 2));
     else if (group == 2)
     {
         switch (a11ySettingItem (row))
         {
             case slope:     index = 3;  break;
             case weightCurve: index = 14; break;
+            case maskCtl:     index = 16; break;
             case smooth:    index = 4;  break;
             case average:   index = 5;  break;
             case hold:      index = 6;  break;
@@ -1457,10 +1485,16 @@ juce::String SpectrumLens::a11yFeatureValue (const Feature& f, bool dip) const
                                   { juce::String (juce::jmax (1, juce::roundToInt (f.prominence))) });
     // Unsmoothed, a peak is a resonance or a note: its pitch and level matter, its width is a bin or two.
     if (smoothDenom (processor.spectrumSmoothIndex()) <= 0)
-        return spoken::hz (f.hz) + ", " + spoken::noteWithCents (noteFor (f.hz)) + ", " + by + ", "
-             + spoken::dB (f.db + weightAt (f.hz));
+    {
+        auto t = spoken::hz (f.hz) + ", " + spoken::noteWithCents (noteFor (f.hz)) + ", " + by + ", "
+               + spoken::dB (f.db + weightAt (f.hz));
+        const auto mask = a11yMaskAt (f.hz);
+        return mask.isEmpty() ? t : t + ", " + mask;
+    }
     // Smoothed, a hump or a hole has no exact pitch: where it starts and ends says more (an EQ band to set).
-    return spoken::hz (f.hz) + ", " + hzRange (f.loHz, f.hiHz) + ", " + by;
+    const auto t = spoken::hz (f.hz) + ", " + hzRange (f.loHz, f.hiHz) + ", " + by;
+    const auto mask = a11yMaskAt (f.hz);
+    return mask.isEmpty() ? t : t + ", " + mask;
 }
 
 // Stretches of a curve of distances (one per grid point) at least the threshold away from zero. A stretch shorter
@@ -1802,6 +1836,7 @@ juce::String SpectrumLens::a11yControlValue (int item) const
             if (a11yHasFrame && a11yShape().tiltValid) t << ". " << a11ytext::T ("Signal tilt") << ", " << a11yTiltValue();
             return t;
         }
+        case maskCtl: return s.masking ? a11ytext::T ("On") : a11ytext::T ("Off");
         case weightCurve:
         {
             // With its effect, as the slope row: how the curve now leans on the plot.
@@ -1867,6 +1902,7 @@ bool SpectrumLens::stepControl (int control, int step)
         case range:     idx = s.rangeDbIndex; n = Spectrum::kNumRanges;    break;
         case smooth:    idx = processor.spectrumSmoothIndex(); n = TelescopeProcessor::kNumSpectrumSmoothOptions; break;
         case weightCurve: idx = s.weighting; n = weighting::kNumCurves; break;
+        case maskCtl:     idx = s.masking ? 1 : 0; n = 2; break;
         default: return false;
     }
 
@@ -1900,6 +1936,7 @@ bool SpectrumLens::stepControl (int control, int step)
             break;
         case range:     s.rangeDbIndex = next; break;
         case weightCurve: s.weighting = next; break;
+        case maskCtl:     s.masking = next != 0; break;
         case smooth:
             // Smoothing is for drawing only and is not part of the engine settings (as in cycleControl).
             processor.setSpectrumSmoothIndex (next);
@@ -1932,5 +1969,71 @@ juce::String SpectrumLens::a11yWeightingName (int curve)
                                                              "D-weighting", "K-weighting", "ITU-R 468",
                                                              "ISO 226, 80 phon", "inverse X-curve" };
     return a11ytext::T (names[juce::jlimit (0, weighting::kNumCurves - 1, curve)]);
+}
+
+// ---- Periscope 1.1.0: auditory masking ----
+// Masked partitions are darkened over the whole height of the plot, those below the threshold of hearing less:
+// the picture keeps its curve and the eye sees which ranges the ear loses (Prism draws them semi-transparent).
+void SpectrumLens::paintMasking (juce::Graphics& g) const
+{
+    if (! sets.masking || maskParts <= 0) return;
+    g.saveState();
+    g.reduceClipRegion (zones.plot);
+    for (int i = 0; i < maskParts; ++i)
+    {
+        if (maskState[i] == AuditoryMasking::audible) continue;
+        const float xa = xForFreq (maskLoHz[i]), xb = xForFreq (maskHiHz[i]);
+        if (xb <= xa) continue;
+        g.setColour (juce::Colours::black.withAlpha (maskState[i] == AuditoryMasking::masked ? 0.55f : 0.3f));
+        g.fillRect (juce::Rectangle<float> (xa, (float) zones.plot.getY(), xb - xa, (float) zones.plot.getHeight()));
+    }
+    g.restoreState();
+}
+
+juce::String SpectrumLens::a11yMaskAt (double hz) const
+{
+    if (! sets.masking) return {};
+    for (int i = 0; i < maskParts; ++i)
+        if (hz >= maskLoHz[i] && hz < maskHiHz[i])
+            return maskState[i] == AuditoryMasking::masked ? a11ytext::T ("masked")
+                 : (maskState[i] == AuditoryMasking::belowHearing ? a11ytext::T ("below hearing") : juce::String());
+    return {};
+}
+
+// Neighbouring partitions in the same state are one range, low to high. At most 8 ranges per state are named,
+// the widest (in octaves), then back in frequency order; the rest are counted.
+juce::String SpectrumLens::a11yMaskingValue() const
+{
+    if (maskParts <= 0) return a11ytext::T ("no data yet");
+    const auto rangesOf = [&] (int state)
+    {
+        struct R { double lo, hi; bool fromBottom, toTop; };
+        std::vector<R> rs;
+        for (int i = 0; i < maskParts; ++i)
+        {
+            if (maskState[i] != state) continue;
+            if (! rs.empty() && i > 0 && maskState[i - 1] == state) rs.back().hi = maskHiHz[i];
+            else rs.push_back ({ (double) maskLoHz[i], (double) maskHiHz[i], i == 0, false });
+            rs.back().toTop = i == maskParts - 1;
+        }
+        const int total = (int) rs.size();
+        if (total > 8)
+        {
+            std::sort (rs.begin(), rs.end(), [] (const R& a, const R& b) { return a.hi / a.lo > b.hi / b.lo; });
+            rs.resize (8);
+            std::sort (rs.begin(), rs.end(), [] (const R& a, const R& b) { return a.lo < b.lo; });
+        }
+        juce::StringArray parts;
+        for (const auto& r : rs)
+            parts.add (r.fromBottom ? a11ytext::TF ("up to {0}", { spoken::hz (roundHz (r.hi)) })
+                     : (r.toTop ? a11ytext::TF ("above {0}", { spoken::hz (roundHz (r.lo)) }) : hzRange (r.lo, r.hi)));
+        auto t = parts.joinIntoString (", ");
+        if (total > 8) t << ", " << a11ytext::TF ("and {0} more", { juce::String (total - 8) });
+        return t;
+    };
+    const auto masked = rangesOf (AuditoryMasking::masked), below = rangesOf (AuditoryMasking::belowHearing);
+    auto t = masked.isEmpty() ? a11ytext::T ("nothing masked") : a11ytext::TF ("masked: {0}", { masked });
+    if (below.isNotEmpty()) t << "; " << a11ytext::TF ("below hearing: {0}", { below });
+    return t;
 }
 }

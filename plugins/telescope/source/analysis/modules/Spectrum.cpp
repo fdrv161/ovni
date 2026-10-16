@@ -63,7 +63,7 @@ bool Spectrum::Settings::operator== (const Settings& o) const noexcept
         && avgSeconds == o.avgSeconds && peakHold == o.peakHold
         && holdDecayDbPerSec == o.holdDecayDbPerSec && bandsMode == o.bandsMode
         && rangeDbIndex == o.rangeDbIndex && historySecIndex == o.historySecIndex
-        && weighting == o.weighting;
+        && weighting == o.weighting && masking == o.masking;
 }
 
 // Lo que obliga a arrancar de cero. El slope y el modo de bandas NO están: son transformaciones de lo
@@ -189,6 +189,8 @@ void Spectrum::rebuild()
     ringR.assign ((size_t) size, 0.0f);
     scratch.assign ((size_t) size, 0.0f);
     midPow.assign ((size_t) bins, 0.0);
+    maskPow.assign ((size_t) bins, 0.0);
+    masking.configure (sr, size, npg / std::max (1.0e-12, cg * cg));   // ENBW in bins: 1.5 for Hann
 
     // El ring del espectrograma se rehace con la tasa de emisión nueva (y se limpia): columnas medidas
     // con dos tamaños de FFT o dos rangos distintos no forman un dibujo, forman dos.
@@ -425,6 +427,29 @@ void Spectrum::computeFrame()
     }
 
     if (! emit) return;
+
+    // Periscope 1.1.0: auditory masking of the spectrum as it is drawn (after the user's averaging, so the
+    // overlay matches the curve and holds as still as it does; with Average off it is momentary). With two
+    // curves the model hears their mean power. Only emitted frames: the overlay and speech read nothing else.
+    out.maskParts = 0;
+    if (current.masking && masking.numPartitions() > 0)
+    {
+        for (int k = 0; k < bins; ++k)
+        {
+            double p = 0.0;
+            for (int s = 0; s < numSpectra; ++s) p += avgPow[s][(size_t) k];
+            maskPow[(size_t) k] = p / (double) numSpectra;
+        }
+        masking.compute (maskPow.data(), bins);
+        const int np = std::min (masking.numPartitions(), SpectrumFrame::kMaxMaskParts);
+        for (int i = 0; i < np; ++i)
+        {
+            out.maskLoHz[i]  = masking.partition (i).loHz;
+            out.maskHiHz[i]  = masking.partition (i).hiHz;
+            out.maskState[i] = masking.result()[(size_t) i];
+        }
+        out.maskParts = np;
+    }
 
     // Los slots que no se usan quedan en el piso: dibujar una copia del canal 0 ahí sería inventar.
     for (int s = numSpectra; s < SpectrumFrame::kMaxSpectra; ++s)

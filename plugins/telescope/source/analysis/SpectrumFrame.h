@@ -51,6 +51,15 @@ struct SpectrumFrame
     float bandsHold [kMaxSpectra][kNumThird] {};
     float bark      [kMaxSpectra][kNumBark]  {};
 
+    // Periscope 1.1.0: auditory masking of this frame (analysis/Masking.h), when the setting is on. One entry
+    // per 1/3-Bark partition below 20 kHz: its edges in Hz and AuditoryMasking::State (0 audible, 1 masked,
+    // 2 below the threshold of hearing). maskParts == 0 means off or not computed.
+    static constexpr int kMaxMaskParts = 96;
+    int          maskParts = 0;
+    float        maskLoHz [kMaxMaskParts] {};
+    float        maskHiHz [kMaxMaskParts] {};
+    juce::uint8  maskState[kMaxMaskParts] {};
+
     // Copia SÓLO el prefijo vivo. El struct entero son ~260 KB; con orden 12 lo que importa son 32 KB.
     // Copiar lo que no se lee es el 90 % del ancho de banda de memoria de esta lente, tirado.
     void copyTo (SpectrumFrame& dst) const noexcept
@@ -70,6 +79,10 @@ struct SpectrumFrame
             std::copy (std::begin (bandsHold[s]), std::end (bandsHold[s]), std::begin (dst.bandsHold[s]));
             std::copy (std::begin (bark[s]),      std::end (bark[s]),      std::begin (dst.bark[s]));
         }
+        dst.maskParts = maskParts;
+        std::copy (std::begin (maskLoHz),  std::end (maskLoHz),  std::begin (dst.maskLoHz));
+        std::copy (std::begin (maskHiHz),  std::end (maskHiHz),  std::begin (dst.maskHiHz));
+        std::copy (std::begin (maskState), std::end (maskState), std::begin (dst.maskState));
     }
 
     double binHz() const noexcept { return fftSize > 0 ? sr / (double) fftSize : 0.0; }

@@ -195,6 +195,7 @@ public:
     static constexpr const char* kSpectrumChannel      = "spectrumChannel";
     static constexpr const char* kSpectrumSlope        = "spectrumSlopeDbPerOct";
     static constexpr const char* kSpectrumWeighting    = "spectrumWeighting";   // Periscope 1.1.0
+    static constexpr const char* kSpectrumMasking      = "spectrumMasking";     // Periscope 1.1.0
     static constexpr const char* kSpectrumAvgMode      = "spectrumAvgMode";
     static constexpr const char* kSpectrumAvgSeconds   = "spectrumAvgSeconds";
     static constexpr const char* kSpectrumPeakHold     = "spectrumPeakHold";

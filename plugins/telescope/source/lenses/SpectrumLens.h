@@ -74,7 +74,7 @@ public:
     // Los nueve controles, en el orden en que se dibujan. Público para que el test los cicle sin clicks.
     // Periscope 1.1.0: weightCurve is appended, so the author's indices keep their meaning.
     enum Control { fftSize = 0, window, overlap, channel, bandsMode, slope, average, hold, range,
-                   smooth, weightCurve, kNumControls };
+                   smooth, weightCurve, maskCtl, kNumControls };
     void cycleControl (int control);
 
     // ================== ACCESSIBILITY (see Lens.h) ==================
@@ -136,6 +136,13 @@ private:
     int    colWeightCurve = -1, colWeightWidth = -1;
     float  colWeightSlope = -1.0f;
     double colWeightSr = 0.0;
+
+    // Periscope 1.1.0: the masking of the latest frame (see SpectrumFrame::maskParts), for the overlay and speech.
+    int         maskParts = 0;
+    float       maskLoHz [SpectrumFrame::kMaxMaskParts] {};
+    float       maskHiHz [SpectrumFrame::kMaxMaskParts] {};
+    juce::uint8 maskState[SpectrumFrame::kMaxMaskParts] {};
+    void paintMasking (juce::Graphics&) const;
 
     TelescopeProcessor& processor;
 
@@ -238,6 +245,8 @@ private:
     juce::String a11yBandValue (int band) const;
     juce::String a11yControlValue (int item) const;
     static juce::String a11yWeightingName (int curve);
+    juce::String a11yMaskingValue() const;            // "masked: 700 Hz to 1.9 kHz; below hearing: above 15 kHz"
+    juce::String a11yMaskAt (double hz) const;        // "masked", "below hearing" or empty
     int          a11yFeatureRows() const;
     int          a11ySettingItem (int row) const;
 

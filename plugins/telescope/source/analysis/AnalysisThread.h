@@ -187,6 +187,7 @@ private:
         std::atomic<int>   fftOrder { 12 }, window { 0 }, overlapIndex { 1 }, channel { Spectrum::leftRight };
         std::atomic<float> slopeDbPerOct { 3.0f };
         std::atomic<int>   weighting { 0 };
+        std::atomic<bool>  masking { false };
         std::atomic<int>   avgMode { Spectrum::avgExp };
         std::atomic<float> avgSeconds { 0.5f };
         std::atomic<bool>  peakHold { true };
