@@ -1237,8 +1237,8 @@ juce::String SpectrumLens::a11yRowHelp (int group, int row) const
         // 14: weighting (Periscope 1.1.0)
         "Weighting shows the spectrum through a standard curve instead of the Slope tilt. A, B, C "
         "and D are the curves of sound level meters, K is the loudness curve of LUFS, ITU-R 468 weighs noise as "
-        "the ear hears it, ISO 226 is the equal-loudness contour at 80 phon, and the inverse X-curve shows what a "
-        "cinema room takes away. Every curve is 0 dB at 1 kHz. All levels spoken in this lens follow it, the bands "
+        "the ear hears it, ISO 226 is the equal-loudness contour at 80 phon, and the inverse X and N curves show "
+        "what cinema rooms take away, with pink noise drawn flat. Every curve is 0 dB at 1 kHz. All levels spoken in this lens follow it, the bands "
         "too. Choose Slope to tilt by the Slope setting again.",
         // 15: masking reading (Periscope 1.1.0)
         "Masking: the frequency ranges that louder sounds nearby cover up, so the ear does not hear them in "
@@ -1967,7 +1967,8 @@ juce::String SpectrumLens::a11yWeightingName (int curve)
 {
     static const char* const names[weighting::kNumCurves] = { "Slope", "A-weighting", "B-weighting", "C-weighting",
                                                              "D-weighting", "K-weighting", "ITU-R 468",
-                                                             "ISO 226, 80 phon", "inverse X-curve" };
+                                                             "ISO 226, 80 phon", "inverse X-curve",
+                                                             "inverse N-curve" };
     return a11ytext::T (names[juce::jlimit (0, weighting::kNumCurves - 1, curve)]);
 }
 

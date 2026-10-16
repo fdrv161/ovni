@@ -14,18 +14,19 @@ namespace telescope
 //
 // Sources and check values: _research/spectrum-weighting-masking.md (A, B, C, D from IEC 61672 / 651 / 537
 // via the public formulas; K from ITU-R BS.1770 with the libebur128 derivation for any sample rate; 468 from
-// the closed-form fit of ITU-R BS.468-4; ISO 226:2003 at 80 phon, inverted; X-curve from public secondary
-// sources, inverted).
+// the closed-form fit of ITU-R BS.468-4; ISO 226:2003 at 80 phon, inverted; X and N cinema curves inverted,
+// with the pink-noise tilt, as TDR Prism draws them).
 // ========================================================================================================
 namespace weighting
 {
-enum Curve { slope = 0, aWeight, bWeight, cWeight, dWeight, kWeight, itu468, iso226, xCurve, kNumCurves };
+// nCurve is appended after xCurve so saved settings keep their meaning.
+enum Curve { slope = 0, aWeight, bWeight, cWeight, dWeight, kWeight, itu468, iso226, xCurve, nCurve, kNumCurves };
 
 // Display names, the same in every language (they are standard names). Spoken names live in the lens.
 inline const char* name (int curve) noexcept
 {
     static const char* const names[kNumCurves] = { "Slope", "A", "B", "C", "D", "K", "ITU-R 468",
-                                                   "ISO 226", "X-curve" };
+                                                   "ISO 226", "X-curve", "N-curve" };
     return curve >= 0 && curve < kNumCurves ? names[curve] : names[0];
 }
 
@@ -157,12 +158,43 @@ inline double iso226Db (double f) noexcept
     return table.w[i] + t * (table.w[i + 1] - table.w[i]);
 }
 
-// Inverse cinema X-curve: flat up to 2 kHz, then rising 3 dB per octave (the X-curve falls 3 dB per octave
-// above 2 kHz). Sources disagree above 10 kHz; this keeps 3 dB per octave until a Prism screenshot says
-// otherwise (see the research file).
+// The cinema curves are specified for pink noise on a third-octave analyser, so on an FFT plot they come with
+// the 3 dB per octave tilt that makes pink noise flat (pivot 1 kHz, held below 63 Hz). This is how TDR Prism
+// draws them: measured on its display with pink noise, 2026-10-16 (Screens/prism, _diag/tools/prism_curve.py).
+inline double cinemaTilt (double f) noexcept { return 3.0 * std::log2 ((f < 63.0 ? 63.0 : f) / 1000.0); }
+
+// Inverse X-curve: flat up to 2 kHz, rising 3 dB per octave to 10 kHz and 6 dB per octave above (the X-curve
+// falls that way; public sources disagree above 10 kHz, Prism's display shows the 6 dB per octave reading).
 inline double xDb (double f) noexcept
 {
-    return f <= 2000.0 ? 0.0 : 3.0 * std::log2 (f / 2000.0);
+    const double inv = f <= 2000.0 ? 0.0 : (f <= 10000.0 ? 3.0 * std::log2 (f / 2000.0)
+                                                         : 3.0 * std::log2 (5.0) + 6.0 * std::log2 (f / 10000.0));
+    return cinemaTilt (f) + inv;
+}
+
+// Inverse N-curve. Public sources give only four points of this older cinema curve (+7 dB at 40 Hz, flat from
+// 100 Hz to 1.6 kHz, -10 dB at 5 kHz, -18 dB at 8 kHz, inverted here); the shape between them is the one TDR
+// Prism draws, measured on its display (see cinemaTilt). Linear in log f, ends held.
+inline double nDb (double f) noexcept
+{
+    static constexpr double pts[][2] = {
+        { 20, 9.2 }, { 25, 8.0 }, { 31.5, 7.0 }, { 40, 6.1 }, { 50, 5.0 }, { 63, 3.2 }, { 80, 1.0 }, { 100, 0.0 },
+        { 2000, 0.0 }, { 2280, 0.7 }, { 2560, 1.1 }, { 2873, 1.6 }, { 3225, 2.1 }, { 3620, 2.5 }, { 4063, 3.1 },
+        { 4561, 4.3 }, { 5120, 5.4 }, { 5747, 7.0 }, { 6450, 8.4 }, { 7240, 9.9 }, { 8127, 11.3 }, { 9122, 12.9 },
+        { 10240, 14.6 }, { 11494, 16.6 }, { 12901, 18.7 }, { 14481, 20.7 }, { 16254, 23.0 }, { 18245, 25.1 },
+    };
+    constexpr int n = (int) (sizeof (pts) / sizeof (pts[0]));
+    double inv = pts[n - 1][1];
+    if (f <= pts[0][0]) inv = pts[0][1];
+    else
+        for (int i = 0; i + 1 < n; ++i)
+            if (f <= pts[i + 1][0])
+            {
+                const double t = std::log (f / pts[i][0]) / std::log (pts[i + 1][0] / pts[i][0]);
+                inv = pts[i][1] + t * (pts[i + 1][1] - pts[i][1]);
+                break;
+            }
+    return cinemaTilt (f) + inv;
 }
 }
 
@@ -188,6 +220,7 @@ inline float db (int curve, double hz, double sr, float slopeDbPerOct) noexcept
         case itu468:  return (float) (detail::r468Db (f) - detail::r468Db (1000.0));
         case iso226:  return (float) detail::iso226Db (f);
         case xCurve:  return (float) detail::xDb (f);
+        case nCurve:  return (float) detail::nDb (f);
         default:      return 0.0f;
     }
 }
