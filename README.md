@@ -20,6 +20,12 @@ Install on Windows: extract the ZIP and copy the `Periscope.vst3` folder into `C
 
 Also in [Russian (Русский)](MANUAL.ru.md) and [Spanish (Español)](MANUAL.es.md). The English manual is the main version; the translations are updated together with it.
 
+## What's new in 1.2.0
+
+- **Q key** on a Spectrum peak or dip: speaks the Q of an EQ bell of the same width, counted the usual way (one octave is Q 1.41).
+- **1/3 octave smoothing** in the Spectrum lens, the usual view for judging the overall balance.
+- **Copy readings**: Ctrl+C copies the current row as text, Ctrl+Shift+C the whole group, to paste into notes or a chat.
+
 ## What's new in 1.1.1
 
 Fixes only, found by a review of how the plugin starts, stops and restores its state.
