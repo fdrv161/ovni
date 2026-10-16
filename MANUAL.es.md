@@ -309,7 +309,7 @@ Pendiente y Suavizado existen para ayudar al ojo: Pendiente hace que una mezcla 
   - **Ponderación**: Pendiente, A, B, C, D, K, ITU-R 468, ISO 226, curva X inversa, curva N inversa. Después del valor se dice la nueva pendiente de la señal.
   - **Enmascaramiento**: On u Off.
   - **Pendiente**: de 0 a 4,5 dB por octava. Después del valor se dice la nueva pendiente de la señal, así escuchás el efecto enseguida. Se usa solo cuando Ponderación está en Pendiente; si no, la fila lo dice, y cambiarla vuelve a la pendiente.
-  - **Suavizado**: Off, 1/24, 1/12 o 1/6 de octava. Después del valor se dice cuántos picos y valles sobresalen con ese suavizado, por ejemplo "1/6 de octava, picos: 7, valles: 5": escuchás qué tan cargada está la imagen.
+  - **Suavizado**: Off, 1/24, 1/12, 1/6 o 1/3 de octava. Con 1/3 de octava queda sólo el equilibrio general, la vista habitual para comparar mezclas. Después del valor se dice cuántos picos y valles sobresalen con ese suavizado, por ejemplo "1/6 de octava, picos: 7, valles: 5": escuchás qué tan cargada está la imagen.
   - **Promedio**: Off, un promedio móvil (se dice su tiempo) o Infinito.
   - **Peak hold**: Off, 12 dB por segundo, 30 dB por segundo, Infinito.
   - **Rango**: 60, 90 o 120 dB, hasta dónde baja el gráfico por debajo de 0 dB. También fija qué cuenta como sobresalir, ver más abajo.

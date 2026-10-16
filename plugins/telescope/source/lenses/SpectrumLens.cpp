@@ -1206,8 +1206,8 @@ juce::String SpectrumLens::a11yRowHelp (int group, int row) const
         "tilted, as on screen.",
         // 4: smoothing
         "Smoothing sets how big a detail counts. Off: narrow resonances and many small peaks. 1/24 and 1/12 "
-        "octave: medium details. 1/6 octave: broad humps and holes, the overall balance. The probe reads the "
-        "smoothed curve too.",
+        "octave: medium details. 1/6 octave: broad humps and holes. 1/3 octave: only the overall balance, as for "
+        "comparing mixes. The probe reads the smoothed curve too.",
         // 5: average
         "Average sets how the curve settles. Off: every frame, the numbers jump. A time in seconds: a running "
         "average over that time. Infinite: everything since the start or the last reset, for a whole song.",

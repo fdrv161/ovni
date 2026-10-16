@@ -309,7 +309,7 @@ Slope and Smoothing exist to help the eye: Slope makes a balanced mix look flat,
   - **Weighting**: Slope, A, B, C, D, K, ITU-R 468, ISO 226, inverse X-curve, inverse N-curve. The value is followed by the new signal tilt.
   - **Masking**: on or off.
   - **Slope**: 0 to 4.5 dB per octave. The value is followed by the new signal tilt, so you hear the effect at once. It is used only when Weighting is Slope; otherwise the row says so, and changing it brings the slope back.
-  - **Smoothing**: off, 1/24, 1/12 or 1/6 octave. The value is followed by how many peaks and dips stand out at this smoothing, for example "1/6 octave, peaks: 7, dips: 5": you hear how busy the picture is.
+  - **Smoothing**: off, 1/24, 1/12, 1/6 or 1/3 octave. 1/3 octave leaves only the overall balance, the usual view for comparing mixes. The value is followed by how many peaks and dips stand out at this smoothing, for example "1/6 octave, peaks: 7, dips: 5": you hear how busy the picture is.
   - **Average**: off, a running average (its time is spoken), or infinite.
   - **Peak hold**: off, 12 dB per second, 30 dB per second, infinite.
   - **Range**: 60, 90 or 120 dB, how far below 0 dB the plot goes. It also sets what counts as standing out, see below.

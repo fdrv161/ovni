@@ -178,9 +178,11 @@ public:
     //
     // Vive en el ValueTree y no en `Spectrum::Settings` justamente porque no viaja al motor.
     static constexpr const char* kSpectrumSmooth = "spectrumSmoothIndex";
-    static constexpr int kNumSpectrumSmoothOptions = 4;
+    static constexpr int kNumSpectrumSmoothOptions = 5;
     // 0 = sin suavizado. El resto, el DENOMINADOR de la fracción de octava.
-    static constexpr int kSpectrumSmoothDenom[kNumSpectrumSmoothOptions] = { 0, 24, 12, 6 };
+    static constexpr int kSpectrumSmoothDenom[kNumSpectrumSmoothOptions] = { 0, 24, 12, 6, 3 };
+    // Periscope: 1/3 octave added last, so saved indices keep their meaning. It is the usual width for judging the
+    // overall balance (Prism, SPAN, Insight offer it), and the spoken shape and peak list follow it like the others.
     static constexpr int kDefaultSpectrumSmoothIndex = 2;   // 1/12 de octava
 
     int  spectrumSmoothIndex() const;
