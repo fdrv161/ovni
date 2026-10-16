@@ -1128,6 +1128,37 @@ juce::String SpectrumLens::a11yRowValue (int group, int row) const
     return a11ytext::TF ("none standing out by {0} dB or more", { spoken::trimmed (sh.threshold, 1) });
 }
 
+// Periscope: the Q key on a peak or dip row.
+juce::String SpectrumLens::a11yRowQ (int group, int row) const
+{
+    if (group != 0 || row < kFirstFeatureRow || ! a11yHasFrame) return {};
+    const auto& sh = a11yShape();
+    const int k = row - kFirstFeatureRow, peaks = (int) sh.peaks.size(), dips = (int) sh.dips.size();
+    if (k < peaks)        return a11yFeatureQ (sh.peaks[(size_t) k]);
+    if (k - peaks < dips) return a11yFeatureQ (sh.dips[(size_t) (k - peaks)]);
+    return {};
+}
+
+// Periscope: the bell Q an EQ would need for this hump or hole. Its edges are where it crosses half its height in
+// dB, which is how the RBJ cookbook defines the width of a peaking band (Equalizer APO and most EQs use it), so
+// Q = sqrt (lo * hi) / (hi - lo): one octave gives 1.41. FabFilter Pro-Q counts about 1.4 times higher.
+juce::String SpectrumLens::a11yFeatureQ (const Feature& f) const
+{
+    if (f.loHz <= 0.0) return {};
+    // The narrowest width the speech grid can tell is one grid step either side; narrower reads as "or more".
+    const double minRatio = std::pow (2.0, 2.0 / kGridPerOct);
+    const bool   atGrid   = f.hiHz <= f.loHz * minRatio;
+    const double lo = f.loHz, hi = atGrid ? f.loHz * minRatio : f.hiHz;
+    const double q  = std::sqrt (lo * hi) / (hi - lo);
+    const auto   qs = spoken::trimmed ((float) q, q < 10.0 ? 1 : 0);
+    auto t = atGrid ? a11ytext::TF ("Q {0} or more", { qs }) : a11ytext::TF ("Q {0}", { qs });
+
+    // Smoothing widens every hump to at least its own width, so a hump that narrow may be narrower in fact.
+    const int denom = smoothDenom (processor.spectrumSmoothIndex());
+    if (denom > 0 && std::log2 (hi / lo) <= 1.25 / denom) t << ", " << a11ytext::T ("limited by the smoothing");
+    return t;
+}
+
 bool SpectrumLens::a11yIsAdjustable (int group, int row) const
 {
     return group == 2 || (group == 0 && row == rrProbe);
@@ -1198,7 +1229,7 @@ juce::String SpectrumLens::a11yRowHelp (int group, int row) const
         // 2: peaks and dips
         "Peaks and dips: places where the curve stands out from the neighbouring frequencies, the biggest first. "
         "Smoothing sets their size: off lists narrow resonances, 1/6 octave lists broad humps and holes. Enter "
-        "moves the probe there.",
+        "moves the probe there. Q speaks the EQ Q of the hump or hole.",
         // 3: slope
         "Slope tilts the picture around 1 kHz, and every level spoken in this lens with it: above 1 kHz levels go "
         "up, below they go down, by this much per octave. 3 dB per octave makes pink noise flat, 4.5 a typical "

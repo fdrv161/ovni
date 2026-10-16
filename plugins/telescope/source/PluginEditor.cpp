@@ -63,6 +63,7 @@ struct TelescopeEditor::LensPanelSource final : a11yui::GridSource
     bool adjust (int g, int r, int step) override           { return hasReadings() && lens()->a11yAdjust (g, r, step); }
     bool isActivatable (int g, int r) const override        { return hasReadings() && lens()->a11yIsActivatable (g, r); }
     juce::String rowHelp (int g, int r) const override      { return hasReadings() ? lens()->a11yRowHelp (g, r) : juce::String(); }
+    juce::String rowQ (int g, int r) const override         { return hasReadings() ? lens()->a11yRowQ (g, r) : juce::String(); }
 
     juce::String activate (int g, int r) override
     {

@@ -84,6 +84,7 @@ public:
     int          a11yRowCount (int group) const override;
     juce::String a11yRowName (int group, int row) const override;
     juce::String a11yRowValue (int group, int row) const override;
+    juce::String a11yRowQ (int group, int row) const override;
     bool         a11yIsAdjustable (int group, int row) const override;
     bool         a11yAdjust (int group, int row, int step) override;
     bool         a11yIsActivatable (int group, int row) const override;
@@ -242,6 +243,7 @@ private:
     static std::vector<Stretch> findStretches (const std::vector<float>& dev, float threshold);
 
     juce::String a11yFeatureValue (const Feature& f, bool dip) const;
+    juce::String a11yFeatureQ (const Feature& f) const;   // Periscope: the Q key
     juce::String a11yBandValue (int band) const;
     juce::String a11yControlValue (int item) const;
     static juce::String a11yWeightingName (int curve);

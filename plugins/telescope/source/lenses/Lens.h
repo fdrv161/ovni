@@ -146,6 +146,8 @@ public:
     virtual juce::String a11yActivate (int, int)               { return {}; }
     // F1 on a row: what it is for (empty: the general help of the panel).
     virtual juce::String a11yRowHelp (int, int) const          { return {}; }
+    // Periscope: the Q key on a row: the EQ Q of a peak or dip (empty: the row has none, Q searches by letter).
+    virtual juce::String a11yRowQ (int, int) const             { return {}; }
     // After a11yActivate: true if the action asks the readings cursor to move to (group, row), which is then
     // spoken instead of a message. Returns the request once.
     virtual bool         a11yTakeCursorRequest (int&, int&)    { return false; }

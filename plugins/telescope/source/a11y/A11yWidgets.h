@@ -36,6 +36,8 @@ struct GridSource
     virtual juce::String activate (int, int) { return {}; }
     // F1 on this row: what it is for. Empty means the general help of the control.
     virtual juce::String rowHelp (int, int) const { return {}; }
+    // Periscope: spoken on the Q key (empty: the key searches by first letter as usual).
+    virtual juce::String rowQ (int, int) const { return {}; }
 };
 
 // Shared part: live name for the screen reader, focus frame, Tab and F1.
@@ -303,6 +305,14 @@ public:
             else if (code == juce::KeyPress::homeKey)     step = -kExtreme;
 
             if (step != 0) { applyStep (step); return true; }
+        }
+
+        // Periscope: Q on a row that has one (a Spectrum peak or dip) speaks its EQ Q. The key code, not the character,
+        // so the same physical key works in a Russian layout; on other rows Q stays a first-letter search.
+        if (plain && (code == 'Q' || code == 'q') && rows > 0)
+        {
+            const auto q = source->rowQ (grp, rw);
+            if (q.isNotEmpty()) { say (q); return true; }
         }
 
         // Search by the first character of the name. getTextCharacter, not the key code: otherwise arrows and Page Up
