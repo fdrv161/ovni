@@ -20,6 +20,12 @@ Install on Windows: extract the ZIP and copy the `Periscope.vst3` folder into `C
 
 Also in [Russian (Русский)](MANUAL.ru.md) and [Spanish (Español)](MANUAL.es.md). The English manual is the main version; the translations are updated together with it.
 
+## What's new in 1.1.0
+
+- **Weighting** in the Spectrum lens: A, B, C, D, K, ITU-R 468, ISO 226 and the inverse cinema X and N curves, in place of the Slope tilt. The plot, the bars and every spoken level follow it.
+- **Masking** in the Spectrum lens: an estimate of which frequency ranges louder sounds nearby cover up, and which lie below the threshold of hearing. Darkened on screen, spoken in a Masking row and by the probe and the peaks.
+- Both follow TDR Prism's Analyzer Weighting and Auditory Masking, written from public standards and checked against Prism's display.
+
 ## What's new in 1.0.0
 
 - First release under the name Periscope: "Periscope (fdrv161)" in the DAW, `Periscope.vst3` on disk.
