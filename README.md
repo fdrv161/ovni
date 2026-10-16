@@ -37,9 +37,10 @@ Also in [Russian (Русский)](MANUAL.ru.md) and [Spanish (Español)](MANUAL
 - Thirteen lenses: Loudness, Dynamics, Spectrum, Spectrogram, Waterfall, CQT, Spiral, Scope, Band correlation, Stereo spectrogram, Field, Tonal balance, Verdict.
 - Three panels, reached with Tab: the lens list, the readings of the open lens, and the plugin controls (bypass, presets, A/B, size, language, theme).
 - In the readings: arrows move through rows and groups, plus and minus change a setting, Enter opens edit mode or runs an action, F5 reads a live value again, F1 gives spoken help, Escape goes back.
-- Space and your DAW's shortcuts keep working while the plugin has focus.
+- Space, function keys and the Ctrl and Alt shortcuts the plugin does not use go to your DAW while the plugin has focus; other plain keys stay in the plugin.
+- In REAPER's FX chain, F6 (an OSARA key) moves focus into the plugin, to the lens list.
 - Speech in English, Spanish, Portuguese, French, German, Italian and Russian. The screen in the same languages.
-- It never changes your audio: zero latency, bit-exact pass-through.
+- It never changes your audio: zero latency, bit-exact pass-through, as long as the host parameters In, Out and In Phase stay at their defaults.
 
 Tested with NVDA in REAPER on Windows. The macOS build is experimental.
 

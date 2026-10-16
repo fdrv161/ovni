@@ -39,9 +39,9 @@ The analysis engine, the lenses and the measurement notes come from the original
 
 Thirteen **lenses** over one analysis engine, plus a rules engine (Verdict) that turns what was measured into sentences. Each sentence carries the number behind it.
 
-- **It does not touch your audio.** TELESCOPE reads the left and right channels, analyses them on its own thread and writes nothing back. Zero latency, no tail, bit-exact output. The author verifies this with automated tests.
+- **It does not touch your audio.** TELESCOPE reads the left and right channels, analyses them on its own thread and writes nothing back. Zero latency, no tail, bit-exact output. The author verifies this with automated tests. This holds while the host parameters In, Out and In Phase stay at their defaults: they are not in the plugin window, but your DAW's parameter list and automation show them, so leave them alone.
 - **The audio never waits for a measurement.** Analysis runs on a separate thread.
-- **Stereo only.** No surround, no Ambisonics.
+- **Stereo or mono input.** A mono input is measured as identical left and right (correlation +1, width 0). No surround, no Ambisonics.
 - **It does not locate sources.** Field and the polar views show energy by pan direction, not where a sound was in a room.
 - **No AI, no network, no telemetry.** Verdict is a fixed table of thresholds: the same signal always gives the same report, and nothing leaves your computer.
 
@@ -99,7 +99,7 @@ On macOS the keys are the same as below, with Option in place of Alt.
 
 ## First steps with a screen reader
 
-1. Insert Periscope and open its window. In REAPER the FX window opens with the plugin; press Tab if focus is still on the FX list.
+1. Insert Periscope and open its window. In REAPER the FX window opens with the plugin. If focus is still on the FX chain list, press **F6** (an OSARA key): focus moves into the plugin, to the lens list.
 2. Focus lands on the **lens list**. NVDA says something like "Lenses, Loudness".
 3. Press **Up** and **Down** to choose a lens. The lens switches immediately, the same as clicking it.
 4. Press **Enter** to go to the **readings** of that lens. NVDA reads the current row, for example "Integrated, -14.2 LUFS".
@@ -160,7 +160,7 @@ Changing values:
 - **Enter on an action** (Reset, Load and so on): run it.
 - **Enter on a plain reading**: read it again.
 
-When a value changes, only the new value is spoken. At the end of a range nothing is spoken and nothing wraps around: silence means you are at the edge. The same goes for the first and last rows.
+When a value changes, only the new value is spoken. At the end of a range nothing is spoken and nothing wraps around: silence means you are at the edge. The same goes for the first and last rows. Three things do go round: plus and minus on the Preset row, Enter on the Language row, and the search by first letter.
 
 Other keys:
 
@@ -178,10 +178,11 @@ Other plain keys are kept by the plugin while it has focus, so an arrow or Delet
 
 ### Spoken messages
 
-TELESCOPE speaks on its own only when something finishes in the background:
+TELESCOPE speaks on its own when a background analysis starts and finishes, and when the analysis falls behind:
 
-- Tonal balance: "Reference analysed, ..." or "Reference could not be read: ...".
-- Verdict: "File analysed, ..." followed by the headline, or "File could not be read: ...".
+- Tonal balance: "Analysing reference", then "Reference analysed, ..." or "Reference could not be read: ...".
+- Verdict: "Analysing" with the file name, then "File analysed, ..." followed by the headline, or "File could not be read: ...".
+- Loudness: "Analysis fell behind and skipped some audio, the readings may be off", once, when the computer could not keep up.
 
 Everything else is spoken in response to your keys.
 
@@ -192,13 +193,15 @@ Everything else is spoken in response to your keys.
 The rows of the third panel, in order:
 
 - **Bypass**: Enter or plus/minus switch it on and off. TELESCOPE passes audio through unchanged either way.
-- **Preset**: the current preset name, with "modified" if you changed something. **Enter** opens the preset menu (Production, Sound design, User); arrow keys and Enter choose. Focus returns to this row afterwards.
-- **Save preset**: **Enter** opens a dialog with a name field. Type a name and press Enter, or Escape to cancel.
-- **A B slot**: which of the two comparison slots is active. Plus selects B, minus selects A.
+- **Preset**: the current preset name, with "modified" if you changed something. **Plus / minus** select the next or previous preset, factory presets and yours in one list, going round. **Enter** opens the preset menu; arrow keys and Enter choose, and focus returns to this row afterwards. In the menu, Production holds the four factory presets (the Loudness lens with no target, Spotify, Apple or YouTube), Sound design is empty in this plugin, and User lists your own presets once you have saved some.
+- **Save preset**: **Enter** opens a dialog with a name field. Type a name and press Enter, or Escape to cancel. Characters a file name cannot have (\ / : * ? " < > |) are removed from the name, and a preset with the same name is replaced without asking. A preset keeps the whole state, including the language, the reference path and the lens settings. Your presets are files in `%APPDATA%\Application Support\OVNI TELESCOPE\User Presets`, shared with the original TELESCOPE.
+- **A B slot**: which of the two comparison slots is active. Plus selects B, minus selects A, Enter switches.
 - **Copy this slot to the other**: Enter copies the active slot over the other one.
-- **Window size**: S, M or L. Enter starts edit mode; plus and minus also work. Each size has its own layout, not a scaled drawing.
-- **Language**: the language of the screen and of speech, see [Languages](#languages).
-- **Theme**: dark or light. Plus selects light.
+- **Window size**: Small, Medium or Large (S, M and L on screen). Enter starts edit mode; plus and minus also work. Each size has its own layout, not a scaled drawing.
+- **Language**: the language of the screen and of speech, see [Languages](#languages). Enter goes to the next language; plus and minus also work.
+- **Theme**: dark or light. Plus selects light, Enter switches.
+
+Theme, language and window size are remembered for new windows and new instances. They are kept in `%APPDATA%\OVNI\OVNI.settings` (on macOS `~/Library/Application Support/OVNI/OVNI.settings`), a file shared with the original TELESCOPE. A saved project keeps its own language.
 
 ---
 
@@ -230,7 +233,7 @@ Each lens below has two parts: what it measures and how to read it (from the aut
 - **Readings**: Integrated, Short-term, Momentary, Loudness range, True peak max (overall, then left and right), Max short-term, Max momentary, History, Target (the platform and how far you are from it). A value that is still filling is followed by "partial". When the analysis had to skip audio because the computer could not keep up, the screen shows an amber "analysis behind" line: TELESCOPE says it once when it appears, and Integrated is followed by "analysis fell behind" until the next reset.
 - **History** tells the three minutes of short-term history on screen the way the eye reads the graph: steady stretches with their length and level, oldest first, then the loudest and the quietest moment. For example: "last 3 minutes, 40 seconds around -14 LUFS, then 1 minute 20 seconds around -9 LUFS, then 1 minute around -11 LUFS, up to now, loudest -8.7 LUFS, 1 minute 30 seconds ago". It shows where the chorus is louder than the verse, or where the loudness jumped. At most five stretches: when there are more steps, small ones are joined, as the eye sees fewer steps from further away.
 - **Actions**:
-  - **Platform target**: plus and minus step through the streaming platforms, or "none".
+  - **Platform target**: plus and minus step through none, Spotify, Apple Music, YouTube, Amazon Music, Tidal and Deezer. It is also the host parameter "Target", so it can be automated.
   - **Pause**: Enter pauses or resumes measuring.
   - **Reset**: Enter clears everything and starts again.
 
@@ -567,7 +570,7 @@ Twelve lenses show. This one **says**. The rule is that every sentence carries t
 - **Within range**: one row per rule that was checked and passed.
 - **Actions**:
   - **Reset analysis**.
-  - **Mode**: live or file; plus and minus switch it.
+  - **Mode**: live or file; plus selects file, minus live, Enter switches.
   - **Load a file to judge**: opens a file dialog and switches to file mode.
 
 Section names and findings are spoken in the plugin language. When a file analysis finishes, TELESCOPE says "File analysed" and reads the headline.
@@ -584,6 +587,7 @@ Tonal balance (reference) and Verdict (file mode) can analyse a whole audio file
 - **Formats**: WAV, AIFF, FLAC and Ogg; on Windows also WMA and MP3. Any file is accepted; if it cannot be read, you are told why.
 - **The sample rate is the file's.** Nothing is resampled, and neither third-octave bands nor LUFS depend on sample rate, so a 44.1 kHz reference compares directly with a 48 kHz session.
 - **It is fast**: a minute of audio takes well under a second on a modern computer.
+- **Only a new file starts a new analysis.** Reopening a project analyses the file again, but undo, presets and A/B do not, as long as the file and the section stay the same.
 
 ## Languages
 
@@ -605,6 +609,7 @@ Numbers are spoken with a decimal point in every language, as on screen: "-14.2 
 
 - The macOS build is experimental: it builds and passes validation, but has not been tested with VoiceOver.
 - Tested with NVDA in REAPER. Other hosts and screen readers should work but have not been tested.
+- If another program keeps the shared settings file locked for more than a second, the theme, language or window size are not saved that time, and a new window opens with the defaults.
 - The main fonts have no Cyrillic. With Russian selected, the system substitutes a font, so Russian text looks different from the rest.
 
 ## Licence and credits

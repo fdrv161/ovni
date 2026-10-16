@@ -39,9 +39,9 @@ El motor de análisis, las lentes y las notas de medición vienen del [TELESCOPE
 
 Trece **lentes** sobre un solo motor de análisis, más un motor de reglas (Veredicto) que convierte lo medido en frases. Cada frase lleva el número que la sostiene.
 
-- **No toca tu audio.** TELESCOPE lee los canales izquierdo y derecho, los analiza en su propio hilo y no escribe nada de vuelta. Latencia cero, sin cola, salida bit-exacta. El autor lo verifica con tests automáticos.
+- **No toca tu audio.** TELESCOPE lee los canales izquierdo y derecho, los analiza en su propio hilo y no escribe nada de vuelta. Latencia cero, sin cola, salida bit-exacta. El autor lo verifica con tests automáticos. Esto vale mientras los parámetros de host In, Out e In Phase estén en su valor por defecto: no están en la ventana del plugin, pero la lista de parámetros y la automatización de tu DAW los muestran, así que no los toques.
 - **El audio nunca espera por una medición.** El análisis corre en un hilo aparte.
-- **Sólo estéreo.** Ni surround ni Ambisonics.
+- **Entrada estéreo o mono.** Una entrada mono se mide como izquierdo y derecho idénticos (correlación +1, ancho 0). Ni surround ni Ambisonics.
 - **No localiza fuentes.** Campo y las vistas polares muestran energía por dirección de paneo, no dónde estaba un sonido en una sala.
 - **Sin IA, sin red, sin telemetría.** Veredicto es una tabla fija de umbrales: la misma señal da siempre el mismo informe, y no sale nada de tu computadora.
 
@@ -99,7 +99,7 @@ En macOS las teclas son las mismas que abajo, con Opción en lugar de Alt.
 
 ## Primeros pasos con un lector de pantalla
 
-1. Insertá Periscope y abrí su ventana. En REAPER la ventana de FX se abre con el plugin; presioná Tab si el foco sigue en la lista de FX.
+1. Insertá Periscope y abrí su ventana. En REAPER la ventana de FX se abre con el plugin. Si el foco sigue en la lista de la cadena de FX, presioná **F6** (una tecla de OSARA): el foco pasa al plugin, a la lista de lentes.
 2. El foco cae en la **lista de lentes**. NVDA dice algo como "Lentes, Loudness".
 3. Presioná **flecha arriba** y **flecha abajo** para elegir una lente. La lente cambia enseguida, igual que con un clic.
 4. Presioná **Intro** para ir a las **lecturas** de esa lente. NVDA lee la fila actual, por ejemplo "Integrado, -14.2 LUFS".
@@ -160,7 +160,7 @@ Cambiar valores:
 - **Intro en una acción** (Reiniciar, Cargar, etcétera): ejecutarla.
 - **Intro en una lectura común**: volver a leerla.
 
-Cuando un valor cambia, sólo se dice el valor nuevo. En el extremo de un rango no se dice nada y el valor no da la vuelta: el silencio significa que estás en el borde. Lo mismo pasa con la primera y la última fila.
+Cuando un valor cambia, sólo se dice el valor nuevo. En el extremo de un rango no se dice nada y el valor no da la vuelta: el silencio significa que estás en el borde. Lo mismo pasa con la primera y la última fila. Sólo tres cosas dan la vuelta: más y menos en la fila Preset, Intro en la fila Idioma y la búsqueda por primera letra.
 
 Otras teclas:
 
@@ -178,10 +178,11 @@ Las demás teclas simples se las queda el plugin mientras tiene el foco, así qu
 
 ### Mensajes hablados
 
-TELESCOPE habla por su cuenta sólo cuando algo termina en segundo plano:
+TELESCOPE habla por su cuenta cuando un análisis en segundo plano empieza y termina, y cuando el análisis se retrasa:
 
-- Balance tonal: "Referencia analizada, ..." o "No se pudo leer la referencia: ...".
-- Veredicto: "Archivo analizado, ..." seguido del titular, o "No se pudo leer el archivo: ...".
+- Balance tonal: "Analizando la referencia", después "Referencia analizada, ..." o "No se pudo leer la referencia: ...".
+- Veredicto: "Analizando" con el nombre del archivo, después "Archivo analizado, ..." seguido del titular, o "No se pudo leer el archivo: ...".
+- Loudness: "El análisis se retrasó y omitió parte del audio, las lecturas pueden no ser exactas", una vez, cuando la computadora no llegó.
 
 Todo lo demás se dice como respuesta a tus teclas.
 
@@ -192,13 +193,15 @@ Todo lo demás se dice como respuesta a tus teclas.
 Las filas del tercer panel, en orden:
 
 - **Bypass**: Intro o más y menos lo activan y desactivan. TELESCOPE deja pasar el audio sin cambios en los dos casos.
-- **Preset**: el nombre del preset actual, con "modificado" si cambiaste algo. **Intro** abre el menú de presets (Producción, Diseño sonoro, Usuario); las flechas e Intro eligen. Después el foco vuelve a esta fila.
-- **Guardar preset**: **Intro** abre un diálogo con un campo de nombre. Escribí un nombre y presioná Intro, o Escape para cancelar.
-- **Ranura A B**: cuál de las dos ranuras de comparación está activa. Más elige B, menos elige A.
+- **Preset**: el nombre del preset actual, con "modificado" si cambiaste algo. **Más y menos** eligen el preset siguiente o el anterior, los de fábrica y los tuyos en una sola lista, dando la vuelta. **Intro** abre el menú de presets; las flechas e Intro eligen, y después el foco vuelve a esta fila. En el menú, Production tiene los cuatro presets de fábrica (la lente Loudness sin objetivo, Spotify, Apple o YouTube), Sound design está vacío en este plugin, y User muestra tus presets cuando guardaste alguno.
+- **Guardar preset**: **Intro** abre un diálogo con un campo de nombre. Escribí un nombre y presioná Intro, o Escape para cancelar. Los caracteres que un nombre de archivo no puede tener (\ / : * ? " < > |) se quitan del nombre, y un preset con el mismo nombre se reemplaza sin preguntar. Un preset guarda todo el estado, incluidos el idioma, la ruta de la referencia y los ajustes de las lentes. Tus presets son archivos en `%APPDATA%\Application Support\OVNI TELESCOPE\User Presets`, carpeta compartida con el TELESCOPE original.
+- **Ranura A B**: cuál de las dos ranuras de comparación está activa. Más elige B, menos elige A, Intro cambia.
 - **Copiar esta ranura en la otra**: Intro copia la ranura activa sobre la otra.
-- **Tamaño de ventana**: S, M o L. Intro entra en modo edición; más y menos también funcionan. Cada tamaño tiene su propia disposición, no un dibujo escalado.
-- **Idioma**: el idioma de la pantalla y de la voz, ver [Idiomas](#idiomas).
-- **Tema**: oscuro o claro. Más elige claro.
+- **Tamaño de ventana**: pequeño, mediano o grande (S, M y L en pantalla). Intro entra en modo edición; más y menos también funcionan. Cada tamaño tiene su propia disposición, no un dibujo escalado.
+- **Idioma**: el idioma de la pantalla y de la voz, ver [Idiomas](#idiomas). Intro pasa al idioma siguiente; más y menos también funcionan.
+- **Tema**: oscuro o claro. Más elige claro, Intro cambia.
+
+El tema, el idioma y el tamaño de ventana se recuerdan para ventanas nuevas e instancias nuevas. Se guardan en `%APPDATA%\OVNI\OVNI.settings` (en macOS `~/Library/Application Support/OVNI/OVNI.settings`), un archivo compartido con el TELESCOPE original. Un proyecto guardado conserva su propio idioma.
 
 ---
 
@@ -230,7 +233,7 @@ Cada lente de abajo tiene dos partes: qué mide y cómo leerla (del manual del a
 - **Lecturas**: Integrado, Short-term, Momentary, Loudness range, Máx true peak (general, después izquierdo y derecho), Máx short-term, Máx momentary, Historia, Objetivo (la plataforma y qué tan lejos estás de ella). Un valor que todavía se llena va seguido de "parcial". Cuando el análisis tuvo que saltear audio porque la computadora no daba abasto, la pantalla muestra una línea ámbar "análisis atrasado": TELESCOPE lo dice una vez cuando aparece, e Integrado va seguido de "el análisis se retrasó" hasta el próximo reinicio.
 - **Historia** cuenta los tres minutos de historia del short-term que hay en pantalla como el ojo lee el gráfico: tramos estables con su duración y su nivel, del más viejo al más nuevo, y después el momento más fuerte y el más suave. Por ejemplo: "últimos 3 minutos, 40 segundos en torno a -14 LUFS, luego 1 minuto 20 segundos en torno a -9 LUFS, luego 1 minuto en torno a -11 LUFS, hasta ahora, lo más fuerte -8.7 LUFS, hace 1 minuto 30 segundos". Muestra dónde el estribillo suena más fuerte que la estrofa, o dónde saltó el loudness. Como máximo cinco tramos: cuando hay más escalones, los chicos se juntan, como el ojo ve menos escalones de lejos.
 - **Acciones**:
-  - **Objetivo de plataforma**: más y menos recorren las plataformas de streaming, o "sin objetivo de plataforma".
+  - **Objetivo de plataforma**: más y menos recorren: sin objetivo, Spotify, Apple Music, YouTube, Amazon Music, Tidal y Deezer. También es el parámetro de host "Target", así que se puede automatizar.
   - **Pausa**: Intro pausa o reanuda la medición.
   - **Reiniciar**: Intro borra todo y empieza de nuevo.
 
@@ -567,7 +570,7 @@ Doce lentes muestran. Ésta **dice**. La regla es que cada frase lleva el númer
 - **Dentro de rango**: una fila por cada regla que se chequeó y pasó.
 - **Acciones**:
   - **Reiniciar análisis**.
-  - **Modo**: En vivo o Archivo; más y menos lo cambian.
+  - **Modo**: En vivo o Archivo; más elige Archivo, menos En vivo, Intro cambia.
   - **Cargar un archivo para evaluar**: abre un diálogo de archivo y pasa al modo archivo.
 
 Los nombres de las secciones y los hallazgos se dicen en el idioma del plugin. Cuando termina el análisis de un archivo, TELESCOPE dice "Archivo analizado" y lee el titular.
@@ -584,6 +587,7 @@ Balance tonal (referencia) y Veredicto (modo archivo) pueden analizar un archivo
 - **Formatos**: WAV, AIFF, FLAC y Ogg; en Windows también WMA y MP3. Se acepta cualquier archivo; si no se puede leer, se te dice por qué.
 - **La frecuencia de muestreo es la del archivo.** No se remuestrea nada, y ni las bandas de tercio de octava ni los LUFS dependen de la frecuencia de muestreo, así que una referencia a 44,1 kHz se compara directamente con una sesión a 48 kHz.
 - **Es rápido**: un minuto de audio tarda bastante menos de un segundo en una computadora moderna.
+- **Sólo un archivo nuevo empieza un análisis nuevo.** Al reabrir un proyecto el archivo se analiza otra vez, pero deshacer, los presets y A/B no lo hacen, mientras el archivo y el tramo sean los mismos.
 
 ## Idiomas
 
@@ -605,6 +609,7 @@ Los números se dicen con punto decimal en todos los idiomas, como en pantalla: 
 
 - La versión para macOS es experimental: compila y pasa la validación, pero no se probó con VoiceOver.
 - Probado con NVDA en REAPER. Otros hosts y lectores de pantalla deberían funcionar, pero no se probaron.
+- Si otro programa mantiene bloqueado el archivo de ajustes compartido más de un segundo, el tema, el idioma o el tamaño de ventana no se guardan esa vez, y una ventana nueva abre con los valores por defecto.
 - Las fuentes principales no tienen cirílico. Con el ruso elegido, el sistema sustituye la fuente, así que el texto en ruso se ve distinto del resto.
 
 ## Licencia y créditos
