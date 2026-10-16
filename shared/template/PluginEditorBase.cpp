@@ -3,20 +3,22 @@
 namespace ovni
 {
 //==================================================================================================
-juce::PropertiesFile& PluginEditorBase::uiSettings()
+// Periscope: this used to be a function-local static PropertiesFile, created at the first editor and kept until
+// the DLL unloaded. A PropertiesFile is a juce::Timer, and in JUCE 8 every Timer holds the shared timer thread
+// (SharedResourcePointer<TimerThread>), so that thread lived until unload too. At process exit Windows ends
+// it first; then the static died, the TimerThread with it, and ~TimerThread waits for its thread with
+// stopThread (-1): forever, because JUCE never saw the thread end. Two minidumps of a REAPER left in the task
+// manager showed exactly that wait. A short-lived file, as ThemePreference.h already does, keeps no Timer
+// alive past the editor. It reads the disk when it is made, so every caller sees the current file.
+std::unique_ptr<juce::PropertiesFile> PluginEditorBase::uiSettings()
 {
-    static juce::PropertiesFile file (
-        []
-        {
-            juce::PropertiesFile::Options o;
-            o.applicationName     = "OVNI";
-            o.filenameSuffix      = "settings";       // -> ~/Library/Application Support/OVNI/OVNI.settings
-            o.folderName          = "OVNI";
-            o.osxLibrarySubFolder = "Application Support";
-            o.processLock         = &settingsProcessLock();   // D-100: el lock entre procesos de JUCE
-            return o;
-        }());
-    return file;
+    juce::PropertiesFile::Options o;
+    o.applicationName     = "OVNI";
+    o.filenameSuffix      = "settings";       // -> ~/Library/Application Support/OVNI/OVNI.settings
+    o.folderName          = "OVNI";
+    o.osxLibrarySubFolder = "Application Support";
+    o.processLock         = &settingsProcessLock();   // D-100: el lock entre procesos de JUCE
+    return std::make_unique<juce::PropertiesFile> (o);
 }
 
 // El lock ENTRE PROCESOS de OVNI.settings (D-100, EYEPIECE-PLUGINS-PROPIOS §2quater punto 4). El archivo lo
@@ -49,7 +51,7 @@ void PluginEditorBase::setBaseSize (int w, int h)
 {
     baseW = w; baseH = h;
     content.setSize (w, h);                                  // coords base (el transform lo escala)
-    const int z = uiSettings().getIntValue ("uiZoom", (int) Zoom::medium);
+    const int z = uiSettings()->getIntValue ("uiZoom", (int) Zoom::medium);
     zoom = (z >= (int) Zoom::small && z <= (int) Zoom::large) ? (Zoom) z : Zoom::medium;
     applyZoom (zoom);
 }
@@ -114,10 +116,9 @@ void PluginEditorBase::setZoom (Zoom z)
     // primera ventana: guardarla tal cual borraba toda clave que otro producto —u otra ventana— hubiera
     // escrito después (el tema de TELESCOPE, el «no mostrar más» de EYEPIECE).
     const juce::InterProcessLock::ScopedLockType lock (settingsProcessLock());
-    auto& s = uiSettings();
-    s.reload();
-    s.setValue ("uiZoom", (int) z);
-    s.saveIfNeeded();
+    auto s = uiSettings();   // freshly read from disk, with the lock taken
+    s->setValue ("uiZoom", (int) z);
+    s->saveIfNeeded();
 }
 
 void PluginEditorBase::resized()

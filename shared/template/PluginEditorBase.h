@@ -158,7 +158,8 @@ private:
     void showPresetMenu();
     void showSaveDialog();
 
-    static juce::PropertiesFile& uiSettings();           // settings global del sello (compartido por los 6)
+    // Periscope: a short-lived file per read or write, never a static (see the .cpp).
+    static std::unique_ptr<juce::PropertiesFile> uiSettings();   // settings global del sello (compartido por los 6)
 
 public:
     // El lock entre procesos de OVNI.settings (D-100). Público: TELESCOPE guarda su tema con el mismo.
