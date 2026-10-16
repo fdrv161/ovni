@@ -1,4 +1,5 @@
 #include "analysis/modules/Spectrum.h"
+#include "analysis/Weighting.h"
 #include <algorithm>
 #include <cmath>
 
@@ -45,6 +46,7 @@ void Spectrum::Settings::sanitise() noexcept
     bandsMode    = std::clamp (bandsMode, 0, (int) kNumBandModes - 1);
     rangeDbIndex = std::clamp (rangeDbIndex, 0, kNumRanges - 1);
     historySecIndex = std::clamp (historySecIndex, 0, SpectrogramRing::kNumHistoryOptions - 1);
+    weighting       = std::clamp (weighting, 0, (int) telescope::weighting::kNumCurves - 1);
 
     // El slope va de a 0.5 dB/oct: son 10 posiciones, no un continuo. Se redondea al paso para que el
     // número que muestra la UI sea EL número (y no 2.9999998).
@@ -60,7 +62,8 @@ bool Spectrum::Settings::operator== (const Settings& o) const noexcept
         && channel == o.channel && slopeDbPerOct == o.slopeDbPerOct && avgMode == o.avgMode
         && avgSeconds == o.avgSeconds && peakHold == o.peakHold
         && holdDecayDbPerSec == o.holdDecayDbPerSec && bandsMode == o.bandsMode
-        && rangeDbIndex == o.rangeDbIndex && historySecIndex == o.historySecIndex;
+        && rangeDbIndex == o.rangeDbIndex && historySecIndex == o.historySecIndex
+        && weighting == o.weighting;
 }
 
 // Lo que obliga a arrancar de cero. El slope y el modo de bandas NO están: son transformaciones de lo

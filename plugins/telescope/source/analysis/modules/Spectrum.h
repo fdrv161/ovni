@@ -72,6 +72,7 @@ public:
         int   bandsMode         = bandsFft;
         int   rangeDbIndex      = 1;                  // 90 dB
         int   historySecIndex   = 1;                  // 30 s de espectrograma
+        int   weighting         = 0;                  // Periscope: weighting::Curve, 0 = Slope (display only)
 
         // Acota todo al rango legal (un estado guardado por una versión futura no puede romper el motor).
         void sanitise() noexcept;

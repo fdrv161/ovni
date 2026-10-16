@@ -100,6 +100,9 @@ enum class Key
     // --- F4 de la 0.2 (T6): la tira de la referencia de TONAL BALANCE ---
     refSpanHint,
 
+    // --- Periscope 1.1.0: SPECTRUM, weighting curves and auditory masking ---
+    weighting, masking,
+
     count
 };
 
@@ -136,7 +139,8 @@ inline const std::array<const char*, (size_t) kNumKeys>& keyNames()
         "refBelowRange","binsAtThisFft",
         "momentaryBar","shortTermBar",
         "theme","themeDark","themeLight",
-        "refSpanHint"
+        "refSpanHint",
+        "weighting","masking"
     };
     return n;
 }
@@ -206,7 +210,9 @@ inline const Table& tableEn()
         "reference below the plot range (−42 LU) in this band"," bins at this FFT",
         "MOM","SHORT",
         "THEME","Dark","Light",
-        "drag to pick a section · double-click: whole file"
+        "drag to pick a section · double-click: whole file",
+        // Periscope 1.1.0: SPECTRUM weighting and masking buttons
+        "WEIGHTING","MASKING"
     }};
     return t;
 }
@@ -251,7 +257,9 @@ inline const Table& tableEs()
         "referencia por debajo del rango (−42 LU) en esta banda"," bins a esta FFT",
         "MOM","CORTO",
         "TEMA","Oscuro","Claro",
-        "arrastrá para elegir un tramo · doble clic: el archivo entero"
+        "arrastrá para elegir un tramo · doble clic: el archivo entero",
+        // Periscope 1.1.0: SPECTRUM weighting and masking buttons
+        "PONDERACIÓN","ENMASCARAMIENTO"
     }};
     return t;
 }
@@ -298,7 +306,9 @@ inline const Table& tablePt()
         "referência abaixo da faixa (−42 LU) nesta banda"," bins nesta FFT",
         "MOM","CURTO",
         "TEMA","Escuro","Claro",
-        "arraste para escolher um trecho · clique duplo: o arquivo inteiro"
+        "arraste para escolher um trecho · clique duplo: o arquivo inteiro",
+        // Periscope 1.1.0: SPECTRUM weighting and masking buttons
+        "PONDERAÇÃO","MASCARAMENTO"
     }};
     return t;
 }
@@ -339,7 +349,9 @@ inline const Table& tableFr()
         "référence sous la plage (−42 LU) dans cette bande"," bins à cette FFT",
         "MOM","COURT",
         "THÈME","Sombre","Clair",
-        "glissez pour choisir un passage · double-clic : le fichier entier"
+        "glissez pour choisir un passage · double-clic : le fichier entier",
+        // Periscope 1.1.0: SPECTRUM weighting and masking buttons
+        "PONDÉRATION","MASQUAGE"
     }};
     return t;
 }
@@ -380,7 +392,9 @@ inline const Table& tableDe()
         "Referenz unter dem Anzeigebereich (−42 LU) in diesem Band"," Bins bei dieser FFT",
         "MOM","KURZ",
         "DESIGN","Dunkel","Hell",
-        "ziehen, um einen Abschnitt zu wählen · Doppelklick: ganze Datei"
+        "ziehen, um einen Abschnitt zu wählen · Doppelklick: ganze Datei",
+        // Periscope 1.1.0: SPECTRUM weighting and masking buttons
+        "BEWERTUNG","VERDECKUNG"
     }};
     return t;
 }
@@ -421,7 +435,9 @@ inline const Table& tableIt()
         "riferimento sotto l'intervallo (−42 LU) in questa banda"," bin a questa FFT",
         "MOM","BREVE",
         "TEMA","Scuro","Chiaro",
-        "trascina per scegliere un tratto · doppio clic: il file intero"
+        "trascina per scegliere un tratto · doppio clic: il file intero",
+        // Periscope 1.1.0: SPECTRUM weighting and masking buttons
+        "PONDERAZIONE","MASCHERAMENTO"
     }};
     return t;
 }
@@ -465,7 +481,9 @@ inline const Table& tableRu()
         "референс ниже диапазона графика (−42 LU) в этой полосе"," бинов при этом FFT",
         "MOM","SHORT",
         "ТЕМА","Тёмная","Светлая",
-        "перетащите, чтобы выбрать участок · двойной щелчок: весь файл"
+        "перетащите, чтобы выбрать участок · двойной щелчок: весь файл",
+        // Periscope 1.1.0: SPECTRUM weighting and masking buttons
+        "ВЗВЕШИВАНИЕ","МАСКИРОВКА"
     }};
     return t;
 }

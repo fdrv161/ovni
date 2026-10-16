@@ -87,20 +87,21 @@ SpectrumLens::Zones SpectrumLens::zonesFor (int w, int h) const
             if (i < n - 1) row.removeFromLeft (gap);
         }
     };
-    juce::Rectangle<int> analysis[5], display[5];
+    juce::Rectangle<int> analysis[5], display[6];
     share (top, 5, analysis);
-    share (bottom, 5, display);   // 57b: el quinto es el suavizado de pantalla
+    share (bottom, 6, display);   // 57b: el quinto es el suavizado de pantalla · Periscope: + Weighting
 
     z.button[fftSize]   = analysis[0];
     z.button[window]    = analysis[1];
     z.button[overlap]   = analysis[2];
     z.button[channel]   = analysis[3];
     z.button[bandsMode] = analysis[4];
-    z.button[slope]     = display[0];
-    z.button[average]   = display[1];
-    z.button[hold]      = display[2];
-    z.button[range]     = display[3];
-    z.button[smooth]    = display[4];
+    z.button[slope]       = display[0];
+    z.button[weightCurve] = display[1];
+    z.button[average]     = display[2];
+    z.button[hold]        = display[3];
+    z.button[range]       = display[4];
+    z.button[smooth]      = display[5];
 
     z.freqAxis = body.removeFromBottom (kAxisH);
     z.dbScale  = body.removeFromLeft (kScaleW);
@@ -203,7 +204,22 @@ void SpectrumLens::rebuildColumns (const SpectrumFrame& f)
 
     const double binHz = f.binHz();
     const int    nSpec = spectrumNumSpectra (f.channelMode);
-    const float  slopeDb = sets.slopeDbPerOct;
+
+    // Periscope 1.1.0: W of the chosen weighting (Slope included) at each column centre. Recomputed only when the
+    // curve, the slope, the sample rate (K depends on it) or the width change: K costs a complex biquad per column.
+    if (colWeightWidth != width || colWeightCurve != sets.weighting || colWeightSlope != sets.slopeDbPerOct
+        || colWeightSr != f.sr)
+    {
+        colWeight.resize ((size_t) width);
+        for (int x = 0; x < width; ++x)
+            colWeight[(size_t) x] = weighting::db (sets.weighting,
+                                                   std::sqrt (freqAtX (zones.plot.getX() + x) * freqAtX (zones.plot.getX() + x + 1)),
+                                                   f.sr, sets.slopeDbPerOct);
+        colWeightWidth = width;
+        colWeightCurve = sets.weighting;
+        colWeightSlope = sets.slopeDbPerOct;
+        colWeightSr    = f.sr;
+    }
 
     for (int s = 0; s < SpectrumFrame::kMaxSpectra; ++s)
     {
@@ -242,8 +258,9 @@ void SpectrumLens::rebuildColumns (const SpectrumFrame& f)
                 hd = f.holdDb[s][ka] + t * (f.holdDb[s][kb] - f.holdDb[s][ka]);
             }
 
-            colDb[s][(size_t) x]   = spectrumDisplayDb (db, centre, slopeDb);
-            colHold[s][(size_t) x] = spectrumDisplayDb (hd, centre, slopeDb);
+            // Periscope: the weighting replaces spectrumDisplayDb's slope; with Slope it is the same tilt.
+            colDb[s][(size_t) x]   = db + colWeight[(size_t) x];
+            colHold[s][(size_t) x] = hd + colWeight[(size_t) x];
         }
 
         std::copy (f.bands[s],     f.bands[s]     + SpectrumFrame::kNumThird, bandDb[s]);
@@ -373,7 +390,11 @@ void SpectrumLens::paintLive (juce::Graphics& g)
     paintButton (g, zones.button[overlap],   tr (strings::Key::overlap),  juce::String ((int) std::lround (s.overlap() * 100.0f)) + " %", hovered == overlap);
     paintButton (g, zones.button[channel],   tr (strings::Key::channel),  channelLabel (s.channel),        hovered == channel);
     paintButton (g, zones.button[bandsMode], tr (strings::Key::bands),    bandsLabel (s.bandsMode),        hovered == bandsMode);
-    paintButton (g, zones.button[slope],     tr (strings::Key::slope),    juce::String (s.slopeDbPerOct, 1) + " dB/oct", hovered == slope);
+    // Periscope: with a weighting curve the slope is not used, and the button says so.
+    paintButton (g, zones.button[slope],     tr (strings::Key::slope),
+                 s.weighting == weighting::slope ? juce::String (s.slopeDbPerOct, 1) + " dB/oct" : tr (strings::Key::off),
+                 hovered == slope);
+    paintButton (g, zones.button[weightCurve], tr (strings::Key::weighting), weighting::name (s.weighting), hovered == weightCurve);
     paintButton (g, zones.button[average],   tr (strings::Key::average),  avgValue,                        hovered == average);
     paintButton (g, zones.button[hold],      tr (strings::Key::hold),     holdValue,                       hovered == hold);
     paintButton (g, zones.button[range],     tr (strings::Key::range),    juce::String (s.rangeDb()) + " dB", hovered == range);
@@ -719,7 +740,8 @@ void SpectrumLens::paintBars (juce::Graphics& g, int slot, juce::Colour hue) con
         const double hi = third ? kThirdOctaveHz[b] * kSixthUp   : kBarkEdgesHz[b + 1];
         if (hi <= kMinHz || lo >= kMaxHz) continue;
 
-        const float db = third ? bandDb[slot][b] : barkDb[slot][b];
+        const float bw = bandWeight (third ? kThirdOctaveHz[b] : std::sqrt (lo * hi));   // Periscope: 0 with Slope
+        const float db = (third ? bandDb[slot][b] : barkDb[slot][b]) + bw;
         const float xa = xForFreq (lo), xb = xForFreq (hi);
         const float y  = yForDb (db);
 
@@ -746,7 +768,7 @@ void SpectrumLens::paintBars (juce::Graphics& g, int slot, juce::Colour hue) con
 
         if (third && s.peakHold)
         {
-            const float yh = yForDb (bandHold[slot][b]);
+            const float yh = yForDb (bandHold[slot][b] + bw);
             g.setColour (hue.withAlpha (0.55f));
             g.fillRect (juce::Rectangle<float> (x, yh, w, 1.0f));
         }
@@ -784,7 +806,8 @@ SpectrumLens::Readout SpectrumLens::readoutAtX (int x) const
             const double hi = third ? kThirdOctaveHz[b] * kSixthUp   : kBarkEdgesHz[b + 1];
             if (r.freqHz >= lo && r.freqHz < hi)
             {
-                r.db = third ? bandDb[0][b] : barkDb[0][b];   // sin slope: ver la nota de paintBars
+                r.db = (third ? bandDb[0][b] : barkDb[0][b])   // sin slope: ver la nota de paintBars
+                     + bandWeight (third ? kThirdOctaveHz[b] : std::sqrt (lo * hi));
                 break;
             }
         }
@@ -854,9 +877,12 @@ void SpectrumLens::cycleControl (int control)
         case channel:   s.channel      = (s.channel + 1) % Spectrum::kNumChannels; break;
         case bandsMode: s.bandsMode    = (s.bandsMode + 1) % Spectrum::kNumBandModes; break;
         case slope:
+            // Periscope: while a weighting curve is on, the first click brings the slope back as it was.
+            if (s.weighting != weighting::slope) { s.weighting = weighting::slope; break; }
             s.slopeDbPerOct += Spectrum::kSlopeStep;
             if (s.slopeDbPerOct > Spectrum::kMaxSlopeDbPerOct + 1.0e-4f) s.slopeDbPerOct = Spectrum::kMinSlopeDbPerOct;
             break;
+        case weightCurve: s.weighting = (s.weighting + 1) % weighting::kNumCurves; break;
         case average:   s.avgMode      = (s.avgMode + 1) % Spectrum::kNumAverages; break;
         case hold:
             // OFF → 12 dB/s → 30 → ∞ (0) → OFF. Lo que un peak hold necesita elegir es cuánto TARDA en
@@ -943,7 +969,7 @@ double gridPos (double hz) { return kGridPerOct * std::log2 (hz / kGridLoHz); }
 
 // Settings rows: the buttons under the plot, no more (sighted users have exactly these), with the ones that matter
 // most for listening first.
-constexpr int kSettingRows[] = { SpectrumLens::slope, SpectrumLens::smooth, SpectrumLens::average, SpectrumLens::hold,
+constexpr int kSettingRows[] = { SpectrumLens::weightCurve, SpectrumLens::slope, SpectrumLens::smooth, SpectrumLens::average, SpectrumLens::hold,
                                  SpectrumLens::range, SpectrumLens::fftSize, SpectrumLens::window,
                                  SpectrumLens::overlap, SpectrumLens::channel, SpectrumLens::bandsMode };
 constexpr int kNumSettingRows = (int) (sizeof (kSettingRows) / sizeof (kSettingRows[0]));
@@ -1055,7 +1081,8 @@ juce::String SpectrumLens::a11yRowName (int group, int row) const
 
     const int item = a11ySettingItem (row);
     static const char* const names[kNumControls] = { "FFT size", "Window", "Overlap", "Channel", "Display",
-                                                     "Slope", "Average", "Peak hold", "Range", "Smoothing" };
+                                                     "Slope", "Average", "Peak hold", "Range", "Smoothing",
+                                                     "Weighting" };
     return a11ytext::T (names[juce::jlimit (0, kNumControls - 1, item)]);
 }
 
@@ -1188,7 +1215,13 @@ juce::String SpectrumLens::a11yRowHelp (int group, int row) const
         // 13: shape
         "Shape against the line: first the height of the line, where the curve lies on the plot, then the "
         "stretches of the curve that lie clearly above or below it, from low to high, with their average distance. "
-        "It uses a broad 1/3 octave view whatever the Smoothing, like a first glance at the picture."
+        "It uses a broad 1/3 octave view whatever the Smoothing, like a first glance at the picture.",
+        // 14: weighting (Periscope 1.1.0)
+        "Weighting shows the spectrum through a standard curve instead of the Slope tilt. A, B, C "
+        "and D are the curves of sound level meters, K is the loudness curve of LUFS, ITU-R 468 weighs noise as "
+        "the ear hears it, ISO 226 is the equal-loudness contour at 80 phon, and the inverse X-curve shows what a "
+        "cinema room takes away. Every curve is 0 dB at 1 kHz. All levels spoken in this lens follow it, the bands "
+        "too. Choose Slope to tilt by the Slope setting again."
     };
 
     int index = -1;
@@ -1198,6 +1231,7 @@ juce::String SpectrumLens::a11yRowHelp (int group, int row) const
         switch (a11ySettingItem (row))
         {
             case slope:     index = 3;  break;
+            case weightCurve: index = 14; break;
             case smooth:    index = 4;  break;
             case average:   index = 5;  break;
             case hold:      index = 6;  break;
@@ -1217,6 +1251,22 @@ juce::String SpectrumLens::a11yRowHelp (int group, int row) const
 const SpectrumLens::A11yCurve& SpectrumLens::a11yCurve() const
 {
     const int smoothIdx = processor.spectrumSmoothIndex();
+
+    // Periscope 1.1.0: W of the chosen weighting on the speech grid. It changes with the settings, not with the
+    // frames, so it is kept apart from the frame cache below.
+    {
+        const int n = gridSize();
+        if ((int) curve.weight.size() != n || curve.weightCurve != sets.weighting
+            || curve.weightSlope != sets.slopeDbPerOct || curve.weightSr != srSeen)
+        {
+            curve.weight.resize ((size_t) n);
+            for (int i = 0; i < n; ++i)
+                curve.weight[(size_t) i] = weighting::db (sets.weighting, gridHz (i), srSeen, sets.slopeDbPerOct);
+            curve.weightCurve = sets.weighting;
+            curve.weightSlope = sets.slopeDbPerOct;
+            curve.weightSr    = srSeen;
+        }
+    }
     if (curveFrame == a11yFrameSerial && curveSmooth == smoothIdx) return curve;
     curveFrame  = a11yFrameSerial;
     curveSmooth = smoothIdx;
@@ -1335,17 +1385,17 @@ float SpectrumLens::a11yProbeLevel (int slot, double hz, bool hold) const
 {
     const auto& c = a11yCurve();
     if (! a11yHasFrame || slot >= a11ySpectra) return SpectrumFrame::kFloorDb;
-    const float slopeDb = sets.slopeDbPerOct;
+    // Periscope: the weighting in place of the slope (with Slope it is the same tilt).
     if (! hold && smoothDenom (processor.spectrumSmoothIndex()) > 0)
-        return spectrumDisplayDb (a11yCurveAt (c.smoothDb[slot], hz), hz, slopeDb);
+        return a11yCurveAt (c.smoothDb[slot], hz) + weightAt (hz);
 
     const auto& v = hold ? c.holdDb[slot] : c.rawDb[slot];
     const int    n = (int) v.size();
     const double centre = gridPos (hz);
     const int    lo = juce::jlimit (0, n - 1, (int) std::ceil (centre - kGridPerOct / 24.0));
     const int    hi = juce::jlimit (0, n - 1, (int) std::floor (centre + kGridPerOct / 24.0));
-    float db = spectrumDisplayDb (a11yCurveAt (v, hz), hz, slopeDb);
-    for (int i = lo; i <= hi; ++i) db = juce::jmax (db, v[(size_t) i] + slopeDb * c.oct[(size_t) i]);
+    float db = a11yCurveAt (v, hz) + weightAt (hz);
+    for (int i = lo; i <= hi; ++i) db = juce::jmax (db, v[(size_t) i] + c.weight[(size_t) i]);
     return db;
 }
 
@@ -1383,7 +1433,7 @@ juce::String SpectrumLens::a11yTiltValue() const
 {
     const auto& sh = a11yShape();
     if (! sh.tiltValid) return a11ytext::T ("not enough signal");
-    const float onPlot = sh.tiltDbPerOct + sets.slopeDbPerOct;
+    const float onPlot = sh.tiltDbPerOct + sh.weightTilt;   // Periscope: weightTilt is the slope with Slope
     if (std::abs (onPlot) < 0.25f) return a11ytext::T ("flat, follows the line");
     return a11ytext::TF (onPlot > 0.0f ? "rises {0} dB per octave, brighter than the line"
                                        : "falls {0} dB per octave, darker than the line",
@@ -1408,7 +1458,7 @@ juce::String SpectrumLens::a11yFeatureValue (const Feature& f, bool dip) const
     // Unsmoothed, a peak is a resonance or a note: its pitch and level matter, its width is a bin or two.
     if (smoothDenom (processor.spectrumSmoothIndex()) <= 0)
         return spoken::hz (f.hz) + ", " + spoken::noteWithCents (noteFor (f.hz)) + ", " + by + ", "
-             + spoken::dB (spectrumDisplayDb (f.db, f.hz, sets.slopeDbPerOct));
+             + spoken::dB (f.db + weightAt (f.hz));
     // Smoothed, a hump or a hole has no exact pitch: where it starts and ends says more (an EQ band to set).
     return spoken::hz (f.hz) + ", " + hzRange (f.loHz, f.hiHz) + ", " + by;
 }
@@ -1488,13 +1538,15 @@ const SpectrumLens::A11yShape& SpectrumLens::a11yShape() const
     const auto& c = a11yCurve();
     const int   smoothIdx = processor.spectrumSmoothIndex();
     const auto  now = juce::Time::getMillisecondCounter();
-    const bool  settingsChanged = smoothIdx != shapeSmooth || sets.slopeDbPerOct != shapeSlope || sets.rangeDb() != shapeRange;
+    const bool  settingsChanged = smoothIdx != shapeSmooth || sets.slopeDbPerOct != shapeSlope || sets.rangeDb() != shapeRange
+                               || sets.weighting != shapeWeighting;
     const bool  stale = shapeFrame != a11yFrameSerial && (now - shapeTimeMs >= kShapeHoldMs || shapeHadFrame != a11yHasFrame);
     if (! settingsChanged && ! stale) return shape;
 
     shapeFrame    = a11yFrameSerial;
     shapeSmooth   = smoothIdx;
     shapeSlope    = sets.slopeDbPerOct;
+    shapeWeighting = sets.weighting;
     shapeRange    = sets.rangeDb();
     shapeTimeMs   = now;
     shapeHadFrame = a11yHasFrame;
@@ -1511,7 +1563,7 @@ const SpectrumLens::A11yShape& SpectrumLens::a11yShape() const
 
     // The curve as it is drawn: louder channel, smoothed, with the slope, held at the edges of the plot.
     const float floorDb = -(float) sets.rangeDb();
-    const auto  onPlot = [&] (float db, int i) { return juce::jlimit (floorDb, 0.0f, db + sets.slopeDbPerOct * c.oct[(size_t) i]); };
+    const auto  onPlot = [&] (float db, int i) { return juce::jlimit (floorDb, 0.0f, db + c.weight[(size_t) i]); };
     std::vector<float> view ((size_t) n), scratch;
     for (int i = 0; i < n; ++i) view[(size_t) i] = onPlot (c.top[(size_t) i], i);
 
@@ -1556,6 +1608,22 @@ const SpectrumLens::A11yShape& SpectrumLens::a11yShape() const
             if (db < (double) floorDb) continue;   // under the plot: noise floor, not signal
             xs.push_back ((float) std::log2 (fc / 1000.0));
             ys.push_back ((float) db);
+        }
+        // Periscope: how the weighting itself leans over the same span, a straight-line fit at the same band
+        // centres. With Slope it is exactly the slope; a curve such as A leans and bends, and the eye sees the
+        // lean of the result.
+        {
+            double wx = 0.0, wy = 0.0, wxx = 0.0, wxy = 0.0;
+            int    wn = 0;
+            for (int b = 0; b < SpectrumFrame::kNumThird; ++b)
+            {
+                const double fc = kThirdOctaveHz[b];
+                if (fc < 50.0 || fc > 10000.0) continue;
+                const double x = std::log2 (fc / 1000.0), y = weightAt (fc);
+                wx += x; wy += y; wxx += x * x; wxy += x * y; ++wn;
+            }
+            const double wden = (double) wn * wxx - wx * wx;
+            shape.weightTilt = wden > 1.0e-9 ? (float) (((double) wn * wxy - wx * wy) / wden) : 0.0f;
         }
         const int count = (int) ys.size();
         double sx = 0.0, sy = 0.0, sxx = 0.0, sxy = 0.0;
@@ -1695,10 +1763,11 @@ const SpectrumLens::A11yShape& SpectrumLens::a11yShape() const
 
 juce::String SpectrumLens::a11yBandValue (int band) const
 {
-    const int floorDb = sets.rangeDb();
+    const int   floorDb = sets.rangeDb();
+    const float w = bandWeight (kThirdOctaveHz[band]);   // Periscope: weighted as the bars are, 0 with Slope
     if (a11ySpectra >= 2)
-        return a11ytext::T ("L ") + spoken::db (bandDb[0][band], floorDb) + a11ytext::T (", R ") + spoken::db (bandDb[1][band], floorDb);
-    return spoken::db (bandDb[0][band], floorDb);
+        return a11ytext::T ("L ") + spoken::db (bandDb[0][band] + w, floorDb) + a11ytext::T (", R ") + spoken::db (bandDb[1][band] + w, floorDb);
+    return spoken::db (bandDb[0][band] + w, floorDb);
 }
 
 juce::String SpectrumLens::a11yControlValue (int item) const
@@ -1727,6 +1796,18 @@ juce::String SpectrumLens::a11yControlValue (int item) const
         {
             // With its effect, so a change is heard at once: how the curve now leans on the plot.
             auto t = spoken::trimmed (s.slopeDbPerOct, 1) + a11ytext::T (" dB per octave");
+            // Periscope: a weighting curve replaces the slope; the row says so instead of a tilt that is not drawn.
+            if (s.weighting != weighting::slope)
+                return a11ytext::TF ("{0}, not used. Weighting: {1}", { t, a11yWeightingName (s.weighting) });
+            if (a11yHasFrame && a11yShape().tiltValid) t << ". " << a11ytext::T ("Signal tilt") << ", " << a11yTiltValue();
+            return t;
+        }
+        case weightCurve:
+        {
+            // With its effect, as the slope row: how the curve now leans on the plot.
+            auto t = a11yWeightingName (s.weighting);
+            if (s.weighting == weighting::slope)
+                t << ", " << spoken::trimmed (s.slopeDbPerOct, 1) << a11ytext::T (" dB per octave");
             if (a11yHasFrame && a11yShape().tiltValid) t << ". " << a11ytext::T ("Signal tilt") << ", " << a11yTiltValue();
             return t;
         }
@@ -1785,7 +1866,19 @@ bool SpectrumLens::stepControl (int control, int step)
         case hold:      idx = holdIndex (s);  n = 4; break;
         case range:     idx = s.rangeDbIndex; n = Spectrum::kNumRanges;    break;
         case smooth:    idx = processor.spectrumSmoothIndex(); n = TelescopeProcessor::kNumSpectrumSmoothOptions; break;
+        case weightCurve: idx = s.weighting; n = weighting::kNumCurves; break;
         default: return false;
+    }
+
+    // Periscope: as with the mouse, the Slope row first brings the slope back when a weighting curve is on.
+    if (control == slope && s.weighting != weighting::slope)
+    {
+        s.weighting = weighting::slope;
+        processor.setSpectrumSettings (s);
+        sets = processor.spectrumSettings();
+        invalidateStatic();
+        repaint();
+        return true;
     }
 
     const int size = std::abs (step) >= a11yui::kExtreme ? n : (std::abs (step) >= a11yui::kCoarse ? 2 : 1);
@@ -1806,6 +1899,7 @@ bool SpectrumLens::stepControl (int control, int step)
             s.holdDecayDbPerSec = next == 2 ? 30.0f : (next == 3 ? 0.0f : 12.0f);
             break;
         case range:     s.rangeDbIndex = next; break;
+        case weightCurve: s.weighting = next; break;
         case smooth:
             // Smoothing is for drawing only and is not part of the engine settings (as in cycleControl).
             processor.setSpectrumSmoothIndex (next);
@@ -1818,5 +1912,25 @@ bool SpectrumLens::stepControl (int control, int step)
     invalidateStatic();
     repaint();
     return true;
+}
+
+// ---- Periscope 1.1.0: the weighting ----
+float SpectrumLens::weightAt (double hz) const
+{
+    return weighting::db (sets.weighting, hz, srSeen, sets.slopeDbPerOct);
+}
+
+float SpectrumLens::bandWeight (double centreHz) const
+{
+    return sets.weighting == weighting::slope ? 0.0f : weightAt (centreHz);
+}
+
+// The spoken name of a curve. The letters are said as in a meter manual: "A-weighting".
+juce::String SpectrumLens::a11yWeightingName (int curve)
+{
+    static const char* const names[weighting::kNumCurves] = { "Slope", "A-weighting", "B-weighting", "C-weighting",
+                                                             "D-weighting", "K-weighting", "ITU-R 468",
+                                                             "ISO 226, 80 phon", "inverse X-curve" };
+    return a11ytext::T (names[juce::jlimit (0, weighting::kNumCurves - 1, curve)]);
 }
 }

@@ -50,6 +50,7 @@ void AnalysisThread::setSpectrumSettings (const Spectrum::Settings& s) noexcept
     spectrumAtomics.overlapIndex     .store (s.overlapIndex,      std::memory_order_release);
     spectrumAtomics.channel          .store (s.channel,           std::memory_order_release);
     spectrumAtomics.slopeDbPerOct    .store (s.slopeDbPerOct,     std::memory_order_release);
+    spectrumAtomics.weighting        .store (s.weighting,         std::memory_order_release);
     spectrumAtomics.avgMode          .store (s.avgMode,           std::memory_order_release);
     spectrumAtomics.avgSeconds       .store (s.avgSeconds,        std::memory_order_release);
     spectrumAtomics.peakHold         .store (s.peakHold,          std::memory_order_release);
@@ -67,6 +68,7 @@ Spectrum::Settings AnalysisThread::spectrumSettings() const noexcept
     s.overlapIndex      = spectrumAtomics.overlapIndex     .load (std::memory_order_acquire);
     s.channel           = spectrumAtomics.channel          .load (std::memory_order_acquire);
     s.slopeDbPerOct     = spectrumAtomics.slopeDbPerOct    .load (std::memory_order_acquire);
+    s.weighting         = spectrumAtomics.weighting        .load (std::memory_order_acquire);
     s.avgMode           = spectrumAtomics.avgMode          .load (std::memory_order_acquire);
     s.avgSeconds        = spectrumAtomics.avgSeconds       .load (std::memory_order_acquire);
     s.peakHold          = spectrumAtomics.peakHold         .load (std::memory_order_acquire);

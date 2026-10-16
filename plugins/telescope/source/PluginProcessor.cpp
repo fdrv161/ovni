@@ -201,6 +201,7 @@ Spectrum::Settings TelescopeProcessor::spectrumSettings() const
     s.bandsMode         = (int) apvts.state.getProperty (kSpectrumBandsMode, d.bandsMode);
     s.rangeDbIndex      = (int) apvts.state.getProperty (kSpectrumRange, d.rangeDbIndex);
     s.historySecIndex   = (int) apvts.state.getProperty (kSpectrogramHistory, d.historySecIndex);
+    s.weighting         = (int) apvts.state.getProperty (kSpectrumWeighting, d.weighting);
     s.sanitise();
     return s;
 }
@@ -222,6 +223,7 @@ void TelescopeProcessor::setSpectrumSettings (const Spectrum::Settings& in)
     apvts.state.setProperty (kSpectrumBandsMode, s.bandsMode, nullptr);
     apvts.state.setProperty (kSpectrumRange,     s.rangeDbIndex, nullptr);
     apvts.state.setProperty (kSpectrogramHistory, s.historySecIndex, nullptr);
+    apvts.state.setProperty (kSpectrumWeighting, s.weighting, nullptr);
 
     analysisThread.setSpectrumSettings (s);
 }

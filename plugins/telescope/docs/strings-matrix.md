@@ -23,7 +23,7 @@
 
 ## 1 · Rótulos de la interfaz — `source/lenses/Strings.h`
 
-150 claves × 7 idiomas.
+152 claves × 7 idiomas.
 
 | Clave | en | es | pt ⚠ | fr ⚠ | de ⚠ | it ⚠ | ru ⚠ |
 |---|---|---|---|---|---|---|---|
@@ -177,6 +177,8 @@
 | `themeDark` | Dark | Oscuro | Escuro | Sombre | Dunkel | Scuro | Тёмная |
 | `themeLight` | Light | Claro | Claro | Clair | Hell | Chiaro | Светлая |
 | `refSpanHint` | drag to pick a section · double-click: whole file | arrastrá para elegir un tramo · doble clic: el archivo entero | arraste para escolher um trecho · clique duplo: o arquivo inteiro | glissez pour choisir un passage · double-clic : le fichier entier | ziehen, um einen Abschnitt zu wählen · Doppelklick: ganze Datei | trascina per scegliere un tratto · doppio clic: il file intero | перетащите, чтобы выбрать участок · двойной щелчок: весь файл |
+| `weighting` | WEIGHTING | PONDERACIÓN | PONDERAÇÃO | PONDÉRATION | BEWERTUNG | PONDERAZIONE | ВЗВЕШИВАНИЕ |
+| `masking` | MASKING | ENMASCARAMIENTO | MASCARAMENTO | MASQUAGE | VERDECKUNG | MASCHERAMENTO | МАСКИРОВКА |
 
 ## 2 · Frases de VERDICT — `source/data/Rules.h`
 

@@ -1,6 +1,7 @@
 #pragma once
 #include <vector>
 #include "analysis/SpectrumFrame.h"
+#include "analysis/Weighting.h"
 #include "analysis/modules/Spectrum.h"
 #include "lenses/Lens.h"
 #include "lenses/Raster.h"
@@ -71,8 +72,9 @@ public:
     Readout readoutAtX (int x) const;
 
     // Los nueve controles, en el orden en que se dibujan. Público para que el test los cicle sin clicks.
+    // Periscope 1.1.0: weightCurve is appended, so the author's indices keep their meaning.
     enum Control { fftSize = 0, window, overlap, channel, bandsMode, slope, average, hold, range,
-                   smooth, kNumControls };
+                   smooth, weightCurve, kNumControls };
     void cycleControl (int control);
 
     // ================== ACCESSIBILITY (see Lens.h) ==================
@@ -124,6 +126,16 @@ private:
     void paintButton (juce::Graphics&, juce::Rectangle<int>, const juce::String& label,
                       const juce::String& value, bool hovered) const;
     float yForDb (float db) const;
+
+    // Periscope 1.1.0: the display weighting (see analysis/Weighting.h). weightAt is W(f) of the chosen curve,
+    // Slope included; bandWeight is what the bars get: nothing with Slope (bands are flat for pink noise by
+    // construction, see paintBars), W at the band centre with a weighting curve.
+    float weightAt (double hz) const;
+    float bandWeight (double centreHz) const;
+    std::vector<float> colWeight;   // W at the centre of each plot column, rebuilt when its key changes
+    int    colWeightCurve = -1, colWeightWidth = -1;
+    float  colWeightSlope = -1.0f;
+    double colWeightSr = 0.0;
 
     TelescopeProcessor& processor;
 
@@ -182,6 +194,8 @@ private:
         std::vector<int>   topBin;                                 // the loudest bin of each grid cell (or -1)
         std::vector<float> oct;                                    // octaves from 1 kHz, for the slope
         std::vector<float> broad;                                  // louder channel over 1/3 octave, no slope
+        std::vector<float> weight;                                 // W of the chosen weighting at each grid point
+        int    weightCurve = -1;  float weightSlope = -1.0f;  double weightSr = 0.0;
     };
     // A peak or a dip of the curve: where it stands out from its neighbourhood, and where its sides cross half
     // of that height (loHz, hiHz).
@@ -196,6 +210,7 @@ private:
         std::vector<Feature> peaks, dips;
         int   totalPeaks = 0, totalDips = 0;   // how many stand out, before the list is cut
         float threshold = 3.0f;   // how far a stretch or a feature must stand out to count
+        float weightTilt = 0.0f;  // how the weighting itself leans from 50 Hz to 10 kHz (= the slope with Slope)
     };
     static constexpr int kMaxPeaks = 10, kMaxDips = 10;
 
@@ -204,6 +219,7 @@ private:
     mutable juce::uint32 curveFrame = 0xffffffffu, shapeFrame = 0xffffffffu;
     mutable int    curveSmooth = -1, shapeSmooth = -1, shapeRange = -1;
     mutable float  shapeSlope = -1.0f;
+    mutable int    shapeWeighting = -1;
     mutable juce::uint32 shapeTimeMs = 0;
     mutable bool   shapeHadFrame = false;
 
@@ -221,6 +237,7 @@ private:
     juce::String a11yFeatureValue (const Feature& f, bool dip) const;
     juce::String a11yBandValue (int band) const;
     juce::String a11yControlValue (int item) const;
+    static juce::String a11yWeightingName (int curve);
     int          a11yFeatureRows() const;
     int          a11ySettingItem (int row) const;
 
