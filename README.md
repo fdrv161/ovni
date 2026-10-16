@@ -25,6 +25,7 @@ Also in [Russian (Русский)](MANUAL.ru.md) and [Spanish (Español)](MANUAL
 - **Weighting** in the Spectrum lens: A, B, C, D, K, ITU-R 468, ISO 226 and the inverse cinema X and N curves, in place of the Slope tilt. The plot, the bars and every spoken level follow it.
 - **Masking** in the Spectrum lens: an estimate of which frequency ranges louder sounds nearby cover up, and which lie below the threshold of hearing. Darkened on screen, spoken in a Masking row and by the probe and the peaks.
 - Both follow TDR Prism's Analyzer Weighting and Auditory Masking, written from public standards and checked against Prism's display.
+- A newly inserted Periscope starts in the language you chose last, like the theme.
 
 ## What's new in 1.0.0
 

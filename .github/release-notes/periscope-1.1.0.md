@@ -13,6 +13,10 @@ Each ZIP contains the manual in English, Russian and Spanish.
 - **Masking.** An estimate of auditory masking, after the psychoacoustic model of AAC encoders (3GPP TS 26.403): which frequency ranges louder sounds nearby cover up, and which lie below the threshold of hearing. Masked bands are darkened on screen. Speech: a Masking row in the readings ("masked: 870 Hz to 1.3 kHz; below hearing: above 18 kHz"), and the probe, the peaks and the dips say "masked" when their frequency is. It follows the curve as drawn, so the Average setting decides how fast it changes.
 - Both are new settings in the lens, with spoken help (F1) and translations in all seven languages.
 
+## Fixed
+
+- **The language is remembered.** A newly inserted Periscope starts in the language you chose last, like the theme; before, it always started in English. A saved project keeps its own language.
+
 Both follow TDR Prism's Analyzer Weighting and Auditory Masking. They are written from public standards and papers, not from Prism's code, and were checked against screenshots of Prism with test signals: the weighting curves agree within about 1 dB (ISO 226 up to 10 kHz), and around a 1 kHz tone over pink noise both mask about 870 Hz to 1.3 kHz. The shape of the N-curve, for which public sources give only a few points, was measured on Prism's display.
 
 Tested with NVDA in REAPER on Windows.
