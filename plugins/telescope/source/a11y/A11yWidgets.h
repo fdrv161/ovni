@@ -270,6 +270,28 @@ public:
             return true;
         }
 
+        // Periscope: Ctrl+C copies the current row, Ctrl+Shift+C the whole group (its name, then one row per line), as
+        // the text that is spoken. A screen reader user can paste readings into notes or a chat instead of retyping
+        // them; a sighted user would take a screenshot. Letters arrive as upper-case key codes.
+        if ((code == 'C' || code == 'c') && mods.isCtrlDown() && ! mods.isAltDown())
+        {
+            if (rows <= 0) return true;
+            if (mods.isShiftDown())
+            {
+                juce::StringArray lines;
+                if (groups > 1) lines.add (source->groupName (grp));
+                for (int r = 0; r < rows; ++r) lines.add (rowText (grp, r));
+                juce::SystemClipboard::copyTextToClipboard (lines.joinIntoString ("\r\n"));
+                say (a11ytext::TF ("Group copied, {0} rows", { juce::String (rows) }));
+            }
+            else
+            {
+                juce::SystemClipboard::copyTextToClipboard (currentText());
+                say (a11ytext::T ("Copied"));
+            }
+            return true;
+        }
+
         if (alt)
         {
             int step = 0;

@@ -104,7 +104,7 @@ On macOS the keys are the same as below, with Option in place of Alt.
 3. Press **Up** and **Down** to choose a lens. The lens switches immediately, the same as clicking it.
 4. Press **Enter** to go to the **readings** of that lens. NVDA reads the current row, for example "Integrated, -14.2 LUFS".
 5. Use **Up** and **Down** to move through rows, **Left** and **Right** to move between groups (Readings, Settings, Actions and so on).
-6. On a setting, press **plus** or **minus** to change it, or **Enter** for edit mode.
+6. On a setting, press **plus** or **minus** to change it, or **Enter** for edit mode. **Alt+Up / Alt+Down** also change it by one step, and **Alt+Page Up / Alt+Page Down** by a big step.
 7. Press **Escape** to go back to the lens list.
 8. Press **F1** anywhere for spoken help about the current panel.
 
@@ -167,6 +167,7 @@ Other keys:
 - **Escape**: back to the lens list (or out of edit mode).
 - **F1**: spoken help. On a row that has its own help (the Spectrum settings, for example) it explains that row; elsewhere it gives the help of the panel.
 - **Tab / Shift+Tab**: next or previous panel.
+- **Ctrl+C**: copy the current row as text, the way it is spoken. **Ctrl+Shift+C**: copy the whole group, its name and then one row per line, for example all the Spectrum readings. Paste them into notes or a message.
 
 ### Keys that go to your DAW
 

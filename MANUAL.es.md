@@ -104,7 +104,7 @@ En macOS las teclas son las mismas que abajo, con Opción en lugar de Alt.
 3. Presioná **flecha arriba** y **flecha abajo** para elegir una lente. La lente cambia enseguida, igual que con un clic.
 4. Presioná **Intro** para ir a las **lecturas** de esa lente. NVDA lee la fila actual, por ejemplo "Integrado, -14.2 LUFS".
 5. Usá **arriba** y **abajo** para moverte por las filas, **izquierda** y **derecha** para pasar de un grupo a otro (Lecturas, Ajustes, Acciones, etcétera).
-6. En un ajuste, presioná **más** o **menos** para cambiarlo, o **Intro** para el modo edición.
+6. En un ajuste, presioná **más** o **menos** para cambiarlo, o **Intro** para el modo edición. **Alt+Flecha arriba / Alt+Flecha abajo** también lo cambian un paso, y **Alt+Re Pág / Alt+Av Pág** un paso grande.
 7. Presioná **Escape** para volver a la lista de lentes.
 8. Presioná **F1** en cualquier lugar para escuchar la ayuda del panel actual.
 
@@ -167,6 +167,7 @@ Otras teclas:
 - **Escape**: volver a la lista de lentes (o salir del modo edición).
 - **F1**: ayuda hablada. En una fila con ayuda propia (los ajustes de Espectro, por ejemplo) explica esa fila; en el resto da la ayuda del panel.
 - **Tab / Mayús+Tab**: panel siguiente o anterior.
+- **Ctrl+C**: copia la fila actual como texto, tal como se dice. **Ctrl+Mayús+C**: copia el grupo entero, su nombre y después una fila por línea, por ejemplo todas las lecturas de Espectro. Pegalas en notas o en un mensaje.
 
 ### Teclas que van a tu DAW
 

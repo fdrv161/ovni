@@ -103,6 +103,8 @@ inline const Row* rows() noexcept
         { { "plus or minus to change", "más o menos para cambiar", "mais ou menos para mudar", "plus ou moins pour changer", "Plus oder Minus zum Ändern", "più o meno per cambiare", "плюс или минус меняют значение" } },
         { { "Edit", "Edición", "Edição", "Modification", "Bearbeiten", "Modifica", "Правка" } },
         { { "Read only", "Solo lectura", "Somente leitura", "Lecture seule", "Nur lesen", "Sola lettura", "Только чтение" } },
+        { { "Copied", "Copiado", "Copiado", "Copié", "Kopiert", "Copiato", "Скопировано" } },
+        { { "Group copied, {0} rows", "Grupo copiado, {0} filas", "Grupo copiado, {0} linhas", "Groupe copié, {0} lignes", "Gruppe kopiert, {0} Zeilen", "Gruppo copiato, {0} righe", "Группа скопирована, строк: {0}" } },
         { { "Done", "Hecho", "Pronto", "Terminé", "Fertig", "Fatto", "Готово" } },
         { { "Empty", "Vacío", "Vazio", "Vide", "Leer", "Vuoto", "Пусто" } },
         { { "Lenses", "Lentes", "Lentes", "Lentilles", "Linsen", "Lenti", "Линзы" } },
@@ -358,5 +360,5 @@ inline const Row* rows() noexcept
     return table;
 }
 
-inline int numRows() noexcept { return 347; }
+inline int numRows() noexcept { return 349; }
 }
