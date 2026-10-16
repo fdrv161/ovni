@@ -15,6 +15,7 @@ Each ZIP contains the manual in English, Russian and Spanish.
 
 ## Fixed
 
+- **REAPER no longer waits forever after you close it.** In 1.0.0 the process could stay in the task manager: at exit Windows ends the plugin's background threads before the plugin is unloaded, and the plugin kept waiting for them. It now notices that the system has already ended them. Live threads are still never killed.
 - **The language is remembered.** A newly inserted Periscope starts in the language you chose last, like the theme; before, it always started in English. A saved project keeps its own language.
 
 Both follow TDR Prism's Analyzer Weighting and Auditory Masking. They are written from public standards and papers, not from Prism's code, and were checked against screenshots of Prism with test signals: the weighting curves agree within about 1 dB (ISO 226 up to 10 kHz), and around a 1 kHz tone over pink noise both mask about 870 Hz to 1.3 kHz. The shape of the N-curve, for which public sources give only a few points, was measured on Prism's display.

@@ -26,6 +26,7 @@ Also in [Russian (Русский)](MANUAL.ru.md) and [Spanish (Español)](MANUAL
 - **Masking** in the Spectrum lens: an estimate of which frequency ranges louder sounds nearby cover up, and which lie below the threshold of hearing. Darkened on screen, spoken in a Masking row and by the probe and the peaks.
 - Both follow TDR Prism's Analyzer Weighting and Auditory Masking, written from public standards and checked against Prism's display.
 - A newly inserted Periscope starts in the language you chose last, like the theme.
+- Fixed: REAPER could stay in the task manager after closing (1.0.0).
 
 ## What's new in 1.0.0
 
